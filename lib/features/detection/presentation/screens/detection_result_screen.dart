@@ -230,6 +230,14 @@ class _ScannedImageSection extends StatelessWidget {
                 ),
         ),
 
+        // AI Detection bounding boxes overlay
+        if (result.detections.any((d) => d.boundingBox != null))
+          Positioned.fill(
+            child: CustomPaint(
+              painter: DetectionOverlayPainter(detections: result.detections),
+            ),
+          ),
+
         // AI Analysis badge
         Positioned(
           top: 10,

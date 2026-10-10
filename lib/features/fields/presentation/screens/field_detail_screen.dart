@@ -129,31 +129,38 @@ class _FieldInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE8F0E8), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _InfoRow(icon: Icons.grass_outlined, label: 'Crop', value: field.cropType),
+          _InfoRow(icon: Icons.grass_rounded, label: 'Crop', value: field.cropType),
           if (field.areHectares != null) ...[
-            const Divider(height: 20),
-            _InfoRow(icon: Icons.straighten_outlined, label: 'Area', value: '${field.areHectares!.toStringAsFixed(2)} hectares'),
+            const Divider(height: 20, color: Color(0xFFF0F4F0)),
+            _InfoRow(icon: Icons.straighten_rounded, label: 'Area', value: '${field.areHectares!.toStringAsFixed(2)} hectares'),
           ],
           if (field.locationLabel != null) ...[
-            const Divider(height: 20),
-            _InfoRow(icon: Icons.location_on_outlined, label: 'Location', value: field.locationLabel!),
+            const Divider(height: 20, color: Color(0xFFF0F4F0)),
+            _InfoRow(icon: Icons.location_on_rounded, label: 'Location', value: field.locationLabel!),
           ],
           if (field.plantingDate != null) ...[
-            const Divider(height: 20),
-            _InfoRow(icon: Icons.calendar_today_outlined, label: 'Planted', value: DateFormatter.formatDate(field.plantingDate!)),
+            const Divider(height: 20, color: Color(0xFFF0F4F0)),
+            _InfoRow(icon: Icons.calendar_today_rounded, label: 'Planted', value: DateFormatter.formatDate(field.plantingDate!)),
           ],
           if (field.notes != null && field.notes!.isNotEmpty) ...[
-            const Divider(height: 20),
-            _InfoRow(icon: Icons.notes_outlined, label: 'Notes', value: field.notes!),
+            const Divider(height: 20, color: Color(0xFFF0F4F0)),
+            _InfoRow(icon: Icons.notes_rounded, label: 'Notes', value: field.notes!),
           ],
         ],
       ),
@@ -172,15 +179,39 @@ class _InfoRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: AppColors.textSecondary),
-        const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: Theme.of(context).textTheme.labelMedium),
-            const SizedBox(height: 2),
-            Text(value, style: Theme.of(context).textTheme.bodyLarge),
-          ],
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8F5E9),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: const Color(0xFF2D6A4F)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF6B8F71),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1B4332),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -192,19 +223,49 @@ class _NoScansCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE8F0E8), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          const Icon(Icons.photo_camera_outlined, size: 36, color: AppColors.textDisabled),
-          const SizedBox(height: 10),
-          Text('No scans yet', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.textSecondary)),
-          const SizedBox(height: 4),
-          Text('Use the Scan button above to capture and analyse this field.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8F5E9),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.photo_camera_outlined, size: 28, color: Color(0xFF2D6A4F)),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'No scans yet',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1B4332),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Use the Scan button above to capture and analyse this field.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: Color(0xFF6B8F71),
+              height: 1.4,
+            ),
+          ),
         ],
       ),
     );
@@ -218,11 +279,18 @@ class _ScanHistoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE8F0E8), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -230,13 +298,27 @@ class _ScanHistoryTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(DateFormatter.formatDateTime(scan.createdAt), style: Theme.of(context).textTheme.bodyMedium),
+                Text(
+                  DateFormatter.formatDateTime(scan.createdAt),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Color(0xFF6B8F71),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text('${scan.weedCount} weeds detected', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  '${scan.weedCount} weeds detected',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1B4332),
+                  ),
+                ),
               ],
             ),
           ),
-          SeverityChip(severity: scan.severity),
+          SeverityChip(severity: scan.severity, small: true),
         ],
       ),
     );

@@ -211,46 +211,59 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: isActive
-                  ? BoxDecoration(
-                      color: const Color(0xFFD8F3DC),
-                      borderRadius: BorderRadius.circular(14))
-                  : null,
-              child: Icon(icon,
-                  color: isActive
-                      ? const Color(0xFF2D6A4F)
-                      : const Color(0xFF6B8F71),
-                  size: 24),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutCubic,
+              width: 48,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isActive ? const Color(0xFFD8F3DC) : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: isActive
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF2D6A4F).withOpacity(0.12),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Icon(
+                icon,
+                color: isActive
+                    ? const Color(0xFF1B4332)
+                    : const Color(0xFF6B8F71),
+                size: isActive ? 24 : 22,
+              ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
+            const SizedBox(height: 3),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
               style: TextStyle(
                 fontSize: 10.5,
-                fontWeight:
-                    isActive ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                 color: isActive
-                    ? const Color(0xFF2D6A4F)
+                    ? const Color(0xFF1B4332)
                     : const Color(0xFF6B8F71),
+                letterSpacing: isActive ? -0.1 : 0,
+              ),
+              child: Text(label),
+            ),
+            const SizedBox(height: 3),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              width: isActive ? 16 : 0,
+              height: 2.5,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2D6A4F),
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            if (isActive)
-              Container(
-                margin: const EdgeInsets.only(top: 3),
-                width: 22,
-                height: 2.5,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2D6A4F),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
           ],
         ),
       ),

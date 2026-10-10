@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -239,41 +240,144 @@ class _ScanHistoryCard extends StatelessWidget {
         );
       },
       child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8EFE8)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(width: 36, height: 36,
-            decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Icons.photo_camera_outlined, color: Color(0xFF2D6A4F), size: 18)),
-          const SizedBox(width: 10),
-          Expanded(child: Text(DateFormatter.formatDateTime(scan.createdAt),
-            style: const TextStyle(fontSize: 13, color: Color(0xFF6B8F71), fontWeight: FontWeight.w500))),
-          SeverityChip(severity: scan.severity, small: true),
-        ]),
-        const SizedBox(height: 12),
-        Row(children: [
-          _Stat(value: scan.weedCount.toString(), label: AppLocalizations.of(context).weedsDetected, color: const Color(0xFF2D6A4F)),
-          const SizedBox(width: 24),
-          _Stat(value: '${(scan.averageConfidence * 100).toStringAsFixed(0)}%', label: AppLocalizations.of(context).confidence, color: const Color(0xFF3A86C8)),
-          if (scan.priorityZone != null) ...[
-            const SizedBox(width: 24),
-            _Stat(value: scan.priorityZone!, label: AppLocalizations.of(context).get('severity'), color: const Color(0xFFF4A261)),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE8F0E8), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
           ],
-        ]),
-        if (scan.isMockDetection) ...[
-          const SizedBox(height: 8),
-          Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(5)),
-            child: const Text('Demo detection', style: TextStyle(fontSize: 10, color: Color(0xFF2D6A4F)))),
-        ],
-      ]),
-    ));
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    color: const Color(0xFFE8F5E9),
+                    child: scan.imageUrl != null && scan.imageUrl!.isNotEmpty
+                        ? (scan.imageUrl!.startsWith('http')
+                            ? Image.network(
+                                scan.imageUrl!,
+                                width: 44,
+                                height: 44,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.photo_camera_rounded,
+                                  color: Color(0xFF2D6A4F),
+                                  size: 20,
+                                ),
+                              )
+                            : Image.file(
+                                File(scan.imageUrl!),
+                                width: 44,
+                                height: 44,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.photo_camera_rounded,
+                                  color: Color(0xFF2D6A4F),
+                                  size: 20,
+                                ),
+                              ))
+                        : const Icon(
+                            Icons.photo_camera_rounded,
+                            color: Color(0xFF2D6A4F),
+                            size: 22,
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        DateFormatter.formatDateTime(scan.createdAt),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF1B4332),
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${scan.weedCount} weed${scan.weedCount == 1 ? '' : 's'} recorded',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF6B8F71),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SeverityChip(severity: scan.severity, small: true),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAF8),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE8F0E8)),
+              ),
+              child: Row(
+                children: [
+                  _Stat(
+                    value: scan.weedCount.toString(),
+                    label: AppLocalizations.of(context).weedsDetected,
+                    color: const Color(0xFF2D6A4F),
+                  ),
+                  const Spacer(),
+                  _Stat(
+                    value: '${(scan.averageConfidence * 100).toStringAsFixed(0)}%',
+                    label: AppLocalizations.of(context).confidence,
+                    color: const Color(0xFF3A86C8),
+                  ),
+                  if (scan.priorityZone != null) ...[
+                    const Spacer(),
+                    _Stat(
+                      value: scan.priorityZone!,
+                      label: 'Priority',
+                      color: const Color(0xFFF4A261),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (scan.isMockDetection) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'Demo detection',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2D6A4F),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 

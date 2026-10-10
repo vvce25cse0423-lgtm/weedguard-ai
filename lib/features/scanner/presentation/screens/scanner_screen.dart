@@ -305,19 +305,27 @@ class _AnalyzingStep extends StatefulWidget {
   State<_AnalyzingStep> createState() => _AnalyzingStepState();
 }
 
-class _AnalyzingStepState extends State<_AnalyzingStep> with SingleTickerProviderStateMixin {
+class _AnalyzingStepState extends State<_AnalyzingStep> with TickerProviderStateMixin {
   late AnimationController _ctrl;
+  late AnimationController _radarCtrl;
   late Animation<double> _pulse;
+  late Animation<double> _beamPos;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.85, end: 1.1).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat(reverse: true);
+    _radarCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200))..repeat();
+    _pulse = Tween<double>(begin: 0.92, end: 1.08).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _beamPos = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOutSine));
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    _radarCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -326,42 +334,161 @@ class _AnalyzingStepState extends State<_AnalyzingStep> with SingleTickerProvide
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            ScaleTransition(
-              scale: _pulse,
-              child: Container(
-                width: 96, height: 96,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Premium High-Tech Scan Reticle
+              SizedBox(
+                width: 140,
+                height: 140,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Outer rotating radar glow
+                    RotationTransition(
+                      turns: _radarCtrl,
+                      child: Container(
+                        width: 136,
+                        height: 136,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFF2D6A4F).withOpacity(0.25),
+                            width: 2,
+                            strokeAlign: BorderSide.strokeAlignOutside,
+                          ),
+                          gradient: SweepGradient(
+                            colors: [
+                              Colors.transparent,
+                              const Color(0xFF52B788).withOpacity(0.0),
+                              const Color(0xFF52B788).withOpacity(0.35),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Inner pulsing container
+                    ScaleTransition(
+                      scale: _pulse,
+                      child: Container(
+                        width: 96,
+                        height: 96,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const RadialGradient(
+                            colors: [Color(0xFFE8F5E9), Color(0xFFD8F3DC)],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF2D6A4F).withOpacity(0.25),
+                              blurRadius: 24,
+                              spreadRadius: 6,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.biotech_rounded, size: 48, color: Color(0xFF2D6A4F)),
+                      ),
+                    ),
+                    // Laser scanning horizontal bar
+                    AnimatedBuilder(
+                      animation: _beamPos,
+                      builder: (context, _) {
+                        return Positioned(
+                          top: 20 + _beamPos.value * 100,
+                          left: 20,
+                          right: 20,
+                          child: Container(
+                            height: 2.5,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Colors.transparent,
+                                  Color(0xFF52B788),
+                                  Color(0xFF2D6A4F),
+                                  Color(0xFF52B788),
+                                  Colors.transparent,
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF52B788).withOpacity(0.8),
+                                  blurRadius: 6,
+                                  spreadRadius: 1.5,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 36),
+              // Glowing smooth progress bar
+              Container(
+                width: 220,
+                height: 6,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3),
+                  color: const Color(0xFFD8F3DC),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: const LinearProgressIndicator(
+                    color: Color(0xFF2D6A4F),
+                    backgroundColor: Color(0xFFD8F3DC),
+                    minHeight: 6,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(
+                    position: Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero).animate(anim),
+                    child: child,
+                  ),
+                ),
+                child: Text(
+                  widget.message.isEmpty ? AppLocalizations.of(context).analyzing : widget.message,
+                  key: ValueKey(widget.message),
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1B4332),
+                    letterSpacing: -0.2,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8F5E9),
-                  shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: const Color(0xFF2D6A4F).withOpacity(0.25), blurRadius: 20, spreadRadius: 4)],
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.biotech_outlined, size: 48, color: Color(0xFF2D6A4F)),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.auto_awesome, size: 13, color: Color(0xFF2D6A4F)),
+                    SizedBox(width: 5),
+                    Text(
+                      'AI Vision Neural Analysis Active',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2D6A4F),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 32),
-            const SizedBox(
-              width: 200,
-              child: LinearProgressIndicator(
-                color: Color(0xFF2D6A4F),
-                backgroundColor: Color(0xFFE8F5E9),
-                minHeight: 6,
-              ),
-            ),
-            const SizedBox(height: 28),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: SlideTransition(
-                position: Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(anim), child: child)),
-              child: Text(widget.message.isEmpty ? AppLocalizations.of(context).analyzing : widget.message,
-                key: ValueKey(widget.message),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1B4332)),
-                textAlign: TextAlign.center),
-            ),
-            const SizedBox(height: 10),
-            Text(AppLocalizations.of(context).get('loading'),
-              style: const TextStyle(fontSize: 13, color: Color(0xFF757575)), textAlign: TextAlign.center),
-          ]),
+            ],
+          ),
         ),
       ),
     );
