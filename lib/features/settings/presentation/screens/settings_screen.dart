@@ -142,29 +142,31 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
   void _showApiKeyDialog(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    final currentKey = prefs.getString('openrouter_api_key') ?? '';
+    final currentKey = prefs.getString('groq_api_key') ?? prefs.getString('openrouter_api_key') ?? '';
     final controller = TextEditingController(text: currentKey);
 
     if (!context.mounted) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('OpenRouter API Key'),
+        title: const Text('Groq AI API Key'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Enter your OpenRouter API key for cloud AI model inference. If empty or invalid, on-device analysis runs automatically.',
+              'Enter your Groq API key (starts with gsk_...) for cloud AI vision inference. If empty or unavailable, on-device vision analysis runs automatically.',
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               decoration: const InputDecoration(
-                hintText: 'sk-or-v1-...',
+                hintText: 'gsk_...',
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
@@ -179,7 +181,9 @@ class SettingsScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              await prefs.setString('openrouter_api_key', controller.text.trim());
+              final val = controller.text.trim();
+              await prefs.setString('groq_api_key', val);
+              await prefs.setString('openrouter_api_key', val);
               if (ctx.mounted) Navigator.pop(ctx);
             },
             child: const Text('Save'),
@@ -274,7 +278,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             _Tile(
               icon: Icons.vpn_key_outlined,
-              label: 'OpenRouter API Key',
+              label: 'Groq AI API Key',
               onTap: () => _showApiKeyDialog(context),
             ),
           ]),
