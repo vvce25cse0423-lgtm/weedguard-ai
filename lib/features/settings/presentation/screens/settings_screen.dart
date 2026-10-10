@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers/app_providers.dart';
@@ -141,6 +142,51 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  void _showApiKeyDialog(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentKey = prefs.getString('openrouter_api_key') ?? '';
+    final controller = TextEditingController(text: currentKey);
+
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('OpenRouter API Key'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter your OpenRouter API key for cloud AI model inference. If empty or invalid, on-device analysis runs automatically.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                hintText: 'sk-or-v1-...',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              obscureText: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await prefs.setString('openrouter_api_key', controller.text.trim());
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -225,6 +271,11 @@ class SettingsScreen extends ConsumerWidget {
               trailing: Text(l10n.metric,
                   style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
               onTap: () => _showUnitsDialog(context),
+            ),
+            _Tile(
+              icon: Icons.vpn_key_outlined,
+              label: 'OpenRouter API Key',
+              onTap: () => _showApiKeyDialog(context),
             ),
           ]),
 
