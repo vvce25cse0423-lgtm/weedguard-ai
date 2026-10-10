@@ -1,0 +1,11 @@
+name: Flutter CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    name: Disabled
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "This workflow is disabled"
