@@ -14,11 +14,24 @@ final fieldsProvider = FutureProvider<List<FieldModel>>((ref) async {
   return repo.getFields();
 });
 
-class FieldsListScreen extends ConsumerWidget {
+class FieldsListScreen extends ConsumerStatefulWidget {
   const FieldsListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FieldsListScreen> createState() => _FieldsListScreenState();
+}
+
+class _FieldsListScreenState extends ConsumerState<FieldsListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(fieldsProvider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final fieldsAsync = ref.watch(fieldsProvider);
 
     return Scaffold(

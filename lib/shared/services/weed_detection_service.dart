@@ -19,64 +19,23 @@ abstract class WeedDetectionService {
 // ─────────────────────────────────────────────────────────────────────────────
 class GeminiWeedDetectionService implements WeedDetectionService {
   static String get _groqApiKey => utf8.decode(
-      base64Decode('Z3NrX0FpM243WFIwQ0ZoSnVTdzRkR0RlV0dkeWIzRllVVkw1S1VtTDNBck90MnpPZ1k4a0Vxako='));
+    base64Decode(
+      'Z3NrX0FpM243WFIwQ0ZoSnVTdzRkR0RlV0dkeWIzRllVVkw1S1VtTDNBck90MnpPZ1k4a0Vxako=',
+    ),
+  );
   static const _groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
   static const _groqModel = 'qwen/qwen3.8-27b';
 
   @override
   bool get isMock => false;
 
-  static const _cropNames = [
-    'Finger Millet (Ragi)', 'Sorghum (Jowar)', 'Rice (Paddy)', 'Maize (Corn)',
-    'Pearl Millet (Bajra)', 'Wheat', 'Foxtail Millet (Navane)', 'Little Millet (Same)',
-    'Kodo Millet (Arka)', 'Proso Millet (Baragu)', 'Pigeon Pea (Red Gram)',
-    'Chickpea (Bengal Gram)', 'Black Gram (Udid)', 'Green Gram (Moong)',
-    'Horse Gram (Huruli)', 'Cowpea (Alsandi)', 'Lablab Bean (Avare)',
-    'Groundnut (Peanut)', 'Sunflower', 'Sesame (Ellu)', 'Sugarcane',
-    'Cotton', 'Soybean', 'Tomato', 'Banana', 'Chilli', 'Castor',
-    'Mustard', 'Niger (Huttellu)', 'Tobacco', 'Arecanut (Betel Nut)',
-    'Coconut', 'Coffee Arabica', 'Coffee Robusta', 'Tea', 'Rubber',
-    'Cardamom', 'Black Pepper', 'Mango', 'Pomegranate', 'Grapes',
-    'Guava', 'Sapota (Chikoo)', 'Onion', 'Brinjal (Eggplant)',
-    'Okra (Bhendi)', 'Jute', 'Turmeric', 'Ginger',
-  ];
-
-  static const _weedNames = [
-    'Purple Nutsedge (Cyperus rotundus)', 'Yellow Nutsedge (Cyperus esculentus)',
-    'Bermuda Grass (Cynodon dactylon)', 'Barnyard Grass (Echinochloa crus-galli)',
-    'Jungle Rice (Echinochloa colona)', 'Crowfoot Grass (Dactyloctenium aegyptium)',
-    'Goosegrass (Eleusine indica)', 'Crabgrass (Digitaria sanguinalis)',
-    'Feather Fingergrass (Chloris barbata)', 'Brachiaria Grass (Brachiaria ramosa)',
-    'Kans Grass (Saccharum spontaneum)', 'Cogongrass (Imperata cylindrica)',
-    'Lovegrass (Eragrostis unioloides)', 'Globe Fimbristylis (Fimbristylis miliacea)',
-    'Short-leaf Spike Rush (Cyperus brevifolius)', 'Johnsongrass (Sorghum halepense)',
-    'Little Canary Grass (Phalaris minor)', 'Congress Grass (Parthenium hysterophorus)',
-    'Benghal Dayflower (Commelina benghalensis)', 'Coat Buttons Tridax (Tridax procumbens)',
-    'Horse Purslane (Trianthema portulacastrum)', 'Wild Amaranth (Amaranthus spinosus)',
-    'Slender Amaranth (Amaranthus viridis)', 'Spurge Milkweed (Euphorbia hirta)',
-    'Thyme-leaved Spurge (Euphorbia thymifolia)', 'False Daisy (Eclipta alba)',
-    'Wild Mustard Cleome (Cleome viscosa)', 'Mexican Prickly Poppy (Argemone mexicana)',
-    'Touch-Me-Not (Mimosa pudica)', 'Billygoat Weed (Ageratum conyzoides)',
-    'Siam Weed (Chromolaena odorata)', "Devil's Horsewhip (Achyranthes aspera)",
-    'Indian Acalypha (Acalypha indica)', 'Balloon Vine (Cardiospermum halicacabum)',
-    'Black Nightshade (Solanum nigrum)', 'Turkey Berry (Solanum torvum)',
-    'Field Bindweed (Convolvulus arvensis)', 'Wild Goat Weed (Stachytarpheta jamaicensis)',
-    'Spreading Hogweed (Boerhavia diffusa)', 'Dwarf Copperleaf (Alternanthera sessilis)',
-    'Khaki Weed (Alternanthera pungens)', 'Country Mallow (Abutilon indicum)',
-    'Arrowleaf Sida (Sida rhombifolia)', 'Common Cocklebur (Xanthium strumarium)',
-    'Wild Coffee (Cassia occidentalis)', 'Sickle Senna (Cassia tora)',
-    "Lamb's Quarters (Chenopodium album)", 'Ban Tulsi (Croton bonplandianum)',
-    'Witchweed (Striga asiatica)', 'Dodder (Cuscuta reflexa)',
-    'Broomrape (Orobanche cernua)', 'Water Hyacinth (Eichhornia crassipes)',
-    'Water Lettuce (Pistia stratiotes)',
-  ];
-
   @override
   Future<WeedDetectionResult> analyzeImage(File imageFile) async {
     // ── 1. Resize + compress image ───────────────────────────────────────────
     final rawBytes = await imageFile.readAsBytes();
     final decoded = img.decodeImage(rawBytes);
-    if (decoded == null) throw const AnalysisException('Could not decode image file.');
+    if (decoded == null)
+      throw const AnalysisException('Could not decode image file.');
     img.Image resized = decoded;
     const maxDim = 1024;
     if (decoded.width > maxDim || decoded.height > maxDim) {
@@ -91,7 +50,9 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     String activeApiKey = _groqApiKey;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userKey = prefs.getString('groq_api_key') ?? prefs.getString('openrouter_api_key');
+      final userKey =
+          prefs.getString('groq_api_key') ??
+          prefs.getString('openrouter_api_key');
       if (userKey != null && userKey.trim().isNotEmpty) {
         activeApiKey = userKey.trim();
       }
@@ -125,44 +86,45 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     required String imagePath,
   }) async {
     final prompt =
-        'You are an expert agricultural AI. Analyze this field image and identify the crop and any weeds present.\n\n'
-        'Known crops (pick the best match): ${_cropNames.join(', ')}.\n'
-        'Known weeds (identify any visible): ${_weedNames.join(', ')}.\n\n'
+        'You are an expert global agricultural AI and botanist. Analyze this uploaded field or plant image carefully.\n'
+        'Identify ANY agricultural crop, cultivated plant, fruit, vegetable, cereal, or flower present in the image.\n'
+        'Identify ANY weed or invasive plant species present worldwide (provide the common name, and botanical/scientific name in parentheses where possible).\n\n'
         'Confidence calibration:\n'
-        '- 0.90-1.0: 3+ definitive features match\n'
-        '- 0.75-0.89: 2 features match\n'
-        '- 0.60-0.74: partial view\n'
+        '- 0.90-1.0: 3+ definitive visual features match\n'
+        '- 0.75-0.89: 2 visual features match\n'
+        '- 0.60-0.74: partial or distant view\n'
         '- Below 0.60: very uncertain\n\n'
-        'Respond ONLY with valid JSON (no markdown, no backticks):\n'
+        'Respond ONLY with valid JSON (no markdown fences, no backticks):\n'
         '{\n'
-        '  "crop_identified": "Full name or null",\n'
+        '  "crop_identified": "Full common and scientific name of the crop (or null if none)",\n'
         '  "crop_confidence": 0.95,\n'
         '  "crop_growth_stage": "seedling|vegetative|reproductive|maturity",\n'
-        '  "crop_key_features": "observed features",\n'
+        '  "crop_key_features": "observed visual features",\n'
         '  "weeds": [\n'
         '    {\n'
-        '      "name": "Weed name",\n'
+        '      "name": "Weed common name (Botanical name)",\n'
         '      "count": 2,\n'
         '      "confidence": 0.85,\n'
         '      "severity": "low|moderate|high",\n'
         '      "distribution": "scattered|clustered|uniform",\n'
-        '      "key_feature": "observed feature"\n'
+        '      "key_feature": "observed leaf, stem, or flower feature"\n'
         '    }\n'
         '  ],\n'
         '  "total_weed_count": 2,\n'
         '  "overall_severity": "low|moderate|high",\n'
         '  "infestation_score": 0.15,\n'
         '  "affected_area_percent": 15,\n'
-        '  "recommended_action": "specific recommendation",\n'
-        '  "summary": "One-line agronomic assessment"\n'
+        '  "recommended_action": "specific management or targeted herbicide intervention recommendation",\n'
+        '  "summary": "One-line agronomic assessment of the field condition"\n'
         '}\n\n'
         'Rules:\n'
-        '1. confidence must be 0.0-1.0\n'
-        '2. infestation_score: 0.0=no weeds, 1.0=fully infested\n'
-        '3. severity: low <10%, moderate 10-30%, high >30%\n'
-        '4. If not a crop image: crop_identified=null, weeds=[]\n'
-        '5. NEVER list the main crop as a weed\n'
-        '6. Count only clearly visible plants';
+        '1. You can identify ANY crop and ANY weed species globally based purely on visual inspection.\n'
+        '2. confidence must be 0.0-1.0\n'
+        '3. infestation_score: 0.0=no weeds, 1.0=fully infested\n'
+        '4. severity: low <10%, moderate 10-30%, high >30%\n'
+        '5. If no crop is present or image is not agricultural: crop_identified=null, weeds=[]\n'
+        '6. NEVER list the main crop as a weed\n'
+        '7. Count only visible weed plants';
 
     final body = jsonEncode({
       'model': model,
@@ -170,18 +132,13 @@ class GeminiWeedDetectionService implements WeedDetectionService {
         {
           'role': 'user',
           'content': [
-            {
-              'type': 'text',
-              'text': prompt,
-            },
+            {'type': 'text', 'text': prompt},
             {
               'type': 'image_url',
-              'image_url': {
-                'url': 'data:image/jpeg;base64,$base64Image',
-              }
+              'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
             },
-          ]
-        }
+          ],
+        },
       ],
       'max_tokens': 2048,
       'temperature': 0.1,
@@ -263,7 +220,8 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     final seed = (avgFoliage * 1000).toInt() + width + height;
     final rng = math.Random(seed);
 
-    final infestationScore = (avgFoliage * 0.70 + (rng.nextDouble() * 0.12)).clamp(0.08, 0.75);
+    final infestationScore = (avgFoliage * 0.70 + (rng.nextDouble() * 0.12))
+        .clamp(0.08, 0.75);
 
     SeverityLevel severity;
     if (infestationScore <= AppConstants.severityLowMax) {
@@ -278,13 +236,18 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     final zoneWeeds = <int>[];
     int distributedWeeds = 0;
     for (int i = 0; i < 4; i++) {
-      final share = totalGreenRatio > 0.01 ? (zoneFoliage[i] / totalGreenRatio) : 0.25;
+      final share = totalGreenRatio > 0.01
+          ? (zoneFoliage[i] / totalGreenRatio)
+          : 0.25;
       final count = (totalWeeds * share).round();
       zoneWeeds.add(count);
       distributedWeeds += count;
     }
     if (distributedWeeds != totalWeeds && zoneWeeds.isNotEmpty) {
-      zoneWeeds[0] = math.max(0, zoneWeeds[0] + (totalWeeds - distributedWeeds));
+      zoneWeeds[0] = math.max(
+        0,
+        zoneWeeds[0] + (totalWeeds - distributedWeeds),
+      );
     }
 
     final zones = List.generate(4, (i) {
@@ -306,7 +269,9 @@ class GeminiWeedDetectionService implements WeedDetectionService {
       );
     });
 
-    final priorityZone = zones.reduce((a, b) => a.weedCount >= b.weedCount ? a : b).zoneLabel;
+    final priorityZone = zones
+        .reduce((a, b) => a.weedCount >= b.weedCount ? a : b)
+        .zoneLabel;
 
     final cropCandidates = [
       'Maize (Corn)',
@@ -332,7 +297,10 @@ class GeminiWeedDetectionService implements WeedDetectionService {
       'Goosegrass (Eleusine indica)',
     ];
 
-    final numWeedTypes = math.min(weedCatalog.length, math.max(2, (totalWeeds / 3).ceil()));
+    final numWeedTypes = math.min(
+      weedCatalog.length,
+      math.max(2, (totalWeeds / 3).ceil()),
+    );
     final shuffledWeeds = List<String>.from(weedCatalog)..shuffle(rng);
 
     final detections = <WeedDetection>[
@@ -349,16 +317,14 @@ class GeminiWeedDetectionService implements WeedDetectionService {
       final weedConf = 0.81 + (rng.nextDouble() * 0.12);
 
       for (int c = 0; c < countForType; c++) {
-        detections.add(WeedDetection(
-          label: weedName,
-          confidence: weedConf,
-        ));
+        detections.add(WeedDetection(label: weedName, confidence: weedConf));
       }
     }
 
     final avgConf = detections.isEmpty
         ? 0.0
-        : detections.map((d) => d.confidence).reduce((a, b) => a + b) / detections.length;
+        : detections.map((d) => d.confidence).reduce((a, b) => a + b) /
+              detections.length;
 
     return WeedDetectionResult(
       imagePath: imagePath,
@@ -374,11 +340,15 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     );
   }
 
-  WeedDetectionResult _buildResult(String imagePath, Map<String, dynamic> parsed) {
+  WeedDetectionResult _buildResult(
+    String imagePath,
+    Map<String, dynamic> parsed,
+  ) {
     final rawCropName = parsed['crop_identified'] as String?;
     final cropConf = (parsed['crop_confidence'] as num?)?.toDouble() ?? 0.0;
 
-    final cropName = (rawCropName != null &&
+    final cropName =
+        (rawCropName != null &&
             rawCropName.isNotEmpty &&
             rawCropName != 'null' &&
             rawCropName != 'Unknown' &&
@@ -387,10 +357,15 @@ class GeminiWeedDetectionService implements WeedDetectionService {
         : null;
 
     final weedsJson = parsed['weeds'] as List<dynamic>? ?? [];
-    final totalWeedCount = (parsed['total_weed_count'] as num?)?.toInt() ??
-        weedsJson.fold<int>(0, (s, w) => s + ((w['count'] as num?)?.toInt() ?? 1));
+    final totalWeedCount =
+        (parsed['total_weed_count'] as num?)?.toInt() ??
+        weedsJson.fold<int>(
+          0,
+          (s, w) => s + ((w['count'] as num?)?.toInt() ?? 1),
+        );
     final severityStr = parsed['overall_severity'] as String? ?? 'low';
-    final infestationScore = (parsed['infestation_score'] as num?)?.toDouble() ?? 0.0;
+    final infestationScore =
+        (parsed['infestation_score'] as num?)?.toDouble() ?? 0.0;
 
     final detections = <WeedDetection>[];
 
@@ -407,7 +382,9 @@ class GeminiWeedDetectionService implements WeedDetectionService {
       if (conf < 0.40) continue;
       if (cropName != null &&
           weedName.toLowerCase().contains(
-              cropName.split('(').first.trim().toLowerCase())) continue;
+            cropName.split('(').first.trim().toLowerCase(),
+          ))
+        continue;
 
       for (int i = 0; i < count; i++) {
         detections.add(WeedDetection(label: weedName, confidence: conf));
@@ -418,7 +395,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     final avgConf = detections.isEmpty
         ? 0.0
         : detections.map((d) => d.confidence).reduce((a, b) => a + b) /
-            detections.length;
+              detections.length;
 
     final zones = _buildZones(weedsJson, totalWeedCount, infestationScore);
     final priorityZone = zones.isEmpty
@@ -440,19 +417,24 @@ class GeminiWeedDetectionService implements WeedDetectionService {
   }
 
   List<FieldZoneAnalysis> _buildZones(
-      List<dynamic> weedsJson, int totalWeedCount, double infestationScore) {
+    List<dynamic> weedsJson,
+    int totalWeedCount,
+    double infestationScore,
+  ) {
     const zoneLabels = ['Zone A', 'Zone B', 'Zone C', 'Zone D'];
     final basePerZone = totalWeedCount ~/ 4;
     final remainder = totalWeedCount % 4;
-    final perZone =
-        List.generate(4, (i) => basePerZone + (i < remainder ? 1 : 0));
+    final perZone = List.generate(
+      4,
+      (i) => basePerZone + (i < remainder ? 1 : 0),
+    );
     final baseCoverage = infestationScore * 100;
 
     return List.generate(4, (i) {
       final count = perZone[i];
-      final coverage = (baseCoverage *
-              (count / (totalWeedCount == 0 ? 1 : totalWeedCount)))
-          .clamp(0.0, 100.0);
+      final coverage =
+          (baseCoverage * (count / (totalWeedCount == 0 ? 1 : totalWeedCount)))
+              .clamp(0.0, 100.0);
       SeverityLevel sev;
       if (infestationScore <= AppConstants.severityLowMax)
         sev = SeverityLevel.low;
@@ -501,7 +483,8 @@ class MockWeedDetectionService implements WeedDetectionService {
       totalWeedCount: 5,
       severity: SeverityLevel.low,
       infestationScore: 0.08,
-      summary: 'Sugarcane field with minor nutsedge and barnyard grass pressure',
+      summary:
+          'Sugarcane field with minor nutsedge and barnyard grass pressure',
     ),
     _DemoScenario(
       crop: 'Maize (Corn)',
@@ -526,7 +509,8 @@ class MockWeedDetectionService implements WeedDetectionService {
       totalWeedCount: 13,
       severity: SeverityLevel.moderate,
       infestationScore: 0.28,
-      summary: 'Rice paddy with significant barnyard grass and sedge competition',
+      summary:
+          'Rice paddy with significant barnyard grass and sedge competition',
     ),
   ];
 
@@ -541,19 +525,21 @@ class MockWeedDetectionService implements WeedDetectionService {
 
     final detections = <WeedDetection>[
       WeedDetection(label: scenario.crop, confidence: scenario.cropConf),
-      ...scenario.weeds
-          .map((w) => WeedDetection(label: w.name, confidence: w.confidence)),
+      ...scenario.weeds.map(
+        (w) => WeedDetection(label: w.name, confidence: w.confidence),
+      ),
     ];
 
-    final avgConf = detections
-            .map((d) => d.confidence)
-            .reduce((a, b) => a + b) /
+    final avgConf =
+        detections.map((d) => d.confidence).reduce((a, b) => a + b) /
         detections.length;
 
     final basePerZone = scenario.totalWeedCount ~/ 4;
     final remainder = scenario.totalWeedCount % 4;
-    final perZone =
-        List.generate(4, (i) => basePerZone + (i < remainder ? 1 : 0));
+    final perZone = List.generate(
+      4,
+      (i) => basePerZone + (i < remainder ? 1 : 0),
+    );
     const zoneLabels = ['Zone A', 'Zone B', 'Zone C', 'Zone D'];
 
     final zones = List.generate(4, (i) {
@@ -570,8 +556,9 @@ class MockWeedDetectionService implements WeedDetectionService {
       );
     });
 
-    final priorityZone =
-        zones.reduce((a, b) => a.weedCount >= b.weedCount ? a : b).zoneLabel;
+    final priorityZone = zones
+        .reduce((a, b) => a.weedCount >= b.weedCount ? a : b)
+        .zoneLabel;
 
     return WeedDetectionResult(
       imagePath: imageFile.path,

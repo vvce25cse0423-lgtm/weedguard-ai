@@ -74,6 +74,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
     ));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(dashboardScansProvider);
+      ref.invalidate(dashboardFieldsProvider);
+    });
   }
 
   String _greeting(BuildContext context) {
@@ -96,8 +100,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     final fields = fieldsAsync.valueOrNull ?? [];
     final scans = scansAsync.valueOrNull ?? [];
-    final highCount =
-        scans.where((s) => s.severity == SeverityLevel.high).length;
+    final highCount = scans.where((s) =>
+        s.severity == SeverityLevel.high ||
+        s.severity == SeverityLevel.moderate ||
+        s.weedCount > 0).length;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -861,15 +867,41 @@ class _EmptyScansCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onScan,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Image.asset(
-          'assets/images/no_scans_placeholder.png',
-          width: double.infinity,
-          fit: BoxFit.fitWidth,
-        ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          // Target only the "Scan now >" button pill in the placeholder:
+          // x: 40% -> 83%, y: 67% -> 87%
+          final btnLeft = width * 0.40;
+          final btnRight = width * 0.17;
+          final btnTop = (width / (1869 / 842)) * 0.67;
+          final btnHeight = (width / (1869 / 842)) * 0.20;
+
+          return Stack(
+            children: [
+              Image.asset(
+                'assets/images/no_scans_placeholder.png',
+                width: double.infinity,
+                fit: BoxFit.fitWidth,
+              ),
+              Positioned(
+                left: btnLeft,
+                right: btnRight,
+                top: btnTop,
+                height: btnHeight,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onScan,
+                  child: Container(
+                    color: Colors.transparent,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

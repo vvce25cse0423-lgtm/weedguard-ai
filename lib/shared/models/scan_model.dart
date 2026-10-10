@@ -86,6 +86,7 @@ class ScanModel {
         'priority_zone': priorityZone,
         'infestation_score': infestationScore,
         'is_mock_detection': isMockDetection,
+        'field_zones': zones.map((z) => z.toJson()).toList(),
         'created_at': createdAt.toIso8601String(),
       };
 }

@@ -35,9 +35,9 @@ class _DetectionResultScreenState extends ConsumerState<DetectionResultScreen> {
   bool _scanSaved = false;
 
   Future<void> _saveAndGoHistory() async {
-    // If scan wasn't saved yet (scanId is null/empty), save it now
-    if ((widget.scanId == null || widget.scanId!.isEmpty) && !_scanSaved) {
-      setState(() => _scanSaved = true);
+    // Ensure scan is saved into local/remote repository
+    if (!_scanSaved) {
+      _scanSaved = true;
       try {
         final scanRepo = ScanRepository(Supabase.instance.client);
         await scanRepo.saveScan(
@@ -50,6 +50,7 @@ class _DetectionResultScreenState extends ConsumerState<DetectionResultScreen> {
       }
     }
     ref.invalidate(dashboardScansProvider);
+    ref.invalidate(dashboardFieldsProvider);
     ref.invalidate(scanHistoryProvider);
     if (mounted) context.go('/history');
   }
