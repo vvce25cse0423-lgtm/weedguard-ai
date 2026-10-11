@@ -410,11 +410,11 @@ class _DetectedWeedTypes extends StatelessWidget {
 
     // Ensure we always have both crop and weed sections populated
     if (crops.isEmpty && weeds.isNotEmpty) {
-      // If only weeds were classified, check if first detection is actually the primary crop
       final first = weeds.first;
-      crops = [WeedDetection(label: 'Field Crop (${first.label.split('(').first.trim()})', confidence: math.max(0.85, first.confidence), isCrop: true)];
+      final weedCore = first.label.split('(').first.trim();
+      crops = [WeedDetection(label: 'Agricultural Crop ($weedCore field)', confidence: math.max(0.85, first.confidence), isCrop: true)];
     } else if (crops.isEmpty && weeds.isEmpty) {
-      crops = [const WeedDetection(label: 'Cultivated Crop (Visual Inspection)', confidence: 0.90, isCrop: true)];
+      crops = [const WeedDetection(label: 'Field Crop (Active Cultivation)', confidence: 0.90, isCrop: true)];
     }
 
     final cropGrouped = _groupDetections(crops);

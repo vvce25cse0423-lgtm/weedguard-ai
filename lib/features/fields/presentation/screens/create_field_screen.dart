@@ -144,112 +144,418 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Edit field' : 'Add field')),
+      backgroundColor: const Color(0xFFF6FBF7),
       body: _loading && _isEditing
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_error != null) ...[
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF1B5E20)))
+          : CustomScrollView(
+              slivers: [
+                // ── Curved Header with landscape & back button ──
+                SliverToBoxAdapter(
+                  child: Stack(
+                    children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: AppColors.errorContainer, borderRadius: BorderRadius.circular(6)),
-                        child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
+                        height: 200,
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          image: DecorationImage(
+                            image: AssetImage('assets/images/add_field_header.png'),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 16),
+                      // Top gradient overlay to ensure text and back button legibility
+                      Container(
+                        height: 200,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.55),
+                              Colors.transparent,
+                              const Color(0xFFF6FBF7),
+                            ],
+                            stops: const [0.0, 0.65, 1.0],
+                          ),
+                        ),
+                      ),
+                      SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: () => context.pop(),
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.35),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                                  ),
+                                  child: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _isEditing ? 'Edit Field' : 'Add Field',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Grow better. Harvest smarter.',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
-                    _SectionLabel('Field information'),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _nameCtrl,
-                      decoration: const InputDecoration(labelText: 'Field name'),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Field name is required' : null,
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
-                      value: _cropType,
-                      decoration: const InputDecoration(labelText: 'Crop type'),
-                      items: _cropTypes.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                      onChanged: (v) { if (v != null) setState(() => _cropType = v); },
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _areaCtrl,
-                      decoration: const InputDecoration(labelText: 'Area (hectares)', hintText: 'e.g. 2.5'),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (v) {
-                        if (v != null && v.isNotEmpty && double.tryParse(v) == null) return 'Enter a valid number';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    _SectionLabel('Location'),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _locationCtrl,
-                            decoration: const InputDecoration(labelText: 'Location label or coordinates'),
+                  ),
+                ),
+
+                // ── Form Content ──
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_error != null) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFEBEE),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFFCDD2)),
+                              ),
+                              child: Text(_error!, style: const TextStyle(color: Color(0xFFC62828), fontSize: 13)),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+
+                          // ── Field information section ──
+                          _buildSectionCard(
+                            icon: Icons.eco,
+                            iconColor: const Color(0xFF2D6A4F),
+                            title: 'Field information',
+                            children: [
+                              _buildInputField(
+                                label: 'Field name',
+                                icon: Icons.spa_outlined,
+                                child: TextFormField(
+                                  controller: _nameCtrl,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Enter field name',
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Field name is required' : null,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              _buildInputField(
+                                label: 'Crop type',
+                                icon: Icons.grass_outlined,
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: _cropType,
+                                    isDense: true,
+                                    isExpanded: true,
+                                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF2D6A4F)),
+                                    items: _cropTypes.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)))).toList(),
+                                    onChanged: (v) {
+                                      if (v != null) setState(() => _cropType = v);
+                                    },
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              _buildInputField(
+                                label: 'Area (hectares)',
+                                icon: Icons.landscape_outlined,
+                                child: TextFormField(
+                                  controller: _areaCtrl,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Enter area in hectares',
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  validator: (v) {
+                                    if (v != null && v.isNotEmpty && double.tryParse(v) == null) return 'Enter a valid number';
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton.outlined(
-                          onPressed: _locating ? null : _detectLocation,
-                          icon: _locating
-                              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Icon(Icons.my_location_outlined),
-                          tooltip: 'Use current location',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    _SectionLabel('Planting details'),
-                    const SizedBox(height: 12),
-                    InkWell(
-                      onTap: _pickDate,
-                      borderRadius: BorderRadius.circular(6),
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Planting date',
-                          suffixIcon: Icon(Icons.calendar_today_outlined, size: 18),
-                        ),
-                        child: Text(
-                          _plantingDate != null ? DateFormatter.formatDate(_plantingDate!) : 'Select date',
-                          style: TextStyle(
-                            color: _plantingDate != null ? AppColors.textPrimary : AppColors.textDisabled,
+
+                          const SizedBox(height: 16),
+
+                          // ── Location section ──
+                          _buildSectionCard(
+                            icon: Icons.location_on,
+                            iconColor: const Color(0xFF2D6A4F),
+                            title: 'Location',
+                            children: [
+                              _buildInputField(
+                                label: 'Location coordinates or label',
+                                icon: Icons.place_outlined,
+                                trailing: GestureDetector(
+                                  onTap: _locating ? null : _detectLocation,
+                                  child: Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFE8F5E9),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: _locating
+                                        ? const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1B5E20))))
+                                        : const Icon(Icons.my_location_rounded, color: Color(0xFF1B5E20), size: 20),
+                                  ),
+                                ),
+                                child: TextFormField(
+                                  controller: _locationCtrl,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Location label or coordinates',
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
+
+                          const SizedBox(height: 16),
+
+                          // ── Planting details section ──
+                          _buildSectionCard(
+                            icon: Icons.calendar_month,
+                            iconColor: const Color(0xFF2D6A4F),
+                            title: 'Planting details',
+                            children: [
+                              _buildInputField(
+                                label: 'Planting date',
+                                icon: Icons.calendar_today_outlined,
+                                trailing: const Icon(Icons.calendar_today_outlined, color: Color(0xFF2D6A4F), size: 18),
+                                onTap: _pickDate,
+                                child: Text(
+                                  _plantingDate != null ? DateFormatter.formatDate(_plantingDate!) : 'Select date',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: _plantingDate != null ? FontWeight.w600 : FontWeight.w400,
+                                    color: _plantingDate != null ? const Color(0xFF1B4332) : Colors.grey.shade500,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              _buildInputField(
+                                label: 'Notes (optional)',
+                                icon: Icons.notes_outlined,
+                                child: TextFormField(
+                                  controller: _notesCtrl,
+                                  maxLines: 3,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Add any additional notes...',
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 28),
+
+                          // ── Save Field Button ──
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: _loading ? null : _submit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1B5E20),
+                                foregroundColor: Colors.white,
+                                elevation: 4,
+                                shadowColor: const Color(0xFF1B5E20).withOpacity(0.4),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(28),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 24),
+                              ),
+                              child: _loading
+                                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
+                                  : Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              width: 32,
+                                              height: 32,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.2),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(Icons.check_circle_outline, size: 20, color: Colors.white),
+                                            ),
+                                            const SizedBox(width: 14),
+                                            Text(
+                                              _isEditing ? 'Save Changes' : 'Save Field',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: 0.2,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _notesCtrl,
-                      decoration: const InputDecoration(labelText: 'Notes (optional)'),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 28),
-                    ElevatedButton(
-                      onPressed: _loading ? null : _submit,
-                      child: _loading
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : Text(_isEditing ? 'Save changes' : 'Add field'),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
     );
   }
-}
 
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
-  @override
-  Widget build(BuildContext context) => Text(text, style: Theme.of(context).textTheme.headlineSmall);
-}
+  Widget _buildSectionCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: iconColor, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1B4332),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required String label,
+    required IconData icon,
+    required Widget child,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FCF9),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2EFE3)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: const Color(0xFF2D6A4F), size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  child,
+                ],
+              ),
+            ),
+            if (trailing != null) ...[
+              const SizedBox(width: 8),
+              trailing,
+            ],
+          ],
+        ),
+      ),
+    );
+  }

@@ -120,7 +120,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
         'Rules:\n'
         '1. You can identify ANY crop and ANY weed species globally based purely on visual inspection.\n'
         '2. NEVER list the cultivated crop under weeds.\n'
-        '3. If no weed is found, return weeds: []. If crop is not recognizable, identify the closest plant family or "Field Crop (Unspecified)".\n'
+        '3. If no weed is found, return weeds: []. Always name the exact crop (e.g. "Wheat (Triticum aestivum)", "Rice (Oryza sativa)", "Cotton (Gossypium hirsutum)"). NEVER output "unspecified" or "Crop is unspecified" anywhere.\n'
         '4. confidence must be 0.0-1.0\n'
         '5. infestation_score: 0.0=no weeds, 1.0=fully infested\n'
         '6. severity: low <10%, moderate 10-30%, high >30%\n'
@@ -347,13 +347,22 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     final rawCropName = parsed['crop_identified'] as String?;
     final cropConf = (parsed['crop_confidence'] as num?)?.toDouble() ?? 0.0;
 
+    String? cleanCropName = rawCropName;
+    if (cleanCropName != null) {
+      cleanCropName = cleanCropName
+          .replaceAll(RegExp(r'\s*\((unspecified|unidentified|unknown)\)', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\b(unspecified|unknown)\b', caseSensitive: false), '')
+          .trim();
+      if (cleanCropName.isEmpty || cleanCropName.toLowerCase() == 'null' || cleanCropName.toLowerCase() == 'crop') {
+        cleanCropName = null;
+      }
+    }
+
     final cropName =
-        (rawCropName != null &&
-            rawCropName.isNotEmpty &&
-            rawCropName != 'null' &&
-            rawCropName != 'Unknown' &&
-            cropConf >= 0.40)
-        ? rawCropName
+        (cleanCropName != null &&
+            cleanCropName.isNotEmpty &&
+            cropConf >= 0.35)
+        ? cleanCropName
         : null;
 
     final weedsJson = parsed['weeds'] as List<dynamic>? ?? [];
