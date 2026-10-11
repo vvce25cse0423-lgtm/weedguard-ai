@@ -15,6 +15,7 @@ import '../../../scanner/presentation/widgets/severity_chip.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/providers/app_providers.dart';
+import '../../../history/presentation/screens/scan_history_screen.dart';
 
 final dashboardFieldsProvider = FutureProvider<List<FieldModel>>((ref) async {
   return FieldsRepository(Supabase.instance.client).getFields();
