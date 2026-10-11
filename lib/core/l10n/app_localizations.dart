@@ -166,6 +166,9 @@ class AppLocalizations {
   String get addField => get('add_field');
   String get noFieldsYet => get('no_fields_yet');
   String get noFieldsDesc => get('no_fields_desc');
+  String get fieldName => get('field_name');
+  String get fieldSize => get('field_size');
+  String get cropType => get('crop_type');
   String get scanTitle => get('scan_title');
   String get takePhoto => get('take_photo');
   String get chooseGallery => get('choose_gallery');
