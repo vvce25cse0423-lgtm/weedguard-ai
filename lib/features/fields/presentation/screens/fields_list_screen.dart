@@ -180,9 +180,8 @@ class _FieldsListScreenState extends ConsumerState<FieldsListScreen> {
                       ),
                     ),
                   ],
-                ],
-              ),
-            );
+                ),
+              );
           },
         ),
       ),
