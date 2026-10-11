@@ -44,6 +44,15 @@ class _FieldsListScreenState extends ConsumerState<FieldsListScreen> {
             onRetry: () => ref.invalidate(fieldsProvider),
           ),
           data: (fields) {
+            if (fields.isEmpty) {
+              return _FieldsTemplateEmptyScreen(
+                onAdd: () async {
+                  await context.push('/fields/new');
+                  ref.invalidate(fieldsProvider);
+                },
+                onProfile: () => context.push('/profile'),
+              );
+            }
             return RefreshIndicator(
               onRefresh: () async => ref.invalidate(fieldsProvider),
               child: CustomScrollView(
@@ -143,17 +152,6 @@ class _FieldsListScreenState extends ConsumerState<FieldsListScreen> {
                       ),
                     ),
                   ),
-                  if (fields.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: _FieldsEmptyState(
-                        onAdd: () async {
-                          await context.push('/fields/new');
-                          ref.invalidate(fieldsProvider);
-                        },
-                      ),
-                    )
-                  else ...[
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                       sliver: SliverList(
@@ -192,165 +190,73 @@ class _FieldsListScreenState extends ConsumerState<FieldsListScreen> {
   }
 }
 
-class _FieldsEmptyState extends StatelessWidget {
+class _FieldsTemplateEmptyScreen extends StatelessWidget {
   final VoidCallback onAdd;
-  const _FieldsEmptyState({required this.onAdd});
+  final VoidCallback onProfile;
+  const _FieldsTemplateEmptyScreen({required this.onAdd, required this.onProfile});
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-        child: Column(
-          children: [
-            // Card matching the template perfectly
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Stack(
                 children: [
-                  // Beautiful landscape field header
-                  Stack(
-                    alignment: Alignment.bottomCenter,
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
-                        height: 240,
-                        width: double.infinity,
-                        decoration: const BoxDecoration(
-                          image: DecorationImage(
-                            image: AssetImage('assets/images/fields_hero.png'),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      // Floating circular leaf badge in center
-                      Positioned(
-                        bottom: -30,
-                        child: Container(
-                          width: 68,
-                          height: 68,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.10),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Container(
-                              width: 50,
-                              height: 50,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFE8F5E9),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.eco,
-                                color: Color(0xFF2D6A4F),
-                                size: 30,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  // Template image perfectly scaled to width with natural aspect ratio
+                  Image.asset(
+                    'assets/images/fields_template.png',
+                    width: double.infinity,
+                    fit: BoxFit.fitWidth,
                   ),
-                  const SizedBox(height: 42),
-                  // "No fields yet" text
-                  const Text(
-                    'No fields yet',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1B4332),
-                      letterSpacing: -0.3,
+
+                  // Top right Profile avatar tap zone
+                  Positioned(
+                    top: 14,
+                    right: 18,
+                    width: 50,
+                    height: 50,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: onProfile,
+                      child: const SizedBox.expand(),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Text(
-                      'Add your first field to start scanning for weeds.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade600,
-                        height: 1.4,
-                      ),
+
+                  // Header '+' Add field icon tap zone
+                  Positioned(
+                    top: 86,
+                    right: 18,
+                    width: 50,
+                    height: 50,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: onAdd,
+                      child: const SizedBox.expand(),
                     ),
                   ),
-                  const SizedBox(height: 28),
+
+                  // "Add field" bottom pill button tap zone
+                  Positioned(
+                    left: 20,
+                    right: 20,
+                    bottom: 24,
+                    height: 72,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: onAdd,
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            // Primary green action button matching the template: (+) Add field ->
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: onAdd,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1B5E20),
-                  foregroundColor: Colors.white,
-                  elevation: 4,
-                  shadowColor: const Color(0xFF1B5E20).withOpacity(0.4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.add, size: 20, color: Colors.white),
-                        ),
-                        const SizedBox(width: 14),
-                        const Text(
-                          'Add field',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

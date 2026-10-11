@@ -158,8 +158,9 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
                         width: double.infinity,
                         decoration: const BoxDecoration(
                           image: DecorationImage(
-                            image: AssetImage('assets/images/add_field_header.png'),
+                            image: AssetImage('assets/images/add_field_template.png'),
                             fit: BoxFit.cover,
+                            alignment: Alignment.topCenter,
                           ),
                         ),
                       ),
