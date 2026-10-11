@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,13 +20,40 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _obscurePassword = true;
   bool _loading = false;
+  bool _googleLoading = false;
   String? _error;
+  StreamSubscription<AuthState>? _authSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn && mounted) {
+        context.go('/');
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _authSub?.cancel();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _submitGoogle() async {
+    setState(() { _googleLoading = true; _error = null; });
+    try {
+      final repo = AuthRepository(Supabase.instance.client);
+      await repo.signInWithGoogle();
+    } on AppError catch (e) {
+      setState(() => _error = e.message);
+    } catch (_) {
+      setState(() => _error = 'Google sign in failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _googleLoading = false);
+    }
   }
 
   Future<void> _submitEmail() async {
@@ -161,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   SizedBox(
                                     width: double.infinity, height: 54,
                                     child: ElevatedButton(
-                                      onPressed: _loading ? null : _submitEmail,
+                                      onPressed: (_loading || _googleLoading) ? null : _submitEmail,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: const Color(0xFF2E7D32),
                                         foregroundColor: Colors.white,
@@ -179,6 +207,28 @@ class _LoginScreenState extends State<LoginScreen> {
                                               Icon(Icons.arrow_forward, size: 18),
                                             ]),
                                     ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      Expanded(child: Container(height: 1, color: const Color(0xFF2E7D32).withOpacity(0.2))),
+                                      const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 12),
+                                        child: Text('OR',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF4A7A4A),
+                                            letterSpacing: 1.2,
+                                          )),
+                                      ),
+                                      Expanded(child: Container(height: 1, color: const Color(0xFF2E7D32).withOpacity(0.2))),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _GoogleSignInButton(
+                                    isLoading: _googleLoading,
+                                    onPressed: (_loading || _googleLoading) ? null : _submitGoogle,
                                   ),
                                   const SizedBox(height: 18),
                                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -297,3 +347,60 @@ class _GlassField extends StatelessWidget {
     );
   }
 }
+
+class _GoogleSignInButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  const _GoogleSignInButton({
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          backgroundColor: Colors.white.withOpacity(0.92),
+          foregroundColor: const Color(0xFF1F2937),
+          side: BorderSide(color: Colors.black.withOpacity(0.12), width: 1.2),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 1,
+          shadowColor: Colors.black.withOpacity(0.08),
+        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2.2, color: Color(0xFF4285F4)),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    'assets/images/google_logo.png',
+                    width: 22,
+                    height: 22,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Sign in with Google',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1F2937),
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+

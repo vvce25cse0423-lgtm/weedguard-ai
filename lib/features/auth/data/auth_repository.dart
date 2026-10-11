@@ -40,6 +40,19 @@ class AuthRepository {
     }
   }
 
+  Future<void> signInWithGoogle() async {
+    try {
+      await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'io.supabase.weedguard://login-callback/',
+      );
+    } on AuthException catch (e) {
+      throw AuthError(e.message);
+    } catch (_) {
+      throw const NetworkError();
+    }
+  }
+
   /// Sends OTP to phone. Phone must be in E.164 format e.g. +919876543210
   Future<void> sendPhoneOtp({required String phone}) async {
     try {
