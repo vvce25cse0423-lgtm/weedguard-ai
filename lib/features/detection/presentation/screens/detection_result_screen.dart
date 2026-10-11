@@ -44,6 +44,7 @@ class _DetectionResultScreenState extends ConsumerState<DetectionResultScreen> {
           fieldId: widget.fieldId.isEmpty ? null : widget.fieldId,
           result: widget.result,
           imageUrl: widget.result.imageUrl,
+          scanId: widget.scanId,
         );
       } catch (_) {
         // best effort

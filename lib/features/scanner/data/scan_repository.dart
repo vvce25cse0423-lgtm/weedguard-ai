@@ -40,8 +40,9 @@ class ScanRepository {
     required String? fieldId,
     required WeedDetectionResult result,
     String? imageUrl,
+    String? scanId,
   }) async {
-    final scanId = const Uuid().v4();
+    final effectiveScanId = (scanId != null && scanId.isNotEmpty) ? scanId : const Uuid().v4();
     final now = DateTime.now();
     final uid = _uid;
 
@@ -67,7 +68,7 @@ class ScanRepository {
     final effectiveImageUrl = imageUrl ?? result.imageUrl ?? result.imagePath;
 
     final newScan = ScanModel(
-      id: scanId,
+      id: effectiveScanId,
       fieldId: effectiveFieldId,
       userId: uid,
       imageUrl: effectiveImageUrl,
@@ -81,7 +82,7 @@ class ScanRepository {
       createdAt: now,
     );
 
-    // 1. ALWAYS persist locally first
+    // 1. ALWAYS persist locally first with deduplication
     try {
       final prefs = await SharedPreferences.getInstance();
       final localJson = prefs.getString(_localScansKey);
@@ -89,6 +90,8 @@ class ScanRepository {
       if (localJson != null && localJson.isNotEmpty) {
         list = jsonDecode(localJson) as List<dynamic>;
       }
+      // If scan already exists by id, remove old version
+      list.removeWhere((item) => (item as Map)['id'] == effectiveScanId);
       list.insert(0, newScan.toJson());
       await prefs.setString(_localScansKey, jsonEncode(list));
     } catch (_) {}
@@ -97,8 +100,8 @@ class ScanRepository {
     try {
       final user = _client.auth.currentUser;
       if (user != null) {
-        await _client.from('scans').insert({
-          'id': scanId,
+        await _client.from('scans').upsert({
+          'id': effectiveScanId,
           if (effectiveFieldId.isNotEmpty) 'field_id': effectiveFieldId,
           'user_id': user.id,
           'image_url': effectiveImageUrl,
@@ -113,7 +116,7 @@ class ScanRepository {
 
         if (result.zones.isNotEmpty) {
           final zonesData = result.zones.map((z) => {
-            'scan_id': scanId,
+            'scan_id': effectiveScanId,
             'zone_id': z.zoneId,
             'zone_label': z.zoneLabel,
             'severity': z.severity.dbValue,
@@ -196,6 +199,20 @@ class ScanRepository {
       final user = _client.auth.currentUser;
       if (user != null) {
         await _client.from('scans').delete().eq('id', scanId).eq('user_id', user.id);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> clearAllScans() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_localScansKey);
+    } catch (_) {}
+
+    try {
+      final user = _client.auth.currentUser;
+      if (user != null) {
+        await _client.from('scans').delete().eq('user_id', user.id);
       }
     } catch (_) {}
   }

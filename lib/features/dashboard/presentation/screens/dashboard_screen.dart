@@ -296,45 +296,58 @@ class _HeroSection extends StatelessWidget {
                     Consumer(
                       builder: (context, ref, _) {
                         final weatherAsync = ref.watch(weatherProvider);
-                        return weatherAsync.when(
-                          loading: () => Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.15),
-                              border: Border.all(color: Colors.white38, width: 1.5),
-                            ),
-                            child: const Icon(Icons.thermostat_outlined, color: Colors.white70, size: 18),
-                          ),
-                          error: (_, __) => const SizedBox.shrink(),
-                          data: (weather) {
-                            if (weather == null) return const SizedBox.shrink();
-                            final temp = weather['temp'];
-                            final tempStr = temp != null ? '${temp.round()}°' : '--°';
-                            return Container(
+                        return GestureDetector(
+                          onTap: () => context.push('/weather'),
+                          child: weatherAsync.when(
+                            loading: () => Container(
+                              width: 38,
                               height: 38,
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(19),
+                                shape: BoxShape.circle,
                                 color: Colors.white.withOpacity(0.15),
                                 border: Border.all(color: Colors.white38, width: 1.5),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.thermostat_outlined, color: Colors.white, size: 16),
-                                  const SizedBox(width: 4),
-                                  Text(tempStr,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                    )),
-                                ],
+                              child: const Icon(Icons.thermostat_outlined, color: Colors.white70, size: 18),
+                            ),
+                            error: (_, __) => Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withOpacity(0.15),
+                                border: Border.all(color: Colors.white38, width: 1.5),
                               ),
-                            );
-                          },
+                              child: const Icon(Icons.thermostat_outlined, color: Colors.white, size: 18),
+                            ),
+                            data: (weather) {
+                              final temp = weather?['temp'];
+                              final tempStr = temp != null ? '${temp.round()}°' : '28°';
+                              return Container(
+                                height: 38,
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(19),
+                                  color: Colors.white.withOpacity(0.18),
+                                  border: Border.all(color: Colors.white54, width: 1.5),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.thermostat_outlined, color: Colors.white, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      tempStr,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
                         );
                       },
                     ),
@@ -798,7 +811,10 @@ class _ActionCard extends StatelessWidget {
 // ─────────────────────────────────────────────
 // RECENT SCANS
 // ─────────────────────────────────────────────
-class _RecentScans extends StatelessWidget {
+// ─────────────────────────────────────────────
+// RECENT SCANS
+// ─────────────────────────────────────────────
+class _RecentScans extends ConsumerWidget {
   final AsyncValue<List<ScanModel>> scansAsync;
   final VoidCallback onViewAll, onScan;
   const _RecentScans(
@@ -806,8 +822,68 @@ class _RecentScans extends StatelessWidget {
       required this.onViewAll,
       required this.onScan});
 
+  Future<void> _handleDeleteScan(BuildContext context, WidgetRef ref, String scanId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete scan?'),
+        content: const Text('Are you sure you want to delete this scan result?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFC62828)),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final repo = ScanRepository(Supabase.instance.client);
+      await repo.deleteScan(scanId);
+      ref.invalidate(dashboardScansProvider);
+      ref.invalidate(scanHistoryProvider);
+    }
+  }
+
+  Future<void> _handleClearAll(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Clear all scans?'),
+        content: const Text('This will delete all recent scans and history recordings. This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFC62828)),
+            child: const Text('Clear all'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final repo = ScanRepository(Supabase.instance.client);
+      await repo.clearAllScans();
+      ref.invalidate(dashboardScansProvider);
+      ref.invalidate(scanHistoryProvider);
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scans = scansAsync.valueOrNull ?? [];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -820,24 +896,52 @@ class _RecentScans extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 AppLocalizations.of(context).recentScans,
-                style: TextStyle(
+                style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1B4332)),
               ),
               const Spacer(),
+              if (scans.isNotEmpty) ...[
+                GestureDetector(
+                  onTap: () => _handleClearAll(context, ref),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.delete_sweep_outlined, size: 14, color: Color(0xFFC62828)),
+                        SizedBox(width: 4),
+                        Text(
+                          'Clear all',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFC62828),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
               GestureDetector(
                 onTap: onViewAll,
                 child: Row(
                   children: [
                     Text(
                       AppLocalizations.of(context).viewAll,
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 13,
                           color: Color(0xFF2D6A4F),
                           fontWeight: FontWeight.w600),
                     ),
-                    Icon(Icons.chevron_right_rounded,
+                    const Icon(Icons.chevron_right_rounded,
                         color: Color(0xFF2D6A4F), size: 18),
                   ],
                 ),
@@ -853,7 +957,10 @@ class _RecentScans extends StatelessWidget {
             error: (_, __) => _ErrorCard(),
             data: (scans) => scans.isEmpty
                 ? _EmptyScansCard(onScan: onScan)
-                : _ScansList(scans: scans.take(5).toList()),
+                : _ScansList(
+                    scans: scans.take(5).toList(),
+                    onDelete: (scanId) => _handleDeleteScan(context, ref, scanId),
+                  ),
           ),
         ),
       ],
@@ -909,7 +1016,8 @@ class _EmptyScansCard extends StatelessWidget {
 
 class _ScansList extends StatelessWidget {
   final List<ScanModel> scans;
-  const _ScansList({required this.scans});
+  final void Function(String scanId) onDelete;
+  const _ScansList({required this.scans, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -918,28 +1026,57 @@ class _ScansList extends StatelessWidget {
           .map((s) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE8F0E8), width: 1.2),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withOpacity(0.04),
                           blurRadius: 8,
                           offset: const Offset(0, 3))
                     ],
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                            color: Color(0xFFD8F3DC),
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(10))),
-                        child: const Icon(Icons.photo_camera_outlined,
-                            color: Color(0xFF2D6A4F), size: 20),
+                      // Scanned field image thumbnail instead of camera emoji
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          color: const Color(0xFFE8F5E9),
+                          child: s.imageUrl != null && s.imageUrl!.isNotEmpty
+                              ? (s.imageUrl!.startsWith('http')
+                                  ? Image.network(
+                                      s.imageUrl!,
+                                      width: 48,
+                                      height: 48,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Icon(
+                                        Icons.grass_rounded,
+                                        color: Color(0xFF2D6A4F),
+                                        size: 24,
+                                      ),
+                                    )
+                                  : Image.file(
+                                      File(s.imageUrl!),
+                                      width: 48,
+                                      height: 48,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Icon(
+                                        Icons.grass_rounded,
+                                        color: Color(0xFF2D6A4F),
+                                        size: 24,
+                                      ),
+                                    ))
+                              : const Icon(
+                                  Icons.grass_rounded,
+                                  color: Color(0xFF2D6A4F),
+                                  size: 24,
+                                ),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -949,8 +1086,8 @@ class _ScansList extends StatelessWidget {
                             Text(
                               '${s.weedCount} ${AppLocalizations.of(context).weedsDetected}',
                               style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
                                   color: Color(0xFF1B4332)),
                             ),
                             const SizedBox(height: 2),
@@ -963,6 +1100,16 @@ class _ScansList extends StatelessWidget {
                         ),
                       ),
                       SeverityChip(severity: s.severity, small: true),
+                      const SizedBox(width: 8),
+                      // Delete button at right of each widget
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded,
+                            size: 20, color: Color(0xFFC62828)),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'Delete scan',
+                        onPressed: () => onDelete(s.id),
+                      ),
                     ],
                   ),
                 ),

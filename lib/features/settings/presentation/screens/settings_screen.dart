@@ -263,23 +263,12 @@ class SettingsScreen extends ConsumerWidget {
                   style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
               onTap: () => _showLanguagePicker(context, ref),
             ),
-            _DarkModeTile(
-              label: l10n.darkMode,
-              isDark: isDark,
-              onChanged: (val) => ref.read(themeModeProvider.notifier)
-                  .setMode(val ? ThemeMode.dark : ThemeMode.light),
-            ),
             _Tile(
               icon: Icons.straighten_outlined,
               label: l10n.units,
               trailing: Text(l10n.metric,
                   style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
               onTap: () => _showUnitsDialog(context),
-            ),
-            _Tile(
-              icon: Icons.vpn_key_outlined,
-              label: 'Groq AI API Key',
-              onTap: () => _showApiKeyDialog(context),
             ),
           ]),
 

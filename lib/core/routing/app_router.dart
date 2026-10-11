@@ -18,6 +18,7 @@ import '../../features/history/presentation/screens/scan_history_screen.dart';
 import '../../features/comparison/presentation/screens/scan_comparison_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/dashboard/presentation/screens/weather_screen.dart';
 import '../../shared/models/detection_result_model.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -73,6 +74,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
           GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+          GoRoute(path: '/weather', builder: (_, __) => const WeatherScreen()),
         ],
       ),
     ],

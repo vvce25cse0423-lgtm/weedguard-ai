@@ -48,8 +48,18 @@ class _ScanHistoryScreenState extends ConsumerState<ScanHistoryScreen> {
           loading: () => const _HistorySkeleton(),
           error: (_, __) => ErrorState(message: 'Unable to load scan history.', onRetry: () => ref.invalidate(scanHistoryProvider)),
           data: (scans) {
+            // Deduplicate scans by ID and timestamp/image
+            final uniqueScansMap = <String, ScanModel>{};
+            for (final s in scans) {
+              final key = s.id.isNotEmpty ? s.id : '${s.createdAt.millisecondsSinceEpoch}_${s.imageUrl ?? ""}';
+              if (!uniqueScansMap.containsKey(key)) {
+                uniqueScansMap[key] = s;
+              }
+            }
+            final uniqueScans = uniqueScansMap.values.toList();
+
             // Apply search + filter
-            var filtered = scans.where((s) {
+            var filtered = uniqueScans.where((s) {
               final matchSeverity = _filterSeverity == null || s.severity == _filterSeverity;
               final matchSearch = _search.isEmpty ||
                 s.weedCount.toString().contains(_search) ||
@@ -57,7 +67,7 @@ class _ScanHistoryScreenState extends ConsumerState<ScanHistoryScreen> {
               return matchSeverity && matchSearch;
             }).toList();
 
-            if (scans.isEmpty) return _EmptyHistoryView();
+            if (uniqueScans.isEmpty) return _EmptyHistoryView();
             return Column(
               children: [
                 _HistoryHeader(onCompare: () => context.push('/comparison')),
@@ -405,10 +415,34 @@ class _ScanDetailSheet extends StatelessWidget {
           Expanded(child: ListView(controller: ctrl, padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
             if (scan.imageUrl != null && scan.imageUrl!.isNotEmpty)
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(scan.imageUrl!, height: 180, width: double.infinity, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(height: 80, color: const Color(0xFFE8F5E9),
-                    child: const Icon(Icons.photo_camera_outlined, color: Color(0xFF2D6A4F), size: 32))),
+                borderRadius: BorderRadius.circular(14),
+                child: scan.imageUrl!.startsWith('http')
+                    ? Image.network(
+                        scan.imageUrl!,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          height: 120,
+                          color: const Color(0xFFE8F5E9),
+                          child: const Center(
+                            child: Icon(Icons.grass_rounded, color: Color(0xFF2D6A4F), size: 36),
+                          ),
+                        ),
+                      )
+                    : Image.file(
+                        File(scan.imageUrl!),
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          height: 120,
+                          color: const Color(0xFFE8F5E9),
+                          child: const Center(
+                            child: Icon(Icons.grass_rounded, color: Color(0xFF2D6A4F), size: 36),
+                          ),
+                        ),
+                      ),
               ),
             const SizedBox(height: 16),
             Text(DateFormatter.formatDateTime(scan.createdAt),
