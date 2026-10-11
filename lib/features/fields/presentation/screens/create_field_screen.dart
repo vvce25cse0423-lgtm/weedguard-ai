@@ -559,3 +559,5 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
       ),
     );
   }
+}
+
