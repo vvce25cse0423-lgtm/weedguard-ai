@@ -105,12 +105,19 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
     final currentIndex = _indexFromLocation(location);
+    final isFullscreen = location == '/fields/new' ||
+        location.endsWith('/edit') ||
+        location.startsWith('/scanner') ||
+        location.startsWith('/detection-result') ||
+        location.startsWith('/comparison');
 
     final bottom = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       body: widget.child,
-      bottomNavigationBar: Container(
+      bottomNavigationBar: isFullscreen
+          ? null
+          : Container(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: const BorderRadius.only(
