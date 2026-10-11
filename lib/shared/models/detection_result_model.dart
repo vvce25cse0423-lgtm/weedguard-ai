@@ -33,18 +33,21 @@ class BoundingBox {
 class WeedDetection {
   final String label;
   final double confidence;
+  final bool isCrop;
   /// Null when the AI did not return real bounding coordinates.
   final BoundingBox? boundingBox;
 
   const WeedDetection({
     required this.label,
     required this.confidence,
+    this.isCrop = false,
     this.boundingBox,
   });
 
   factory WeedDetection.fromJson(Map<String, dynamic> json) => WeedDetection(
         label: json['label'] as String,
         confidence: (json['confidence'] as num).toDouble(),
+        isCrop: json['is_crop'] as bool? ?? false,
         boundingBox: json['bounding_box'] != null
             ? BoundingBox.fromJson(json['bounding_box'] as Map<String, dynamic>)
             : null,
@@ -53,6 +56,7 @@ class WeedDetection {
   Map<String, dynamic> toJson() => {
         'label': label,
         'confidence': confidence,
+        'is_crop': isCrop,
         if (boundingBox != null) 'bounding_box': boundingBox!.toJson(),
       };
 }

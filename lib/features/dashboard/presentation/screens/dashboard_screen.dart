@@ -1311,19 +1311,44 @@ class _WeatherStat extends StatelessWidget {
 // ─────────────────────────────────────────────
 class _TipOfTheDay extends StatelessWidget {
   static const _tips = [
-    'Apply herbicides early morning or late evening for best results.',
-    'Rotate herbicides annually to prevent weed resistance.',
-    'Scout fields weekly during peak weed germination season.',
-    'Use GPS mapping to track weed hotspots across seasons.',
-    'Maintain sharp spray nozzles for uniform herbicide coverage.',
-    'Integrate cover crops to naturally suppress weed growth.',
-    'Keep field edges clear — they are primary weed seed sources.',
-    'Post-harvest tillage can reduce weed seed bank significantly.',
+    'Apply herbicides early morning or late evening (calm winds & high humidity) for peak absorption.',
+    'Rotate herbicide mode-of-action groups (HRAC classes) annually to prevent chemical resistance.',
+    'Scout fields systematically in a "W" or "Z" pattern weekly during peak emergence periods.',
+    'Use GPS field mapping to spot and treat localized weed hotspots before they spread.',
+    'Calibrate sprayer nozzles regularly; worn tips cause uneven coverage and herbicide waste.',
+    'Integrate cereal rye or clover cover crops between seasons to naturally suppress weed seed germination.',
+    'Maintain clean field borders and bunds — weed seed banks travel easily via wind and water.',
+    'Deep summer ploughing exposes perennial weed rhizomes and tubers to direct solar heat.',
+    'Apply pre-emergent herbicides right after rainfall or irrigation when soil moisture is optimal.',
+    'Ensure sprayer water pH is between 5.5 and 6.5; alkaline water can deactivate glyphosate and glufosinate.',
+    'Intercropping with leguminous crops provides living mulch and smothers early grass weeds.',
+    'Target post-emergent spraying when weeds are in the tender 2-to-4 leaf stage for maximum efficacy.',
+    'Thoroughly wash tractors and harvesters before entering clean fields to stop weed seed transfer.',
+    'Incorporate mechanical weeding with a wheel hoe or cultivator between rows before canopy closure.',
+    'Adjust sprayer boom height to 50 cm above crop canopy to prevent drift and ensure uniform overlap.',
+    'Use certified weed-free crop seed lots to prevent introducing noxious foreign weed species.',
+    'High-density planting narrows inter-row gaps, shading the ground faster and suppressing light-dependent weeds.',
+    'Avoid spraying herbicides when wind speed exceeds 10 km/h to prevent spray drift damage.',
+    'Apply organic straw or plastic mulching in vegetable beds to block weed emergence completely.',
+    'Alternate irrigation methods (drip vs flood) to limit moisture availability in non-crop row zones.',
+    'Keep records of persistent weed species per plot to plan targeted pre-plant weed control.',
+    'Destroy weed plants before flowering and seed dispersal to deplete the long-term soil seed bank.',
+    'Use appropriate non-ionic surfactants or adjuvants when recommended to enhance leaf uptake.',
+    'Monitor ditches, drainage channels, and farm roads as common reservoirs for weed infestation.',
+    'Allow pre-emergent herbicide spray barrier to remain undisturbed; avoid shallow hoeing right after spraying.',
+    'Check weather forecasts before spraying: ensure a 4 to 6-hour rain-free window for foliar uptake.',
+    'Test soil nutrient balance regularly; excessive nitrogen fertilization often accelerates aggressive weed growth.',
+    'Stale seedbed technique: irrigate field early, allow weeds to sprout, eliminate them, then sow crop.',
+    'Clean backpack sprayer tanks with clean water and detergent immediately after completing spraying.',
+    'Combine bio-herbicides and manual weeding in organic plots for sustainable weed management.',
+    'Early weed competition during the first 30–45 days after sowing causes the greatest yield loss.',
   ];
 
   String get _todaysTip {
-    final idx = DateTime.now().day % _tips.length;
-    return _tips[idx];
+    final now = DateTime.now();
+    // Unique day-of-year calculation ensures a fresh, rotating tip every day
+    final dayOfYear = now.difference(DateTime(now.year, 1, 1)).inDays;
+    return _tips[dayOfYear % _tips.length];
   }
 
   @override

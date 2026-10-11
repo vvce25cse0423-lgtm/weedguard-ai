@@ -87,8 +87,8 @@ class GeminiWeedDetectionService implements WeedDetectionService {
   }) async {
     final prompt =
         'You are an expert global agricultural AI and botanist. Analyze this uploaded field or plant image carefully.\n'
-        'Identify ANY agricultural crop, cultivated plant, fruit, vegetable, cereal, or flower present in the image.\n'
-        'Identify ANY weed or invasive plant species present worldwide (provide the common name, and botanical/scientific name in parentheses where possible).\n\n'
+        '1. CROP IDENTIFIED: Identify ANY agricultural crop, cultivated plant, fruit, vegetable, cereal, grain, cash crop, plantation crop, or flower present in the image. Give common name and botanical name (e.g., "Maize / Corn (Zea mays)"). If cultivation is visible, ALWAYS name the crop accurately.\n'
+        '2. WEEDS IDENTIFIED: Identify ALL weed species or unwanted invasive plants present in the image with common name and botanical name (e.g., "Parthenium (Parthenium hysterophorus)"). NEVER list the crop itself as a weed.\n\n'
         'Confidence calibration:\n'
         '- 0.90-1.0: 3+ definitive visual features match\n'
         '- 0.75-0.89: 2 visual features match\n'
@@ -96,7 +96,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
         '- Below 0.60: very uncertain\n\n'
         'Respond ONLY with valid JSON (no markdown fences, no backticks):\n'
         '{\n'
-        '  "crop_identified": "Full common and scientific name of the crop (or null if none)",\n'
+        '  "crop_identified": "Full common and scientific name of the crop",\n'
         '  "crop_confidence": 0.95,\n'
         '  "crop_growth_stage": "seedling|vegetative|reproductive|maturity",\n'
         '  "crop_key_features": "observed visual features",\n'
@@ -119,11 +119,11 @@ class GeminiWeedDetectionService implements WeedDetectionService {
         '}\n\n'
         'Rules:\n'
         '1. You can identify ANY crop and ANY weed species globally based purely on visual inspection.\n'
-        '2. confidence must be 0.0-1.0\n'
-        '3. infestation_score: 0.0=no weeds, 1.0=fully infested\n'
-        '4. severity: low <10%, moderate 10-30%, high >30%\n'
-        '5. If no crop is present or image is not agricultural: crop_identified=null, weeds=[]\n'
-        '6. NEVER list the main crop as a weed\n'
+        '2. NEVER list the cultivated crop under weeds.\n'
+        '3. If no weed is found, return weeds: []. If crop is not recognizable, identify the closest plant family or "Field Crop (Unspecified)".\n'
+        '4. confidence must be 0.0-1.0\n'
+        '5. infestation_score: 0.0=no weeds, 1.0=fully infested\n'
+        '6. severity: low <10%, moderate 10-30%, high >30%\n'
         '7. Count only visible weed plants';
 
     final body = jsonEncode({
@@ -304,7 +304,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     final shuffledWeeds = List<String>.from(weedCatalog)..shuffle(rng);
 
     final detections = <WeedDetection>[
-      WeedDetection(label: selectedCrop, confidence: cropConf),
+      WeedDetection(label: selectedCrop, confidence: cropConf, isCrop: true),
     ];
 
     int remainingWeeds = totalWeeds;
@@ -317,7 +317,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
       final weedConf = 0.81 + (rng.nextDouble() * 0.12);
 
       for (int c = 0; c < countForType; c++) {
-        detections.add(WeedDetection(label: weedName, confidence: weedConf));
+        detections.add(WeedDetection(label: weedName, confidence: weedConf, isCrop: false));
       }
     }
 
@@ -370,7 +370,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     final detections = <WeedDetection>[];
 
     if (cropName != null) {
-      detections.add(WeedDetection(label: cropName, confidence: cropConf));
+      detections.add(WeedDetection(label: cropName, confidence: cropConf, isCrop: true));
     }
 
     for (final w in weedsJson) {
@@ -379,15 +379,16 @@ class GeminiWeedDetectionService implements WeedDetectionService {
       final weedName = wMap['name'] as String? ?? 'Unknown weed';
       final conf = (wMap['confidence'] as num?)?.toDouble() ?? 0.75;
 
-      if (conf < 0.40) continue;
+      if (conf < 0.35) continue;
       if (cropName != null &&
           weedName.toLowerCase().contains(
             cropName.split('(').first.trim().toLowerCase(),
-          ))
+          )) {
         continue;
+      }
 
       for (int i = 0; i < count; i++) {
-        detections.add(WeedDetection(label: weedName, confidence: conf));
+        detections.add(WeedDetection(label: weedName, confidence: conf, isCrop: false));
       }
     }
 

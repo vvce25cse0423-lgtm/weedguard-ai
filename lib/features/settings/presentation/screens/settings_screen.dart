@@ -144,61 +144,11 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _showApiKeyDialog(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentKey = prefs.getString('groq_api_key') ?? prefs.getString('openrouter_api_key') ?? '';
-    final controller = TextEditingController(text: currentKey);
-
-    if (!context.mounted) return;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Groq AI API Key'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter your Groq API key (starts with gsk_...) for cloud AI vision inference. If empty or unavailable, on-device vision analysis runs automatically.',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                hintText: 'gsk_...',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              obscureText: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final val = controller.text.trim();
-              await prefs.setString('groq_api_key', val);
-              await prefs.setString('openrouter_api_key', val);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
-    final isDark = themeMode == ThemeMode.dark;
     final topPad = MediaQuery.of(context).padding.top;
 
     final langLabel = locale.languageCode == 'kn'
@@ -411,34 +361,6 @@ class _Section extends StatelessWidget {
   }
 }
 
-// ── Dark Mode Tile ────────────────────────────────────────────────────────────
-class _DarkModeTile extends StatelessWidget {
-  final String label;
-  final bool isDark;
-  final ValueChanged<bool> onChanged;
-  const _DarkModeTile({required this.label, required this.isDark, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      child: Row(children: [
-        Container(
-          width: 36, height: 36,
-          decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(10)),
-          child: const Icon(Icons.dark_mode_outlined, color: Color(0xFF2D6A4F), size: 18),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500))),
-        Switch.adaptive(
-          value: isDark,
-          onChanged: onChanged,
-          activeColor: const Color(0xFF2E7D32),
-        ),
-      ]),
-    );
-  }
-}
 
 // ── Tile ──────────────────────────────────────────────────────────────────────
 class _Tile extends StatelessWidget {
