@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -44,6 +45,16 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
+      if (source == ImageSource.camera) {
+        final status = await Permission.camera.status;
+        if (!status.isGranted) {
+          final res = await Permission.camera.request();
+          if (!res.isGranted) {
+            setState(() => _error = 'Camera permission is required to scan fields.');
+            return;
+          }
+        }
+      }
       final picked = await _picker.pickImage(
           source: source, maxWidth: 1920, maxHeight: 1920, imageQuality: 88);
       if (picked == null) return;

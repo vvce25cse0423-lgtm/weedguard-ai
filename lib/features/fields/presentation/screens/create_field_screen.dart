@@ -183,48 +183,21 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
                       SafeArea(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              GestureDetector(
-                                onTap: () => context.pop(),
-                                child: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.35),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
-                                  ),
-                                  child: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: GestureDetector(
+                              onTap: () => context.pop(),
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.35),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
                                 ),
+                                child: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
                               ),
-                              const SizedBox(width: 14),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    _isEditing ? 'Edit Field' : 'Add Field',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Grow better. Harvest smarter.',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
@@ -258,25 +231,25 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
                           _buildSectionCard(
                             icon: Icons.eco,
                             iconColor: const Color(0xFF2D6A4F),
-                            title: 'Field information',
+                            title: AppLocalizations.of(context).fieldInfo,
                             children: [
                               _buildInputField(
-                                label: 'Field name',
+                                label: AppLocalizations.of(context).fieldName,
                                 icon: Icons.spa_outlined,
                                 child: TextFormField(
                                   controller: _nameCtrl,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Enter field name',
+                                  decoration: InputDecoration(
+                                    hintText: AppLocalizations.of(context).enterFieldName,
                                     border: InputBorder.none,
                                     isDense: true,
                                     contentPadding: EdgeInsets.zero,
                                   ),
-                                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Field name is required' : null,
+                                  validator: (v) => (v == null || v.trim().isEmpty) ? AppLocalizations.of(context).fieldNameReq : null,
                                 ),
                               ),
                               const SizedBox(height: 14),
                               _buildInputField(
-                                label: 'Crop type',
+                                label: AppLocalizations.of(context).cropType,
                                 icon: Icons.grass_outlined,
                                 child: DropdownButtonHideUnderline(
                                   child: DropdownButton<String>(
@@ -293,13 +266,13 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
                               ),
                               const SizedBox(height: 14),
                               _buildInputField(
-                                label: 'Area (hectares)',
+                                label: AppLocalizations.of(context).areaHectares,
                                 icon: Icons.landscape_outlined,
                                 child: TextFormField(
                                   controller: _areaCtrl,
                                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  decoration: const InputDecoration(
-                                    hintText: 'Enter area in hectares',
+                                  decoration: InputDecoration(
+                                    hintText: AppLocalizations.of(context).enterArea,
                                     border: InputBorder.none,
                                     isDense: true,
                                     contentPadding: EdgeInsets.zero,
@@ -319,10 +292,10 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
                           _buildSectionCard(
                             icon: Icons.location_on,
                             iconColor: const Color(0xFF2D6A4F),
-                            title: 'Location',
+                            title: AppLocalizations.of(context).locationText,
                             children: [
                               _buildInputField(
-                                label: 'Location coordinates or label',
+                                label: AppLocalizations.of(context).locationLabel,
                                 icon: Icons.place_outlined,
                                 trailing: GestureDetector(
                                   onTap: _locating ? null : _detectLocation,
@@ -340,8 +313,8 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
                                 ),
                                 child: TextFormField(
                                   controller: _locationCtrl,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Location label or coordinates',
+                                  decoration: InputDecoration(
+                                    hintText: AppLocalizations.of(context).locationLabel,
                                     border: InputBorder.none,
                                     isDense: true,
                                     contentPadding: EdgeInsets.zero,
@@ -357,15 +330,15 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
                           _buildSectionCard(
                             icon: Icons.calendar_month,
                             iconColor: const Color(0xFF2D6A4F),
-                            title: 'Planting details',
+                            title: AppLocalizations.of(context).plantingDetails,
                             children: [
                               _buildInputField(
-                                label: 'Planting date',
+                                label: AppLocalizations.of(context).plantingDate,
                                 icon: Icons.calendar_today_outlined,
                                 trailing: const Icon(Icons.calendar_today_outlined, color: Color(0xFF2D6A4F), size: 18),
                                 onTap: _pickDate,
                                 child: Text(
-                                  _plantingDate != null ? DateFormatter.formatDate(_plantingDate!) : 'Select date',
+                                  _plantingDate != null ? DateFormatter.formatDate(_plantingDate!) : AppLocalizations.of(context).selectDate,
                                   style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: _plantingDate != null ? FontWeight.w600 : FontWeight.w400,
@@ -375,13 +348,13 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
                               ),
                               const SizedBox(height: 14),
                               _buildInputField(
-                                label: 'Notes (optional)',
+                                label: AppLocalizations.of(context).notesOptional,
                                 icon: Icons.notes_outlined,
                                 child: TextFormField(
                                   controller: _notesCtrl,
                                   maxLines: 3,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Add any additional notes...',
+                                  decoration: InputDecoration(
+                                    hintText: AppLocalizations.of(context).addNotesHint,
                                     border: InputBorder.none,
                                     isDense: true,
                                     contentPadding: EdgeInsets.zero,
@@ -427,7 +400,7 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
                                             ),
                                             const SizedBox(width: 14),
                                             Text(
-                                              _isEditing ? 'Save Changes' : 'Save Field',
+                                              _isEditing ? AppLocalizations.of(context).saveChanges : AppLocalizations.of(context).saveField,
                                               style: const TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w700,

@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -31,10 +32,27 @@ const _owmApiKey = '624d64f50bcf3cf596ccf7693dce142f';
 
 final weatherProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   try {
+    double lat = 12.9716;
+    double lon = 77.5946;
+
+    try {
+      LocationPermission perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.whileInUse || perm == LocationPermission.always) {
+        final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 4),
+        );
+        lat = pos.latitude;
+        lon = pos.longitude;
+      }
+    } catch (_) {
+      // Keep defaults if GPS timeout or unavailable
+    }
+
     final client = HttpClient();
-    // Default to Bangalore; update with geolocator for device location
-    const lat = 12.9716;
-    const lon = 77.5946;
     final req = await client.getUrl(Uri.parse(
       'https://api.openweathermap.org/data/2.5/weather?lat=$lat&lon=$lon&appid=$_owmApiKey&units=metric'));
     final res = await req.close();

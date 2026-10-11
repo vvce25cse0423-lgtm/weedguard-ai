@@ -60,8 +60,22 @@ class AppLocalizations {
                         'hi': 'खरपतवार स्कैन शुरू करने के लिए अपना पहला खेत जोड़ें।'},
     'field_name':      {'en': 'Field Name',    'kn': 'ಹೊಲದ ಹೆಸರು',   'hi': 'खेत का नाम'},
     'field_size':      {'en': 'Field Size',    'kn': 'ಹೊಲದ ಗಾತ್ರ',   'hi': 'खेत का आकार'},
-    'crop_type':       {'en': 'Crop Type',     'kn': 'ಬೆಳೆ ಪ್ರಕಾರ',   'hi': 'फसल का प्रकार'},
     'create_field':    {'en': 'Create Field',  'kn': 'ಹೊಲ ರಚಿಸಿ',    'hi': 'खेत बनाएं'},
+    'field_info':      {'en': 'Field information', 'kn': 'ಹೊಲದ ಮಾಹಿತಿ', 'hi': 'खेत की जानकारी'},
+    'location':        {'en': 'Location',          'kn': 'ಸ್ಥಳ',        'hi': 'स्थान'},
+    'planting_details':{'en': 'Planting details',  'kn': 'ಬಿತ್ತನೆ ವಿವರಗಳು', 'hi': 'बुवाई का विवरण'},
+    'area_hectares':   {'en': 'Area (hectares)',   'kn': 'ವಿಸ್ತೀರ್ಣ (ಹೆಕ್ಟೇರ್)', 'hi': 'क्षेत्रफल (हेक्टेयर)'},
+    'location_label':  {'en': 'Location label or coordinates', 'kn': 'ಸ್ಥಳದ ವಿವರ ಅಥವಾ ನಿರ್ದೇಶಾಂಕಗಳು', 'hi': 'स्थान विवरण या निर्देशांक'},
+    'planting_date':   {'en': 'Planting date',     'kn': 'ಬಿತ್ತನೆ ದಿನಾಂಕ', 'hi': 'बुवाई की तारीख'},
+    'notes_optional':  {'en': 'Notes (optional)',  'kn': 'ಟಿಪ್ಪಣಿಗಳು (ಐಚ್ಛಿಕ)', 'hi': 'नोट्स (वैकल्पिक)'},
+    'enter_field_name':{'en': 'Enter field name',  'kn': 'ಹೊಲದ ಹೆಸರು ನಮೂದಿಸಿ', 'hi': 'खेत का नाम दर्ज करें'},
+    'enter_area':      {'en': 'Enter area in hectares', 'kn': 'ಹೆಕ್ಟೇರ್‌ನಲ್ಲಿ ವಿಸ್ತೀರ್ಣ ನಮೂದಿಸಿ', 'hi': 'हेक्टेयर में क्षेत्रफल दर्ज करें'},
+    'select_date':     {'en': 'Select date',       'kn': 'ದಿನಾಂಕ ಆಯ್ಕೆಮಾಡಿ', 'hi': 'तारीख चुनें'},
+    'add_notes_hint':  {'en': 'Add any additional notes…', 'kn': 'ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳನ್ನು ಸೇರಿಸಿ…', 'hi': 'कोई अतिरिक्त नोट्स जोड़ें…'},
+    'field_name_req':  {'en': 'Field name is required', 'kn': 'ಹೊಲದ ಹೆಸರು ಅಗತ್ಯವಿದೆ', 'hi': 'खेत का नाम आवश्यक है'},
+    'save_field':      {'en': 'Save Field',        'kn': 'ಹೊಲ ಉಳಿಸಿ',    'hi': 'खेत सहेजें'},
+    'save_changes':    {'en': 'Save Changes',      'kn': 'ಬದಲಾವಣೆಗಳನ್ನು ಉಳಿಸಿ', 'hi': 'बदलाव सहेजें'},
+    'grow_better':     {'en': 'Grow better. Harvest smarter.', 'kn': 'ಉತ್ತಮ ಬೆಳೆ. ಬುದ್ಧಿವಂತ ಕೊಯ್ಲು.', 'hi': 'बेहतर उपज. स्मार्ट कटाई.'},
 
     // ── Scanner ──
     'scan_title':      {'en': 'Scan Field',       'kn': 'ಹೊಲ ಸ್ಕ್ಯಾನ್',        'hi': 'खेत स्कैन'},
@@ -205,6 +219,21 @@ class AppLocalizations {
   String get scanField => get('scan_field');
   String get viewAll => get('view_all');
   String get noRecentScans => get('no_recent_scans');
+  String get fieldInfo => get('field_info');
+  String get locationText => get('location');
+  String get plantingDetails => get('planting_details');
+  String get areaHectares => get('area_hectares');
+  String get locationLabel => get('location_label');
+  String get plantingDate => get('planting_date');
+  String get notesOptional => get('notes_optional');
+  String get enterFieldName => get('enter_field_name');
+  String get enterArea => get('enter_area');
+  String get selectDate => get('select_date');
+  String get addNotesHint => get('add_notes_hint');
+  String get fieldNameReq => get('field_name_req');
+  String get saveField => get('save_field');
+  String get saveChanges => get('save_changes');
+  String get growBetter => get('grow_better');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

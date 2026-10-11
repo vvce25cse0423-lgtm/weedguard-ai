@@ -196,6 +196,9 @@ class _FieldsTemplateEmptyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final isEn = Localizations.localeOf(context).languageCode == 'en';
+
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
@@ -205,12 +208,106 @@ class _FieldsTemplateEmptyScreen extends StatelessWidget {
             child: IntrinsicHeight(
               child: Stack(
                 children: [
-                  // Template image perfectly scaled to width with natural aspect ratio
+                  // Template background image perfectly scaled
                   Image.asset(
                     'assets/images/fields_template.png',
                     width: double.infinity,
                     fit: BoxFit.fitWidth,
                   ),
+
+                  // If non-English (Kannada / Hindi), overlay localized title & subtitle cleanly without overlapping
+                  if (!isEn) ...[
+                    // Cover the middle "No fields yet" card text area with crisp localized card content
+                    Positioned(
+                      left: constraints.maxWidth * 0.12,
+                      right: constraints.maxWidth * 0.12,
+                      top: (constraints.maxWidth / 0.562) * 0.58,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              l10n.noFieldsYet,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF1B4332),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              l10n.noFieldsDesc,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey.shade600,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Cover the bottom pill with localized "Add field" text
+                    Positioned(
+                      left: constraints.maxWidth * 0.08,
+                      right: constraints.maxWidth * 0.08,
+                      bottom: (constraints.maxWidth / 0.562) * 0.075,
+                      height: 54,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1B5E20),
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.18),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 30,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.add, size: 18, color: Colors.white),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    l10n.addField,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
 
                   // Top right Profile avatar tap zone
                   Positioned(
@@ -227,10 +324,10 @@ class _FieldsTemplateEmptyScreen extends StatelessWidget {
 
                   // Header '+' Add field icon tap zone
                   Positioned(
-                    top: 86,
-                    right: 18,
-                    width: 50,
-                    height: 50,
+                    top: 70,
+                    right: 12,
+                    width: 64,
+                    height: 64,
                     child: GestureDetector(
                       behavior: HitTestBehavior.translucent,
                       onTap: onAdd,
@@ -240,10 +337,10 @@ class _FieldsTemplateEmptyScreen extends StatelessWidget {
 
                   // "Add field" bottom pill button tap zone
                   Positioned(
-                    left: 20,
-                    right: 20,
-                    bottom: 24,
-                    height: 72,
+                    left: 10,
+                    right: 10,
+                    bottom: 0,
+                    height: 120,
                     child: GestureDetector(
                       behavior: HitTestBehavior.translucent,
                       onTap: onAdd,
