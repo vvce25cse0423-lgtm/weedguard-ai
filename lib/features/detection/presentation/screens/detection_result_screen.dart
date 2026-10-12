@@ -1,4 +1,4 @@
-import '../data/agronomy_pdf_report_service.dart';
+import '../../data/agronomy_pdf_report_service.dart';
 import '../../../fields/data/fields_repository.dart';
 import 'dart:io';
 import 'dart:math' as math;
