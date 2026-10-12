@@ -303,12 +303,14 @@ class AgronomyPdfReportService {
   }
 
   static pw.Widget _buildMetricBox(String title, String val, PdfColor col) {
+    final bgColor = PdfColor(col.red, col.green, col.blue, 0.12);
+    final borderColor = PdfColor(col.red, col.green, col.blue, 0.45);
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 10),
       decoration: pw.BoxDecoration(
-        color: col.tint(0.9),
+        color: bgColor,
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-        border: pw.Border.all(color: col.tint(0.5)),
+        border: pw.Border.all(color: borderColor),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
