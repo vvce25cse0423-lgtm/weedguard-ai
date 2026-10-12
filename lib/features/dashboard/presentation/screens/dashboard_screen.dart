@@ -112,13 +112,18 @@ final weatherProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
       'temp':       main?['temp'],
       'feels_like': main?['feels_like'],
       'humidity':   main?['humidity'],
+      'pressure':   main?['pressure'],
       'wind':       wind?['speed'],
+      'wind_speed': wind?['speed'],
+      'wind_deg':   wind?['deg'],
       'desc':       weather?['description'],
       'icon':       weather?['icon'],
       'main':       weather?['main'],
       'clouds':     clouds?['all'],
       'city':       cityName,
       'country':    sys?['country'],
+      'lat':        effectiveLat,
+      'lon':        effectiveLon,
     };
   } catch (_) { return null; }
 });
@@ -359,8 +364,9 @@ class _HeroSection extends StatelessWidget {
                     Consumer(
                       builder: (context, ref, _) {
                         final weatherAsync = ref.watch(weatherProvider);
+                        final cachedData = weatherAsync.valueOrNull;
                         return GestureDetector(
-                          onTap: () => context.push('/weather'),
+                          onTap: () => context.push('/weather', extra: cachedData),
                           child: weatherAsync.when(
                             loading: () => Container(
                               width: 38,
@@ -1295,7 +1301,7 @@ class _WeatherCard extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              temp != null ? '${temp.toStringAsFixed(1)}°C' : '--°C',
+                              temp != null ? '${temp.round()}°C' : '--°C',
                               style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: iconColor, height: 1),
                             ),
                             const SizedBox(width: 8),

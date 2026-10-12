@@ -149,59 +149,18 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF1B5E20)))
           : CustomScrollView(
               slivers: [
-                // ── Curved Header with landscape & back button ──
+                // ── Header with landscape template ──
                 SliverToBoxAdapter(
-                  child: Stack(
-                    children: [
-                      Container(
-                        height: 200,
-                        width: double.infinity,
-                        decoration: const BoxDecoration(
-                          image: DecorationImage(
-                            image: AssetImage('assets/images/add_field_template.png'),
-                            fit: BoxFit.cover,
-                            alignment: Alignment.topCenter,
-                          ),
-                        ),
+                  child: Container(
+                    height: 180,
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/images/add_field_template.png'),
+                        fit: BoxFit.cover,
+                        alignment: Alignment.topCenter,
                       ),
-                      // Top gradient overlay to ensure text and back button legibility
-                      Container(
-                        height: 200,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withOpacity(0.55),
-                              Colors.transparent,
-                              const Color(0xFFF6FBF7),
-                            ],
-                            stops: const [0.0, 0.65, 1.0],
-                          ),
-                        ),
-                      ),
-                      SafeArea(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: GestureDetector(
-                              onTap: () => context.pop(),
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.35),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
-                                ),
-                                child: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
 

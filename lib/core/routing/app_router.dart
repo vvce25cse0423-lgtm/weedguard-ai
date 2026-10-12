@@ -74,7 +74,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
           GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
-          GoRoute(path: '/weather', builder: (_, __) => const WeatherScreen()),
+          GoRoute(
+            path: '/weather',
+            builder: (_, state) => WeatherScreen(
+              initialData: state.extra as Map<String, dynamic>?,
+            ),
+          ),
         ],
       ),
     ],

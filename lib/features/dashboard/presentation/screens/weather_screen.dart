@@ -9,7 +9,8 @@ import '../../../../core/theme/app_theme.dart';
 const _owmApiKey = '624d64f50bcf3cf596ccf7693dce142f';
 
 class WeatherScreen extends ConsumerStatefulWidget {
-  const WeatherScreen({super.key});
+  final Map<String, dynamic>? initialData;
+  const WeatherScreen({super.key, this.initialData});
 
   @override
   ConsumerState<WeatherScreen> createState() => _WeatherScreenState();
@@ -57,8 +58,15 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
   @override
   void initState() {
     super.initState();
-    // Auto-detect current device GPS location on launch
-    _fetchDeviceGpsLocation();
+    if (widget.initialData != null && widget.initialData!.isNotEmpty) {
+      _weatherData = widget.initialData;
+      _currentCity = widget.initialData!['city'] as String? ?? _currentCity;
+      _lat = (widget.initialData!['lat'] as num?)?.toDouble() ?? _lat;
+      _lon = (widget.initialData!['lon'] as num?)?.toDouble() ?? _lon;
+      _isLoading = false;
+    } else {
+      _fetchDeviceGpsLocation();
+    }
   }
 
   @override
