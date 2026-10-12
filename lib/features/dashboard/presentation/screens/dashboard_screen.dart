@@ -76,7 +76,7 @@ final weatherProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
 
     final client = HttpClient();
     final req = await client.getUrl(Uri.parse(
-      'https://api.openweathermap.org/data/2.5/weather?lat=&lon=&appid=&units=metric'));
+      'https://api.openweathermap.org/data/2.5/weather?lat=$effectiveLat&lon=$effectiveLon&appid=$_owmApiKey&units=metric'));
     final res = await req.close();
     final body = await res.transform(utf8.decoder).join();
     
@@ -85,7 +85,7 @@ final weatherProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
     if (lat != null && lon != null) {
       try {
         final geoReq = await client.getUrl(Uri.parse(
-          'https://api.openweathermap.org/geo/1.0/reverse?lat=&lon=&limit=5&appid='));
+          'https://api.openweathermap.org/geo/1.0/reverse?lat=$lat&lon=$lon&limit=5&appid=$_owmApiKey'));
         final geoRes = await geoReq.close();
         final geoBody = await geoRes.transform(utf8.decoder).join();
         final geoList = jsonDecode(geoBody) as List?;

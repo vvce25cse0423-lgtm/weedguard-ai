@@ -112,7 +112,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
     try {
       final client = HttpClient();
       final uri = Uri.parse(
-        'https://api.openweathermap.org/geo/1.0/reverse?lat=&lon=&limit=5&appid=',
+        'https://api.openweathermap.org/geo/1.0/reverse?lat=$lat&lon=$lon&limit=5&appid=$_owmApiKey',
       );
       final req = await client.getUrl(uri);
       final res = await req.close();
@@ -141,7 +141,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
     try {
       final client = HttpClient();
       final uri = Uri.parse(
-        'https://api.openweathermap.org/data/2.5/weather?lat=&lon=&appid=&units=metric',
+        'https://api.openweathermap.org/data/2.5/weather?lat=$lat&lon=$lon&appid=$_owmApiKey&units=metric',
       );
       final req = await client.getUrl(uri);
       final res = await req.close();
@@ -271,26 +271,26 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
       if (perm == LocationPermission.denied) {
         perm = await Geolocator.requestPermission();
       }
-      if (perm == LocationPermission.deniedForever) {
-        setState(() {
-          _isLoading = false;
-          _error = 'Location permission is denied. Enable it in settings.';
-        });
-        return;
+
+      Position? pos;
+      if (perm == LocationPermission.whileInUse || perm == LocationPermission.always) {
+        try {
+          pos = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.medium,
+            timeLimit: const Duration(seconds: 5),
+          );
+        } catch (_) {
+          pos = await Geolocator.getLastKnownPosition();
+        }
       }
 
-      final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 8),
-      );
-
       _searchCtrl.clear();
-      await _fetchWeatherForCoords(pos.latitude, pos.longitude);
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _error = 'Unable to fetch current GPS location. Please check GPS settings.';
-      });
+      final targetLat = pos?.latitude ?? _lat;
+      final targetLon = pos?.longitude ?? _lon;
+      await _fetchWeatherForCoords(targetLat, targetLon);
+    } catch (_) {
+      // Fallback to active coordinates
+      await _fetchWeatherForCoords(_lat, _lon, cityName: _currentCity);
     }
   }
 
