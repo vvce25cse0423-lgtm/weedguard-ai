@@ -34,9 +34,9 @@ dependencies:
   latlong2: ^0.9.0
   permission_handler: ^11.3.0
   loading_animation_widget: ^1.2.0+4
-  pdf: ^3.12.0
-  printing: ^5.14.3
-  share_plus: ^12.0.2
+  pdf: ^3.11.1
+  printing: ^5.13.2
+  share_plus: ^10.1.4
 
 dev_dependencies:
   flutter_test:
