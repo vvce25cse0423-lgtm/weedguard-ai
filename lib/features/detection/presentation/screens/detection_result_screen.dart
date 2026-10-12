@@ -1,3 +1,5 @@
+import '../data/agronomy_pdf_report_service.dart';
+import '../../../fields/data/fields_repository.dart';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -77,7 +79,7 @@ class _DetectionResultScreenState extends ConsumerState<DetectionResultScreen> {
 
 // ─── Analysis Results Screen ──────────────────────────────────────────────────
 
-class _AnalysisResultsScreen extends StatelessWidget {
+class _AnalysisResultsScreen extends StatefulWidget {
   final WeedDetectionResult result;
   final String fieldId;
   final String? scanId;
@@ -91,6 +93,47 @@ class _AnalysisResultsScreen extends StatelessWidget {
     required this.onViewFieldZones,
     required this.onSaveScan,
   });
+
+  @override
+  State<_AnalysisResultsScreen> createState() => _AnalysisResultsScreenState();
+}
+
+class _AnalysisResultsScreenState extends State<_AnalysisResultsScreen> {
+  bool _isGeneratingPdf = false;
+
+  Future<void> _shareReport() async {
+    setState(() => _isGeneratingPdf = true);
+    try {
+      String? fieldName;
+      String? locationLabel;
+      String? cropType;
+
+      if (widget.fieldId.isNotEmpty) {
+        try {
+          final repo = FieldsRepository(Supabase.instance.client);
+          final field = await repo.getField(widget.fieldId);
+          fieldName = field.name;
+          locationLabel = field.locationLabel;
+          cropType = field.cropType;
+        } catch (_) {}
+      }
+
+      await AgronomyPdfReportService.generateAndShareReport(
+        result: widget.result,
+        fieldName: fieldName,
+        locationLabel: locationLabel,
+        cropType: cropType,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate report: ')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGeneratingPdf = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -150,22 +193,22 @@ class _AnalysisResultsScreen extends StatelessWidget {
                     ),
                   ),
                   // Image with bounding boxes
-                  _ScannedImageSection(result: result),
+                  _ScannedImageSection(result: widget.result),
                   // Stats row
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: _StatsRow(result: result),
+                    child: _StatsRow(result: widget.result),
                   ),
                   // Detected weed types
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                    child: _DetectedWeedTypes(result: result),
+                    child: _DetectedWeedTypes(result: widget.result),
                   ),
                   const SizedBox(height: 20),
                   // Herbicide recommendations
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                    child: _HerbicideRecommendations(result: result),
+                    child: _HerbicideRecommendations(result: widget.result),
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -176,41 +219,73 @@ class _AnalysisResultsScreen extends StatelessWidget {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: OutlinedButton.icon(
-                        onPressed: onViewFieldZones,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF1B5E20),
-                          side: const BorderSide(color: Color(0xFF1B5E20), width: 1.5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        icon: const Icon(Icons.grid_view_rounded, size: 18),
-                        label: Text(AppLocalizations.of(context).viewFieldZones,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  // One-Tap WhatsApp / PDF Share Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: _isGeneratingPdf ? null : _shareReport,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(0xFF25D366).withOpacity(0.6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 1,
+                      ),
+                      icon: _isGeneratingPdf
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.share_rounded, size: 20, color: Colors.white),
+                      label: Text(
+                        _isGeneratingPdf ? 'Generating PDF...' : 'Share Report via WhatsApp / PDF',
+                        style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, letterSpacing: 0.2),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: ElevatedButton.icon(
-                        onPressed: onSaveScan,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1B5E20),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          elevation: 0,
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: OutlinedButton.icon(
+                            onPressed: widget.onViewFieldZones,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF1B5E20),
+                              side: const BorderSide(color: Color(0xFF1B5E20), width: 1.5),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            icon: const Icon(Icons.grid_view_rounded, size: 18),
+                            label: Text(AppLocalizations.of(context).viewFieldZones,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          ),
                         ),
-                        icon: const Icon(Icons.save_alt_rounded, size: 18),
-                        label: const Text('Save Scan',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: ElevatedButton.icon(
+                            onPressed: widget.onSaveScan,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1B5E20),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Icons.save_alt_rounded, size: 18),
+                            label: const Text('Save Scan',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

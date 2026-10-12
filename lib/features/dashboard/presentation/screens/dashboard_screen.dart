@@ -30,10 +30,29 @@ final dashboardScansProvider = FutureProvider<List<ScanModel>>((ref) async {
 // ── Weather (OpenWeatherMap API) ──────────────────────────────────────────────
 const _owmApiKey = '624d64f50bcf3cf596ccf7693dce142f';
 
+String _cleanWeatherPlaceName(String raw) {
+  var name = raw.trim();
+  name = name
+      .replaceAll('ī', 'i')
+      .replaceAll('Ĩ', 'I')
+      .replaceAll('ā', 'a')
+      .replaceAll('Ā', 'A')
+      .replaceAll('ū', 'u')
+      .replaceAll('Ū', 'U');
+
+  name = name
+      .replaceAll(RegExp(r'\s+taluk\b', caseSensitive: false), '')
+      .replaceAll(RegExp(r'\s+district\b', caseSensitive: false), '')
+      .replaceAll(RegExp(r'\s+hobli\b', caseSensitive: false), '')
+      .trim();
+
+  return name.isNotEmpty ? name : raw;
+}
+
 final weatherProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   try {
-    double lat = 12.9716;
-    double lon = 77.5946;
+    double? lat;
+    double? lon;
 
     try {
       LocationPermission perm = await Geolocator.checkPermission();
@@ -42,28 +61,53 @@ final weatherProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
       }
       if (perm == LocationPermission.whileInUse || perm == LocationPermission.always) {
         final pos = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.medium,
-          timeLimit: const Duration(seconds: 4),
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 6),
         );
         lat = pos.latitude;
         lon = pos.longitude;
       }
     } catch (_) {
-      // Keep defaults if GPS timeout or unavailable
+      // GPS unavailable or timed out
     }
+
+    final effectiveLat = lat ?? 12.9716;
+    final effectiveLon = lon ?? 77.5946;
 
     final client = HttpClient();
     final req = await client.getUrl(Uri.parse(
-      'https://api.openweathermap.org/data/2.5/weather?lat=$lat&lon=$lon&appid=$_owmApiKey&units=metric'));
+      'https://api.openweathermap.org/data/2.5/weather?lat=&lon=&appid=&units=metric'));
     final res = await req.close();
     final body = await res.transform(utf8.decoder).join();
+    
+    // Reverse geocode to get natural place name
+    String? resolvedCity;
+    if (lat != null && lon != null) {
+      try {
+        final geoReq = await client.getUrl(Uri.parse(
+          'https://api.openweathermap.org/geo/1.0/reverse?lat=&lon=&limit=5&appid='));
+        final geoRes = await geoReq.close();
+        final geoBody = await geoRes.transform(utf8.decoder).join();
+        final geoList = jsonDecode(geoBody) as List?;
+        if (geoList != null && geoList.isNotEmpty) {
+          final first = geoList.first as Map<String, dynamic>?;
+          final placeName = first?['name'] as String?;
+          if (placeName != null && placeName.trim().isNotEmpty) {
+            resolvedCity = _cleanWeatherPlaceName(placeName);
+          }
+        }
+      } catch (_) {}
+    }
     client.close();
+
     final json = jsonDecode(body) as Map<String, dynamic>;
     final main   = json['main']    as Map<String, dynamic>?;
     final wind   = json['wind']    as Map<String, dynamic>?;
     final weather = (json['weather'] as List?)?.first as Map<String, dynamic>?;
     final clouds = json['clouds']  as Map<String, dynamic>?;
     final sys    = json['sys']     as Map<String, dynamic>?;
+    final cityName = resolvedCity ?? _cleanWeatherPlaceName(json['name'] as String? ?? 'Bengaluru');
+
     return {
       'temp':       main?['temp'],
       'feels_like': main?['feels_like'],
@@ -73,7 +117,7 @@ final weatherProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
       'icon':       weather?['icon'],
       'main':       weather?['main'],
       'clouds':     clouds?['all'],
-      'city':       json['name'],
+      'city':       cityName,
       'country':    sys?['country'],
     };
   } catch (_) { return null; }

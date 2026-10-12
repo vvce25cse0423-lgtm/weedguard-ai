@@ -57,7 +57,8 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchWeatherForCoords(_lat, _lon, cityName: _currentCity);
+    // Auto-detect current device GPS location on launch
+    _fetchDeviceGpsLocation();
   }
 
   @override
@@ -88,6 +89,48 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
     });
   }
 
+  String _cleanPlaceName(String raw) {
+    var name = raw.trim();
+    name = name
+        .replaceAll('ī', 'i')
+        .replaceAll('Ĩ', 'I')
+        .replaceAll('ā', 'a')
+        .replaceAll('Ā', 'A')
+        .replaceAll('ū', 'u')
+        .replaceAll('Ū', 'U');
+
+    name = name
+        .replaceAll(RegExp(r'\s+taluk\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\s+district\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\s+hobli\b', caseSensitive: false), '')
+        .trim();
+
+    return name.isNotEmpty ? name : raw;
+  }
+
+  Future<String> _resolveCityName(double lat, double lon, String? fallback) async {
+    try {
+      final client = HttpClient();
+      final uri = Uri.parse(
+        'https://api.openweathermap.org/geo/1.0/reverse?lat=&lon=&limit=5&appid=',
+      );
+      final req = await client.getUrl(uri);
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      client.close();
+
+      final list = jsonDecode(body) as List?;
+      if (list != null && list.isNotEmpty) {
+        final first = list.first as Map<String, dynamic>?;
+        final name = first?['name'] as String?;
+        if (name != null && name.trim().isNotEmpty) {
+          return _cleanPlaceName(name);
+        }
+      }
+    } catch (_) {}
+    return fallback != null ? _cleanPlaceName(fallback) : 'Your Location';
+  }
+
   Future<void> _fetchWeatherForCoords(double lat, double lon, {String? cityName}) async {
     setState(() {
       _isLoading = true;
@@ -98,7 +141,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
     try {
       final client = HttpClient();
       final uri = Uri.parse(
-        'https://api.openweathermap.org/data/2.5/weather?lat=$lat&lon=$lon&appid=$_owmApiKey&units=metric',
+        'https://api.openweathermap.org/data/2.5/weather?lat=&lon=&appid=&units=metric',
       );
       final req = await client.getUrl(uri);
       final res = await req.close();
@@ -119,10 +162,15 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
       final clouds = json['clouds'] as Map<String, dynamic>?;
       final sys = json['sys'] as Map<String, dynamic>?;
 
+      String resolvedCity = cityName ?? '';
+      if (resolvedCity.isEmpty) {
+        resolvedCity = await _resolveCityName(lat, lon, json['name'] as String?);
+      }
+
       setState(() {
         _lat = lat;
         _lon = lon;
-        _currentCity = cityName ?? (json['name'] as String? ?? 'Your Location');
+        _currentCity = resolvedCity;
         _weatherData = {
           'temp': main?['temp'],
           'feels_like': main?['feels_like'],
@@ -136,7 +184,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
           'main': weather?['main'],
           'icon': weather?['icon'],
           'clouds': clouds?['all'],
-          'city': cityName ?? (json['name'] as String? ?? 'Your Location'),
+          'city': resolvedCity,
           'country': sys?['country'],
         };
         _isLoading = false;
