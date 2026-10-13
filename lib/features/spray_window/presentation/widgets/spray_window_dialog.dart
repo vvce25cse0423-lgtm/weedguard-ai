@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../core/services/notification_service.dart';
-import '../data/spray_window_service.dart';
+import 'package:weedguard/core/services/notification_service.dart';
+import 'package:weedguard/features/spray_window/data/spray_window_service.dart';
 
 class SprayWindowDialog extends StatelessWidget {
   final double windSpeed;
