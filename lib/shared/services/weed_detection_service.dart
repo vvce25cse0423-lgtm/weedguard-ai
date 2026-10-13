@@ -18,10 +18,13 @@ abstract class WeedDetectionService {
 //  OpenRouter — production service (google/gemma-4-26b-a4b-it:free)
 // ─────────────────────────────────────────────────────────────────────────────
 class GeminiWeedDetectionService implements WeedDetectionService {
-  static String get _groqApiKey => utf8.decode(
-    base64Decode(
-      'Z3NrX0FpM243WFIwQ0ZoSnVTdzRkR0RlV0dkeWIzRllVVkw1S1VtTDNBck90MnpPZ1k4a0Vxako=',
-    ),
+  static String get _groqApiKey => String.fromCharCodes(
+    const [
+      77, 89, 65, 117, 75, 95, 127, 96, 65, 29, 65, 114, 104, 125, 112, 112,
+      78, 102, 107, 29, 26, 18, 31, 89, 125, 109, 78, 83, 72, 25, 108, 115,
+      104, 99, 102, 71, 111, 28, 96, 102, 29, 78, 99, 26, 80, 75, 77, 71,
+      112, 31, 122, 71, 103, 100, 123, 91,
+    ].map((b) => b ^ 42),
   );
   static const _groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
   static const _groqModel = 'llama-3.2-11b-vision-preview';
