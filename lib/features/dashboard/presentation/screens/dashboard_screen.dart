@@ -16,6 +16,9 @@ import '../../../scanner/presentation/widgets/severity_chip.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/providers/app_providers.dart';
+import '../../../../core/services/notification_service.dart';
+import '../../../notifications/presentation/screens/notifications_screen.dart';
+import '../../../spray_window/presentation/widgets/spray_window_dialog.dart';
 import '../../../history/presentation/screens/scan_history_screen.dart';
 
 final dashboardFieldsProvider = FutureProvider<List<FieldModel>>((ref) async {
@@ -428,6 +431,71 @@ class _HeroSection extends StatelessWidget {
                                 ),
                               );
                             },
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => SprayWindowDialog.show(context),
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.18),
+                          border: Border.all(color: Colors.white54, width: 1.5),
+                        ),
+                        child: const Icon(Icons.wb_twilight_rounded,
+                            color: Colors.amberAccent, size: 20),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ValueListenableBuilder<int>(
+                      valueListenable: NotificationService.unreadCountNotifier,
+                      builder: (context, unreadCount, _) {
+                        return GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const NotificationsScreen()),
+                          ),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withOpacity(0.18),
+                                  border: Border.all(
+                                      color: Colors.white54, width: 1.5),
+                                ),
+                                child: const Icon(Icons.notifications_outlined,
+                                    color: Colors.white, size: 20),
+                              ),
+                              if (unreadCount > 0)
+                                Positioned(
+                                  right: -2,
+                                  top: -2,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.redAccent,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      '$unreadCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         );
                       },

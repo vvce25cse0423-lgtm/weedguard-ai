@@ -7,6 +7,8 @@ import 'core/routing/app_router.dart';
 import 'core/providers/app_providers.dart';
 import 'core/l10n/app_localizations.dart';
 
+import 'core/services/notification_service.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -14,6 +16,8 @@ Future<void> main() async {
     url: 'https://yphhjjunhtqpazvxfhgo.supabase.co',
     anonKey: 'sb_publishable_Y9LPePWF1tgrckpyd-JtaA_rG4cRXmA',
   );
+
+  await NotificationService.initialize();
 
   runApp(const ProviderScope(child: WeedGuardApp()));
 }

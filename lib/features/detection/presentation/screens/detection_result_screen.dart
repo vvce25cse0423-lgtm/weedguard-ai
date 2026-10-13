@@ -15,6 +15,12 @@ import '../widgets/detection_overlay_painter.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../history/presentation/screens/scan_history_screen.dart';
+import '../../../spray_window/presentation/widgets/spray_window_dialog.dart';
+import '../../../roi_calculator/presentation/widgets/roi_savings_card.dart';
+import '../../../organic/presentation/widgets/organic_management_card.dart';
+import '../../../drone/data/drone_mission_export_service.dart';
+import '../../../procurement/data/krishi_kendra_service.dart';
+import '../../../resistance/presentation/widgets/resistance_tracker_widget.dart';
 
 
 class DetectionResultScreen extends ConsumerStatefulWidget {
@@ -136,6 +142,41 @@ class _AnalysisResultsScreenState extends State<_AnalysisResultsScreen> {
     }
   }
 
+  Future<void> _exportDroneMission() async {
+    String? fieldName;
+    if (widget.fieldId.isNotEmpty) {
+      try {
+        final repo = FieldsRepository(Supabase.instance.client);
+        final field = await repo.getField(widget.fieldId);
+        fieldName = field.name;
+      } catch (_) {}
+    }
+    await DroneMissionExportService.exportAndShareDroneFlightPath(
+      result: widget.result,
+      fieldName: fieldName,
+    );
+  }
+
+  Future<void> _inquireKrishiKendra() async {
+    final langCode = Localizations.localeOf(context).languageCode;
+    String? fieldName;
+    String? cropType;
+    if (widget.fieldId.isNotEmpty) {
+      try {
+        final repo = FieldsRepository(Supabase.instance.client);
+        final field = await repo.getField(widget.fieldId);
+        fieldName = field.name;
+        cropType = field.cropType;
+      } catch (_) {}
+    }
+    await KrishiKendraService.sharePrescriptionToDealer(
+      result: widget.result,
+      fieldName: fieldName,
+      cropType: cropType,
+      languageCode: langCode,
+    );
+  }
+
   @override
   void dispose() {
     AgronomyVoiceAssistantService.stop();
@@ -211,6 +252,11 @@ class _AnalysisResultsScreenState extends State<_AnalysisResultsScreen> {
                 onPressed: _playVoiceAssistant,
               );
             },
+          ),
+          IconButton(
+            tooltip: 'Spray-Window Weather Intelligence',
+            icon: const Icon(Icons.wb_twilight_rounded, color: Colors.amberAccent, size: 24),
+            onPressed: () => SprayWindowDialog.show(context),
           ),
           const SizedBox(width: 4),
         ],
@@ -306,6 +352,39 @@ class _AnalysisResultsScreenState extends State<_AnalysisResultsScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                     child: _HerbicideRecommendations(result: widget.result),
                   ),
+                  const SizedBox(height: 16),
+
+                  // Feature 2: Precision ROI & Chemical Savings
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: RoiSavingsCard(
+                      weedCount: widget.result.weedCount,
+                      averageConfidence: widget.result.averageConfidence,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Feature 3: Organic & Bio-Weed Management Alternatives
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: OrganicManagementCard(
+                      weeds: widget.result.detections
+                          .where((d) => !d.isCrop)
+                          .map((d) => d.label)
+                          .toSet()
+                          .toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Feature 6: Weed Growth Timeline & Resistance Tracker
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ResistanceTrackerWidget(
+                      baselineWeedCount: widget.result.weedCount + 8,
+                      currentWeedCount: widget.result.weedCount,
+                    ),
+                  ),
                   const SizedBox(height: 24),
                 ],
               ),
@@ -318,6 +397,51 @@ class _AnalysisResultsScreenState extends State<_AnalysisResultsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Action Buttons Row: Krishi Kendra & Drone Export
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 44,
+                          child: ElevatedButton.icon(
+                            onPressed: _inquireKrishiKendra,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1565C0),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Icons.storefront_rounded, size: 17),
+                            label: const Text(
+                              'Krishi Kendra Order',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: SizedBox(
+                          height: 44,
+                          child: OutlinedButton.icon(
+                            onPressed: _exportDroneMission,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF00695C),
+                              side: const BorderSide(color: Color(0xFF00695C), width: 1.3),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            icon: const Icon(Icons.flight_takeoff_rounded, size: 17),
+                            label: const Text(
+                              'Drone GeoJSON Export',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
                   // One-Tap WhatsApp / PDF Share Button
                   SizedBox(
                     width: double.infinity,
