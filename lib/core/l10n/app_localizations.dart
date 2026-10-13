@@ -137,8 +137,62 @@ class AppLocalizations {
     // ── Splash ──
     'loading_farm':    {'en': 'Loading your farm…', 'kn': 'ನಿಮ್ಮ ಜಮೀನು ಲೋಡ್ ಆಗುತ್ತಿದೆ…', 'hi': 'आपका खेत लोड हो रहा है…'},
     'login_title':     {'en': 'Sign In',   'kn': 'ಸೈನ್ ಇನ್',  'hi': 'साइन इन करें'},
-    'email':           {'en': 'Email',     'kn': 'ಇಮೇಲ್',     'hi': 'ईमेल'},
-    'password':        {'en': 'Password',  'kn': 'ಪಾಸ್‌ವರ್ಡ್', 'hi': 'पासवर्ड'},
+    // ── Agronomy & Detection Results ──
+    'crop_name':       {'en': 'Crop Name',     'kn': 'ಬೆಳೆಯ ಹೆಸರು',    'hi': 'फसल का नाम'},
+    'weed_name':       {'en': 'Weed Name',     'kn': 'ಕಳೆಯ ಹೆಸರು',     'hi': 'खरपतवार का नाम'},
+    'weed_names_detected': {'en': 'Weed Name(s) Detected', 'kn': 'ಪತ್ತೆಯಾದ ಕಳೆಗಳ ಹೆಸರು', 'hi': 'पहचाने गए खरपतवार'},
+    'infestation_level':{'en': 'Infestation Level', 'kn': 'ಕಳೆ ಹರಡುವಿಕೆ ಮಟ್ಟ', 'hi': 'खरपतवार संक्रमण स्तर'},
+    'herbicides_name': {'en': 'Herbicides Name', 'kn': 'ಶಿಫಾರಸು ಸಸ್ಯನಾಶಕ ಹೆಸರು', 'hi': 'अनुशंसित शाकनाशक'},
+    'buy_herbicide_online': {'en': 'Buy Herbicide Online', 'kn': 'ಸಸ್ಯನಾಶಕವನ್ನು ಆನ್‌ಲೈನ್‌ ಖರೀದಿಸಿ', 'hi': 'ऑनलाइन शाकनाशक खरीदें'},
+    'total_weeds_detected': {'en': 'Total Weeds Detected', 'kn': 'ಒಟ್ಟು ಪತ್ತೆಯಾದ ಕಳೆಗಳು', 'hi': 'कुल पहचाने गए खरपतवार'},
+    'crop_field_protected': {'en': 'Field Protected', 'kn': 'ರಕ್ಷಿತ ಬೆಳೆ', 'hi': 'संरक्षित फसल'},
+    'no_weeds_clean':  {'en': 'No weeds detected - Clean crop', 'kn': 'ಯಾವುದೇ ಕಳೆಗಳಿಲ್ಲ - ಸ್ವಚ್ಛ ಬೆಳೆ', 'hi': 'कोई खरपतवार नहीं - स्वच्छ फसल'},
+    'priority_treatment_zone': {'en': 'High Priority Treatment Zone', 'kn': 'ಹೆಚ್ಚಿನ ಆದ್ಯತೆಯ ಚಿಕಿತ್ಸಾ ವಲಯ', 'hi': 'उच्च प्राथमिकता उपचार क्षेत्र'},
+
+    // ── Precision ROI & Savings ──
+    'precision_roi_savings': {'en': 'Precision ROI & Savings', 'kn': 'ನಿಖರ ಹೂಡಿಕೆ ಮೌಲ್ಯ & ಉಳಿತಾಯ', 'hi': 'सटीक निवेश लाभ और बचत'},
+    'roi_savings_badge':     {'en': 'SAVINGS', 'kn': 'ಉಳಿತಾಯ', 'hi': 'बचत'},
+    'roi_saved_per_acre':    {'en': 'saved per acre via Spot Spraying', 'kn': 'ಸ್ಪಾಟ್ ಸಿಂಪರಣೆಯಿಂದ ಪ್ರತಿ ಎಕರೆಗೆ ಉಳಿತಾಯ', 'hi': 'स्पॉट छिड़काव से प्रति एकड़ बचत'},
+    'traditional_spray':     {'en': 'Traditional Blanket Spray', 'kn': 'ಸಾಂಪ್ರದಾಯಿಕ ಪೂರ್ಣ ಸಿಂಪರಣೆ', 'hi': 'पारंपरिक पूर्ण छिड़काव'},
+    'weedguard_spot_spray':  {'en': 'WeedGuard Spot Spray', 'kn': 'ವೀಡ್‌ಗಾರ್ಡ್ ನಿಖರ ಸ್ಪಾಟ್ ಸಿಂಪರಣೆ', 'hi': 'वीडगार्ड सटीक स्पॉट छिड़काव'},
+    'water_saved_label':     {'en': 'water saved', 'kn': 'ನೀರಿನ ಉಳಿತಾಯ', 'hi': 'पानी की बचत'},
+    'less_soil_residue':     {'en': '70% less soil chemical residue', 'kn': '೭೦% ಕಡಿಮೆ ಮಣ್ಣಿನ ರಾಸಾಯನಿಕ ಶೇಷ', 'hi': '70% कम रासायनिक अवशेष'},
+    'chemical':              {'en': 'chemical', 'kn': 'ರಾಸಾಯನಿಕ', 'hi': 'रसायन'},
+
+    // ── Zero Chemical Bio & Organic Solutions ──
+    'zero_chemical_bio':     {'en': 'Zero-Chemical Bio & Organic Solutions', 'kn': 'ರಾಸಾಯನಿಕ ಮುಕ್ತ ಸಾವಯವ & ಜೈವಿಕ ನಿಯಂತ್ರಣ', 'hi': 'शून्य-रासायनिक जैविक एवं प्राकृतिक उपचार'},
+    'bio_subtitle':          {'en': 'Eco-friendly alternatives & non-toxic management', 'kn': 'ಪರಿಸರಸ್ನೇಹಿ ಪರ್ಯಾಯಗಳು ಮತ್ತು ನೈಸರ್ಗಿಕ ಕಳೆ ನಿರ್ವಹಣೆ', 'hi': 'पर्यावरण-अनुकूल विकल्प एवं गैर-विषाक्त खरपतवार प्रबंधन'},
+    'eco_mode':              {'en': 'ECO MODE', 'kn': 'ಪರಿಸರ ಮೋಡ್', 'hi': 'इको मोड'},
+    'natural_bio_herbicide': {'en': 'Natural Contact Bio-Herbicide', 'kn': 'ನೈಸರ್ಗಿಕ ಸಂಪರ್ಕ ಜೈವಿಕ ಸಸ್ಯನಾಶಕ', 'hi': 'प्राकृतिक संपर्क बायो-हर्बिसाइड'},
+    'natural_bio_detail':    {'en': 'Mix 1 Litre White Vinegar (20% Acetic Acid) + 100g Rock Salt + 20ml Lemon/Neem Oil. Spray directly on weed leaves during bright sun at noon for instant foliar desiccation.',
+                              'kn': '೧ ಲೀಟರ್ ಬಿಳಿ ವಿನೆಗರ್ (೨೦% ಅಸಿಟಿಕ್ ಆಮ್ಲ) + ೧೦೦ ಗ್ರಾಂ ಕಲ್ಲುಪ್ಪು + ೨೦ ಮಿ.ಲೀ ಬೇವಿನ ಎಣ್ಣೆ ಮಿಶ್ರಣ ಮಾಡಿ. ಮಧ್ಯಾಹ್ನದ ಬಿಸಿಲಿನಲ್ಲಿ ಕಳೆ ಎಲೆಗಳ ಮೇಲೆ ನೇರವಾಗಿ ಸಿಂಪಡಿಸಿ.',
+                              'hi': '1 लीटर सफेद सिरका + 100 ग्राम सेंधा नमक + 20 मिली नीम का तेल मिलाएं। दोपहर की तेज धूप में खरपतवार की पत्तियों पर सीधे छिड़कें।'},
+    'certified_organic':     {'en': 'Certified Organic', 'kn': 'ಪ್ರಮಾಣೀಕೃತ ಸಾವಯವ', 'hi': 'प्रमाणित जैविक'},
+    'mechanical_cultivation':{'en': 'Mechanical Inter-Cultivation', 'kn': 'ಯಾಂತ್ರಿಕ ಎಡೆಕುಂಟೆ ಕಳೆ ನಿರ್ವಹಣೆ', 'hi': 'यांत्रिक निराई-गुड़ाई'},
+    'mechanical_detail':     {'en': 'Use twin-wheel hand hoe or shallow blade harrow at 15–20 days after crop emergence. Cut weeds at crown level before seed setting to deplete root carbohydrates.',
+                              'kn': 'ಬೆಳೆ ಬಂದ ೧೫-೨೦ ದಿನಗಳಲ್ಲಿ ಕೈ ಕುಂಟೆ ಅಥವಾ ವೀಡರ್ ಬಳಸಿ. ಬೀಜ ಕಟ್ಟುವ ಮೊದಲೇ ಕಳೆಗಳ ಬೇರುಗಳನ್ನು ತೆಗೆದುಹಾಕಿ.',
+                              'hi': 'फसल उगने के 15-20 दिनों के बाद व्हील हो या वीडर का उपयोग करें। बीज बनने से पहले खरपतवार की जड़ों को नष्ट करें।'},
+    'physical_control':      {'en': 'Physical Control', 'kn': 'ಭೌತಿಕ ನಿಯಂತ್ರಣ', 'hi': 'भौतिक नियंत्रण'},
+    'bio_mulching':          {'en': 'Bio-Mulching & Shading', 'kn': 'ಜೈವಿಕ ಹೊದಿಕೆ & ಮಣ್ಣು ರಕ್ಷಣೆ (ಮಲ್ಚಿಂಗ್)', 'hi': 'बायो-मल्चिंग एवं छाया'},
+    'bio_mulching_detail':   {'en': 'Apply 8–10 cm dry paddy straw or sugarcane trash mulch between crop rows. Prevents sunlight penetration (zero weed germination) and conserves 35% soil moisture.',
+                              'kn': 'ಸಾಲುಗಳ ನಡುವೆ ಒಣ ಹುಲ್ಲು ಅಥವಾ ಕಬ್ಬಿನ ರವದಿಯ ೮-೧೦ ಸೆಂ.ಮೀ ಹೊದಿಕೆ ಹಾಕಿ. ಸೂರ್ಯನ ಬೆಳಕು ತಡೆದು ಕಳೆ ಮೊಳಕೆಯಾಗುವುದನ್ನು ನಿಲ್ಲಿಸುತ್ತದೆ ಮತ್ತು ತೇವಾಂಶ ಉಳಿಸುತ್ತದೆ.',
+                              'hi': 'फसल की कतारों के बीच 8-10 सेमी सूखी पुआल या पत्तों की मल्चिंग लगाएं। यह धूप रोककर खरपतवार उगने से रोकता है और नमी बनाए रखता है।'},
+    'moisture_saver':        {'en': 'Moisture Saver', 'kn': 'ತೇವಾಂಶ ಸಂರಕ್ಷಕ', 'hi': 'नमी संरक्षक'},
+
+    // ── Herbicide Resistance Warning ──
+    'herbicide_resistance_warning': {'en': 'Herbicide Resistance Warning', 'kn': 'ಸಸ್ಯನಾಶಕ ನಿರೋಧಕತೆ ಎಚ್ಚರಿಕೆ', 'hi': 'शाकनाशी प्रतिरोधक चेतावनी'},
+    'post_spray_tracker':    {'en': 'Post-Spray Mortality Tracker', 'kn': 'ಸಿಂಪರಣೆ ನಂತರದ ಕಳೆ ನಿರ್ಮೂಲನೆ ಟ್ರ್ಯಾಕರ್', 'hi': 'छिड़काव बाद खरपतवार नियंत्रण ट्रैकर'},
+    'followup_audit':        {'en': 'Follow-up Efficacy Audit', 'kn': 'ದಕ್ಷತೆ ಪರಿಶೀಲನಾ ಲೆಕ್ಕಪರಿಶೋಧನೆ', 'hi': 'प्रभावशीलता ऑडिट'},
+    'eradicated_badge':      {'en': 'ERADICATED', 'kn': 'ನಿರ್ಮೂಲನೆ', 'hi': 'नष्ट'},
+    'initial_scan':          {'en': 'Initial Scan', 'kn': 'ಆರಂಭಿಕ ಸ್ಕ್ಯಾನ್', 'hi': 'प्रारंभिक स्कैन'},
+    'rescan':                {'en': 'Rescan', 'kn': 'ಮರು ಸ್ಕ್ಯಾನ್', 'hi': 'पुनः स्कैन'},
+    'weeds_remaining':       {'en': 'Weeds Remaining', 'kn': 'ಉಳಿದಿರುವ ಕಳೆಗಳು', 'hi': 'शेष खरपतवार'},
+    'resistance_alert_msg':  {'en': 'Low weed mortality detected. Weeds may have developed tolerance to the active ingredient. Switch to an alternative Mode of Action (MoA) herbicide group.',
+                              'kn': 'ಕಡಿಮೆ ಕಳೆ ನಿರ್ಮೂಲನೆ ಪತ್ತೆಯಾಗಿದೆ! ಕಳೆಗಳು ಈ ರಾಸಾಯನಿಕಕ್ಕೆ ನಿರೋಧಕತೆ ಬೆಳೆಸಿಕೊಂಡಿರಬಹುದು. ಪರ್ಯಾಯ ಸಸ್ಯನಾಶಕ ಗುಂಪನ್ನು (HRAC MoA) ಬಳಸಿ ಅಥವಾ ಯಾಂತ್ರಿಕವಾಗಿ ತೆಗೆಯಿರಿ.',
+                              'hi': 'कम खरपतवार नियंत्रण मिला। खरपतवारों में इस रसायन के प्रति सहनशीलता आ सकती है। वैकल्पिक रासायनिक समूह (MoA) अपनाएं।'},
+    'efficacy_success_msg':  {'en': 'Excellent treatment efficacy. Weed population has been drastically reduced with healthy crop recovery.',
+                              'kn': 'ಉತ್ತಮ ಕಳೆ ನಿಯಂತ್ರಣ ಫಲಿತಾಂಶ. ಕಳೆಗಳು ಗಣನೀಯವಾಗಿ ಕಡಿಮೆಯಾಗಿದ್ದು ಬೆಳೆ ಆರೋಗ್ಯಕರವಾಗಿ ಚೇತರಿಸಿಕೊಳ್ಳುತ್ತಿದೆ.',
+                              'hi': 'उत्कृष्ट उपचार परिणाम। खरपतवारों की संख्या बहुत कम हो गई है और फसल स्वस्थ है।'},
   };
 
   String get(String key) {
@@ -237,6 +291,101 @@ class AppLocalizations {
   String get saveField => get('save_field');
   String get saveChanges => get('save_changes');
   String get growBetter => get('grow_better');
+
+  String translateCrop(String? cropName) {
+    if (cropName == null || cropName.trim().isEmpty) return cropName ?? '';
+    final lang = locale.languageCode;
+    if (lang == 'en') return cropName;
+
+    final lower = cropName.toLowerCase();
+    if (lower.contains('tomato')) {
+      return lang == 'kn' ? 'ಟೊಮ್ಯಾಟೊ (Tomato)' : 'टमाटर (Tomato)';
+    }
+    if (lower.contains('paddy') || lower.contains('rice') || lower.contains('oryza')) {
+      return lang == 'kn' ? 'ಭತ್ತ (Paddy/Rice)' : 'धान / चावल (Paddy)';
+    }
+    if (lower.contains('wheat') || lower.contains('triticum')) {
+      return lang == 'kn' ? 'ಗೋಧಿ (Wheat)' : 'गेहूं (Wheat)';
+    }
+    if (lower.contains('cotton') || lower.contains('gossypium')) {
+      return lang == 'kn' ? 'ಹತ್ತಿ (Cotton)' : 'कपास (Cotton)';
+    }
+    if (lower.contains('maize') || lower.contains('corn') || lower.contains('zea')) {
+      return lang == 'kn' ? 'ಮೆಕ್ಕೆಜೋಳ (Corn/Maize)' : 'मक्का (Maize)';
+    }
+    if (lower.contains('sugarcane')) {
+      return lang == 'kn' ? 'ಕಬ್ಬು (Sugarcane)' : 'गन्ना (Sugarcane)';
+    }
+    if (lower.contains('soybean') || lower.contains('soya') || lower.contains('glycine')) {
+      return lang == 'kn' ? 'ಸೋಯಾಬೀನ್ (Soybean)' : 'सोयाबीन (Soybean)';
+    }
+    if (lower.contains('potato') || lower.contains('tuberosum')) {
+      return lang == 'kn' ? 'ಆಲೂಗಡ್ಡೆ (Potato)' : 'आलू (Potato)';
+    }
+    if (lower.contains('chilli') || lower.contains('chili') || lower.contains('pepper')) {
+      return lang == 'kn' ? 'ಮೆಣಸಿನಕಾಯಿ (Chilli)' : 'मिर्च (Chilli)';
+    }
+    if (lower.contains('onion')) {
+      return lang == 'kn' ? 'ಈರುಳ್ಳಿ (Onion)' : 'प्याज (Onion)';
+    }
+    if (lower.contains('groundnut') || lower.contains('peanut')) {
+      return lang == 'kn' ? 'ಕಡಲೆಕಾಯಿ (Groundnut)' : 'मूंगफली (Groundnut)';
+    }
+    if (lower.contains('field crop') || lower.contains('agricultural') || lower.contains('crop field') || lower.contains('cultivation')) {
+      return lang == 'kn' ? 'ಕೃಷಿ ಹೊಲದ ಬೆಳೆ (Field Crop)' : 'कृषि खेत की फसल (Field Crop)';
+    }
+
+    return cropName;
+  }
+
+  String translateWeed(String weedName) {
+    if (weedName.trim().isEmpty) return weedName;
+    final lang = locale.languageCode;
+    if (lang == 'en') return weedName;
+
+    final lower = weedName.toLowerCase();
+    if (lower.contains('amaranthus') || lower.contains('pigweed') || lower.contains('chaulai') || lower.contains('amaranth')) {
+      return lang == 'kn' ? 'ದಂಟು / ಕಳೆ ಹರಿವೆ (Amaranthus/Pigweed)' : 'चौलाई / अमरंथस (Amaranthus)';
+    }
+    if (lower.contains('cyperus') || lower.contains('nutgrass') || lower.contains('sedge') || lower.contains('motha') || lower.contains('nutsedge')) {
+      return lang == 'kn' ? 'ಭದ್ರಮುಷ್ಟಿ / ಜೇಕು (Nutgrass/Cyperus)' : 'मोथा / साइपरस (Nutgrass)';
+    }
+    if (lower.contains('parthenium') || lower.contains('congress') || lower.contains('carrot grass') || lower.contains('gajjar')) {
+      return lang == 'kn' ? 'ಕಾಂಗ್ರೆಸ್ ಹುಲ್ಲು / ಪಾರ್ಥೇನಿಯಂ (Parthenium)' : 'गाजर घास / पार्थेनियम (Parthenium)';
+    }
+    if (lower.contains('echinochloa') || lower.contains('barnyard') || lower.contains('jungle rice') || lower.contains('shama')) {
+      return lang == 'kn' ? 'ಕಾಡು ಭತ್ತ / ಜಾವಡೆ ಹುಲ್ಲು (Barnyard Grass)' : 'सांवा घास (Barnyard Grass)';
+    }
+    if (lower.contains('cynodon') || lower.contains('bermuda') || lower.contains('hariali') || lower.contains('dub') || lower.contains('doob')) {
+      return lang == 'kn' ? 'ಗರಿಕೆ ಹುಲ್ಲು (Bermuda Grass)' : 'दूब घास (Bermuda Grass)';
+    }
+    if (lower.contains('digitaria') || lower.contains('crabgrass')) {
+      return lang == 'kn' ? 'ಏಡಿ ಹುಲ್ಲು (Crabgrass)' : 'केकड़ा घास / क्रेबग्रास (Crabgrass)';
+    }
+    if (lower.contains('convolvulus') || lower.contains('bindweed') || lower.contains('hiran')) {
+      return lang == 'kn' ? 'ಬಳ್ಳಿ ಕಳೆ (Field Bindweed)' : 'हिरनखुरी (Field Bindweed)';
+    }
+    if (lower.contains('chenopodium') || lower.contains('bathua') || lower.contains('lambsquarters') || lower.contains('lambs')) {
+      return lang == 'kn' ? 'ಬಾತುವಾ / ಕಾಡು ಪಾಲಕ್ (Bathua)' : 'बथुआ (Bathua/Lambsquarters)';
+    }
+    if (lower.contains('solanum') || lower.contains('nightshade') || lower.contains('makoi')) {
+      return lang == 'kn' ? 'ಕಾಡು ಕಾಗೆಹಣ್ಣು (Black Nightshade)' : 'मकोय (Black Nightshade)';
+    }
+    if (lower.contains('eleusine') || lower.contains('goosegrass')) {
+      return lang == 'kn' ? 'ರಾಗಿ ಹುಲ್ಲು (Goosegrass)' : 'कोदो घास / गूजग्रास (Goosegrass)';
+    }
+    if (lower.contains('portulaca') || lower.contains('purslane') || lower.contains('kulfa')) {
+      return lang == 'kn' ? 'ಗೋಳಿ ಸೊಪ್ಪು (Purslane)' : 'कुलफा / लोनी (Purslane)';
+    }
+    if (lower.contains('oxalis') || lower.contains('woodsorrel') || lower.contains('wood sorrel')) {
+      return lang == 'kn' ? 'ಹುಳಿ ಸೊಪ್ಪು (Wood Sorrel)' : 'खट्टी मीठी बूಟಿ (Oxalis)';
+    }
+    if (lower.contains('lantana')) {
+      return lang == 'kn' ? 'ಲಂಟಾನ / ರೋಣದ ಗಿಡ (Lantana)' : 'रायमुनिया / लेंटाना (Lantana)';
+    }
+
+    return weedName;
+  }
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

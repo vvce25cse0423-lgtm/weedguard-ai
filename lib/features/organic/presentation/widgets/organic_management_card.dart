@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/l10n/app_localizations.dart';
 
 class OrganicManagementCard extends StatelessWidget {
   final List<String> weeds;
@@ -10,6 +11,8 @@ class OrganicManagementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(16),
@@ -32,21 +35,21 @@ class OrganicManagementCard extends StatelessWidget {
                 child: const Icon(Icons.eco_rounded, color: Color(0xFF33691E), size: 22),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Zero-Chemical Bio & Organic Solutions',
-                      style: TextStyle(
+                      l10n.get('zero_chemical_bio'),
+                      style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1B5E20),
                       ),
                     ),
                     Text(
-                      'Eco-friendly alternatives & non-toxic management',
-                      style: TextStyle(fontSize: 11.5, color: Color(0xFF558B2F)),
+                      l10n.get('bio_subtitle'),
+                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF558B2F)),
                     ),
                   ],
                 ),
@@ -57,9 +60,9 @@ class OrganicManagementCard extends StatelessWidget {
                   color: const Color(0xFF33691E),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text(
-                  'ECO MODE',
-                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                child: Text(
+                  l10n.get('eco_mode'),
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -69,30 +72,27 @@ class OrganicManagementCard extends StatelessWidget {
           // 1. Bio-formulation
           _buildSolutionItem(
             icon: Icons.science_outlined,
-            title: 'Natural Contact Bio-Herbicide',
-            detail:
-                'Mix 1 Litre White Vinegar (20% Acetic Acid) + 100g Rock Salt + 20ml Lemon/Neem Oil. Spray directly on weed leaves during bright sun at noon for instant foliar desiccation.',
-            badge: 'Certified Organic',
+            title: l10n.get('natural_bio_herbicide'),
+            detail: l10n.get('natural_bio_detail'),
+            badge: l10n.get('certified_organic'),
           ),
           const SizedBox(height: 10),
 
           // 2. Mechanical Timing
           _buildSolutionItem(
             icon: Icons.handyman_outlined,
-            title: 'Mechanical Inter-Cultivation',
-            detail:
-                'Use twin-wheel hand hoe or shallow blade harrow at 15–20 days after crop emergence. Cut weeds at crown level before seed setting to deplete root carbohydrates.',
-            badge: 'Physical Control',
+            title: l10n.get('mechanical_cultivation'),
+            detail: l10n.get('mechanical_detail'),
+            badge: l10n.get('physical_control'),
           ),
           const SizedBox(height: 10),
 
           // 3. Cultural & Mulching
           _buildSolutionItem(
             icon: Icons.layers_outlined,
-            title: 'Bio-Mulching & Shading',
-            detail:
-                'Apply 8–10 cm dry paddy straw or sugarcane trash mulch between crop rows. Prevents sunlight penetration (zero weed germination) and conserves 35% soil moisture.',
-            badge: 'Moisture Saver',
+            title: l10n.get('bio_mulching'),
+            detail: l10n.get('bio_mulching_detail'),
+            badge: l10n.get('moisture_saver'),
           ),
         ],
       ),

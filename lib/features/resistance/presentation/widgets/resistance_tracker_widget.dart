@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/l10n/app_localizations.dart';
 
 class ResistanceTrackerWidget extends StatelessWidget {
   final int baselineWeedCount;
@@ -14,6 +15,8 @@ class ResistanceTrackerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     final int safeBaseline = baselineWeedCount > 0 ? baselineWeedCount : (currentWeedCount + 6);
     final int safeCurrent = currentWeedCount;
     final int killedWeeds = (safeBaseline - safeCurrent).clamp(0, safeBaseline);
@@ -21,6 +24,8 @@ class ResistanceTrackerWidget extends StatelessWidget {
     final int mortalityPercent = (mortalityRate * 100).round();
 
     final bool isResistant = daysAfterTreatment >= 7 && mortalityPercent < 45;
+
+    final String daySuffix = l10n.locale.languageCode == 'kn' ? 'ನೇ ದಿನ' : (l10n.locale.languageCode == 'hi' ? 'दिन $daysAfterTreatment' : 'Day $daysAfterTreatment');
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -55,7 +60,9 @@ class ResistanceTrackerWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isResistant ? 'Herbicide Resistance Warning' : 'Post-Spray Mortality Tracker',
+                      isResistant
+                          ? l10n.get('herbicide_resistance_warning')
+                          : l10n.get('post_spray_tracker'),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -63,7 +70,7 @@ class ResistanceTrackerWidget extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Day $daysAfterTreatment Follow-up Efficacy Audit',
+                      '$daySuffix ${l10n.get('followup_audit')}',
                       style: TextStyle(fontSize: 11.5, color: Colors.grey.shade700),
                     ),
                   ],
@@ -76,7 +83,7 @@ class ResistanceTrackerWidget extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '$mortalityPercent% ERADICATED',
+                  '$mortalityPercent% ${l10n.get('eradicated_badge')}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -106,9 +113,17 @@ class ResistanceTrackerWidget extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildTimelineStep('Day 0 Initial Scan', '$safeBaseline Weeds', Icons.camera_alt_outlined),
+              _buildTimelineStep(
+                l10n.get('initial_scan'),
+                '$safeBaseline ${l10n.weedCol}',
+                Icons.camera_alt_outlined,
+              ),
               const Icon(Icons.arrow_forward, size: 16, color: Colors.grey),
-              _buildTimelineStep('Day $daysAfterTreatment Rescan', '$safeCurrent Weeds Remaining', Icons.check_circle_outline),
+              _buildTimelineStep(
+                l10n.get('rescan'),
+                '$safeCurrent ${l10n.get('weeds_remaining')}',
+                Icons.check_circle_outline,
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -128,7 +143,7 @@ class ResistanceTrackerWidget extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Low weed mortality detected. Weeds may have developed tolerance to the active ingredient. Switch to an alternative Mode of Action (MoA) herbicide group.',
+                      l10n.get('resistance_alert_msg'),
                       style: TextStyle(fontSize: 11, color: Colors.deepOrange.shade900, height: 1.3),
                     ),
                   ),
@@ -142,14 +157,14 @@ class ResistanceTrackerWidget extends StatelessWidget {
                 color: const Color(0xFFE8F5E9),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.verified_outlined, color: Color(0xFF2E7D32), size: 20),
-                  SizedBox(width: 8),
+                  const Icon(Icons.verified_outlined, color: Color(0xFF2E7D32), size: 20),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Excellent treatment efficacy. Weed population has been drastically reduced with healthy crop recovery.',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF1B5E20)),
+                      l10n.get('efficacy_success_msg'),
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF1B5E20)),
                     ),
                   ),
                 ],

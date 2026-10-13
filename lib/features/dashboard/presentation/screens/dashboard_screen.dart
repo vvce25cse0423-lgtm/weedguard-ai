@@ -927,6 +927,9 @@ class _ActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (customAsset != null) {
+      final l10n = AppLocalizations.of(context);
+      final isNonEnglish = l10n.locale.languageCode != 'en';
+
       return GestureDetector(
         onTap: onTap,
         child: SizedBox(
@@ -935,9 +938,46 @@ class _ActionCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             child: AspectRatio(
               aspectRatio: 305 / 223,
-              child: Image.asset(
-                customAsset!,
-                fit: BoxFit.fill,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    customAsset!,
+                    fit: BoxFit.fill,
+                  ),
+                  if (isNonEnglish)
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF1B4332).withOpacity(0.92),
+                            const Color(0xFF2D6A4F).withOpacity(0.88),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(icon, color: Colors.white, size: 26),
+                          const SizedBox(height: 5),
+                          Text(
+                            label,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

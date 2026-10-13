@@ -218,6 +218,9 @@ class _SelectStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final isNonEnglish = l10n.locale.languageCode != 'en';
+
     return Column(
       children: [
         if (error != null)
@@ -236,15 +239,10 @@ class _SelectStep extends StatelessWidget {
             final imgH = imgW / (1033 / 1336);
 
             // Tap zone fractions (relative to image height)
-            // Camera card: y 0.269 → 0.516
-            // Gallery card: y 0.524 → 0.748
             final cameraTop    = imgH * 0.269;
             final cameraBottom = imgH * 0.516;
             final galleryTop    = imgH * 0.524;
             final galleryBottom = imgH * 0.748;
-
-            // Back arrow: sits at top-left of image, over the baked-in arrow area
-            // The image has "Scan field" text + arrow at top ~8% of height
             final backBtnTop = imgH * 0.01;
 
             return SingleChildScrollView(
@@ -256,6 +254,146 @@ class _SelectStep extends StatelessWidget {
                     // Full template image
                     Image.asset('assets/images/scanner_bg.png',
                         width: imgW, height: imgH, fit: BoxFit.fill),
+
+                    // Localized Header when Kannada or Hindi selected
+                    if (isNonEnglish)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        height: imgH * 0.08,
+                        child: Container(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF1B4332)),
+                                onPressed: onBack,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                l10n.scanField,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1B4332),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    // Localized Camera card
+                    if (isNonEnglish)
+                      Positioned(
+                        left: 20,
+                        right: 20,
+                        top: cameraTop + 8,
+                        height: (cameraBottom - cameraTop) - 16,
+                        child: IgnorePointer(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F5E9).withOpacity(0.96),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFF81C784)),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2E7D32),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 28),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        l10n.takePhoto,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF1B5E20),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        l10n.locale.languageCode == 'kn'
+                                            ? 'ಕ್ಯಾಮೆರಾ ಬಳಸಿ ಕಳೆ ಗುರುತಿಸಿ'
+                                            : 'कैमरे से खेत स्कैन करें',
+                                        style: const TextStyle(fontSize: 11, color: Color(0xFF2E7D32)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // Localized Gallery card
+                    if (isNonEnglish)
+                      Positioned(
+                        left: 20,
+                        right: 20,
+                        top: galleryTop + 8,
+                        height: (galleryBottom - galleryTop) - 16,
+                        child: IgnorePointer(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F8F1).withOpacity(0.96),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFA5D6A7)),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF388E3C),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.photo_library_rounded, color: Colors.white, size: 28),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        l10n.chooseGallery,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF1B5E20),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        l10n.locale.languageCode == 'kn'
+                                            ? 'ಗ್ಯಾಲರಿಯಿಂದ ಫೋಟೋ ಆರಿಸಿ'
+                                            : 'गैलरी से फोटो चुनें',
+                                        style: const TextStyle(fontSize: 11, color: Color(0xFF388E3C)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
 
                     // Floating back arrow (only widget, positioned over image arrow)
                     Positioned(

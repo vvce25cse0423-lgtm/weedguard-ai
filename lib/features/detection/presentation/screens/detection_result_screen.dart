@@ -565,10 +565,10 @@ class _StatsRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                children: const [
-                  Icon(Icons.local_florist, color: Color(0xFF1B5E20), size: 18),
-                  SizedBox(width: 6),
-                  Text('Total Weeds Detected', style: TextStyle(fontSize: 11, color: Color(0xFF5C5C5C))),
+                children: [
+                  const Icon(Icons.local_florist, color: Color(0xFF1B5E20), size: 18),
+                  const SizedBox(width: 6),
+                  Text(AppLocalizations.of(context).get('total_weeds_detected'), style: const TextStyle(fontSize: 11, color: Color(0xFF5C5C5C))),
                 ],
               ),
               const SizedBox(height: 4),
@@ -606,10 +606,10 @@ class _StatsRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              children: const [
-                Icon(Icons.eco_outlined, color: Color(0xFF1B5E20), size: 16),
-                SizedBox(width: 4),
-                Text('Infestation Level', style: TextStyle(fontSize: 11, color: Color(0xFF5C5C5C))),
+              children: [
+                const Icon(Icons.eco_outlined, color: Color(0xFF1B5E20), size: 16),
+                const SizedBox(width: 4),
+                Text(AppLocalizations.of(context).get('infestation_level'), style: const TextStyle(fontSize: 11, color: Color(0xFF5C5C5C))),
               ],
             ),
             const SizedBox(height: 6),
@@ -818,10 +818,10 @@ class _DetectedWeedTypes extends StatelessWidget {
               color: const Color(0xFFE8F5E9),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Row(children: [
-              Icon(Icons.check_circle_outline, color: Color(0xFF2E7D32), size: 18),
-              SizedBox(width: 8),
-              Text('No weeds detected in this scan.', style: TextStyle(fontSize: 13, color: Color(0xFF2E7D32), fontWeight: FontWeight.w500)),
+            child: Row(children: [
+              const Icon(Icons.check_circle_outline, color: Color(0xFF2E7D32), size: 18),
+              const SizedBox(width: 8),
+              Text(AppLocalizations.of(context).get('no_weeds_clean'), style: const TextStyle(fontSize: 13, color: Color(0xFF2E7D32), fontWeight: FontWeight.w500)),
             ]),
           ),
         ],
@@ -869,7 +869,12 @@ class _PlantRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
+                Text(
+                  isCrop
+                      ? AppLocalizations.of(context).translateCrop(label)
+                      : AppLocalizations.of(context).translateWeed(label),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A)),
+                ),
                 const SizedBox(height: 3),
                 Text(
                   '$count ${count == 1 ? 'instance' : 'instances'} · ${(confidence * 100).toStringAsFixed(0)}% ${AppLocalizations.of(context).confidence}',
@@ -885,7 +890,7 @@ class _PlantRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              isCrop ? 'Crop' : 'Weed',
+              isCrop ? AppLocalizations.of(context).get('crop_name') : AppLocalizations.of(context).get('weed_name'),
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accentColor),
             ),
           ),
@@ -1030,9 +1035,9 @@ class _HerbicideRecommendations extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Buy Herbicide Online',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A)),
+                        Text(
+                          AppLocalizations.of(context).get('buy_herbicide_online'),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A)),
                         ),
                         Text(
                           herbicideName,
@@ -1165,7 +1170,7 @@ class _HerbicideRecommendations extends StatelessWidget {
                       Expanded(flex: 3, child: Row(children: [
                         Container(width: 8, height: 8, margin: const EdgeInsets.only(top: 3, right: 6),
                           decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                        Expanded(child: Text(weed.label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A)))),
+                        Expanded(child: Text(AppLocalizations.of(context).translateWeed(weed.label), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A)))),
                       ])),
                       Expanded(flex: 3, child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

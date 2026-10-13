@@ -326,8 +326,8 @@ class _ScanHistoryCard extends StatelessWidget {
                         Flexible(
                           child: Text(
                             (scan.cropName != null && scan.cropName!.isNotEmpty)
-                                ? scan.cropName!
-                                : (scan.zones.isNotEmpty ? 'Paddy / Crop' : 'Field Crop'),
+                                ? l10n.translateCrop(scan.cropName)
+                                : (scan.zones.isNotEmpty ? l10n.translateCrop('Paddy / Crop') : l10n.translateCrop('Field Crop')),
                             style: const TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
@@ -358,8 +358,8 @@ class _ScanHistoryCard extends StatelessWidget {
                         Flexible(
                           child: Text(
                             scan.weedNames.isNotEmpty
-                                ? scan.weedNames.join(', ')
-                                : (scan.weedCount > 0 ? 'Target Weeds' : 'No Weeds'),
+                                ? scan.weedNames.map((w) => l10n.translateWeed(w)).join(', ')
+                                : (scan.weedCount > 0 ? l10n.get('weed_name') : l10n.get('no_weeds_clean')),
                             style: const TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
@@ -863,9 +863,9 @@ class _ScanDetailSheet extends StatelessWidget {
                           children: [
                             Icon(Icons.warning_amber_rounded, size: 20, color: severityColor),
                             const SizedBox(width: 8),
-                            const Text(
-                              'Infestation Level',
-                              style: TextStyle(
+                            Text(
+                              l10n.get('infestation_level'),
+                              style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF333333),
@@ -927,7 +927,7 @@ class _ScanDetailSheet extends StatelessWidget {
                                 padding: const EdgeInsets.only(left: 12),
                                 child: _DetailStat(
                                   value: scan.severity.label,
-                                  label: 'Severity Rating',
+                                  label: l10n.severity,
                                   color: severityColor,
                                 ),
                               ),
@@ -962,9 +962,9 @@ class _ScanDetailSheet extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Crop Name',
-                                style: TextStyle(
+                              Text(
+                                l10n.get('crop_name'),
+                                style: const TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w600,
                                   color: Color(0xFF2E7D32),
@@ -972,7 +972,7 @@ class _ScanDetailSheet extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                cropDisplayName,
+                                l10n.translateCrop(cropDisplayName),
                                 style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w800,
@@ -989,9 +989,9 @@ class _ScanDetailSheet extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: const Color(0xFF81C784)),
                           ),
-                          child: const Text(
-                            'Field Protected',
-                            style: TextStyle(
+                          child: Text(
+                            l10n.get('crop_field_protected'),
+                            style: const TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF2E7D32),
@@ -1025,9 +1025,9 @@ class _ScanDetailSheet extends StatelessWidget {
                               child: const Icon(Icons.grass_rounded, color: Colors.white, size: 18),
                             ),
                             const SizedBox(width: 10),
-                            const Text(
-                              'Weed Name(s) Detected',
-                              style: TextStyle(
+                            Text(
+                              l10n.get('weed_names_detected'),
+                              style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFFB71C1C),
@@ -1035,7 +1035,7 @@ class _ScanDetailSheet extends StatelessWidget {
                             ),
                             const Spacer(),
                             Text(
-                              '${scan.weedCount} identified',
+                              '${scan.weedCount} ${l10n.weedsDetected}',
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -1063,7 +1063,7 @@ class _ScanDetailSheet extends StatelessWidget {
                                     const Icon(Icons.grass_rounded, size: 14, color: Color(0xFFC62828)),
                                     const SizedBox(width: 5),
                                     Text(
-                                      w,
+                                      l10n.translateWeed(w),
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
@@ -1089,7 +1089,7 @@ class _ScanDetailSheet extends StatelessWidget {
                                 const Icon(Icons.grass_rounded, size: 14, color: Color(0xFFC62828)),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Detected field weeds (${scan.weedCount})',
+                                  '${l10n.weedsDetected} (${scan.weedCount})',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
@@ -1107,14 +1107,14 @@ class _ScanDetailSheet extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: const Color(0xFFC8E6C9)),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.check_circle_outline_rounded, size: 15, color: Color(0xFF2E7D32)),
-                                SizedBox(width: 6),
+                                const Icon(Icons.check_circle_outline_rounded, size: 15, color: Color(0xFF2E7D32)),
+                                const SizedBox(width: 6),
                                 Text(
-                                  'No weeds detected - Clean crop',
-                                  style: TextStyle(
+                                  l10n.get('no_weeds_clean'),
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF1B5E20),
@@ -1150,21 +1150,21 @@ class _ScanDetailSheet extends StatelessWidget {
                               child: const Icon(Icons.science_rounded, color: Colors.white, size: 18),
                             ),
                             const SizedBox(width: 10),
-                            const Expanded(
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Herbicides Name',
-                                    style: TextStyle(
+                                    l10n.get('herbicides_name'),
+                                    style: const TextStyle(
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w600,
                                       color: Color(0xFF1565C0),
                                     ),
                                   ),
                                   Text(
-                                    'Agronomic Treatment Recommendation',
-                                    style: TextStyle(
+                                    l10n.herbicideRec,
+                                    style: const TextStyle(
                                       fontSize: 10,
                                       color: Color(0xFF757575),
                                     ),
@@ -1200,7 +1200,7 @@ class _ScanDetailSheet extends StatelessWidget {
                                   const Icon(Icons.water_drop_outlined, size: 13, color: Color(0xFF1565C0)),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Dosage: ${herbicide.dose}',
+                                    '${l10n.dose}: ${herbicide.dose}',
                                     style: const TextStyle(
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w600,
@@ -1240,9 +1240,9 @@ class _ScanDetailSheet extends StatelessWidget {
                               ),
                             ),
                             icon: const Icon(Icons.shopping_bag_outlined, size: 18),
-                            label: const Text(
-                              'Buy Herbicide Online',
-                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            label: Text(
+                              l10n.get('buy_herbicide_online'),
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                             ),
                             onPressed: () => _showStoreOptions(context, herbicide.name),
                           ),
@@ -1265,7 +1265,7 @@ class _ScanDetailSheet extends StatelessWidget {
                           const Icon(Icons.location_on_rounded, color: Color(0xFFE65100), size: 18),
                           const SizedBox(width: 8),
                           Text(
-                            'High Priority Treatment Zone: ${scan.priorityZone}',
+                            '${l10n.get('priority_treatment_zone')}: ${scan.priorityZone}',
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 12,

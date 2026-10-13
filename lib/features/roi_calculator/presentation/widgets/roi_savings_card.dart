@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/l10n/app_localizations.dart';
 
 class RoiSavingsCard extends StatelessWidget {
   final int weedCount;
@@ -14,15 +15,15 @@ class RoiSavingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     // Economic calculations:
-    // Standard blanket spray: 2.0 Litres herbicide per acre @ ~₹900/Litre = ₹1,800 + ₹400 labor = ₹2,200 / acre
-    // Targeted spot spray with WeedGuard: Spray only infected clusters (~25% to 40% area)
     final double infectionRatio = (weedCount / 20).clamp(0.15, 0.45);
     final double blanketHerbicideVolumeLiters = 2.0 * acreage;
-    final double blanketCost = blanketHerbicideVolumeLiters * 950 + (acreage * 450); // Chemical + labor
+    final double blanketCost = blanketHerbicideVolumeLiters * 950 + (acreage * 450);
 
     final double spotHerbicideVolumeLiters = (blanketHerbicideVolumeLiters * infectionRatio);
-    final double spotCost = (blanketCost * (infectionRatio + 0.15)); // Reduced chemical + faster spot spray labor
+    final double spotCost = (blanketCost * (infectionRatio + 0.15));
 
     final double savingsAmount = (blanketCost - spotCost).clamp(400, 50000);
     final int savingsPercent = (((blanketCost - spotCost) / blanketCost) * 100).round().clamp(40, 85);
@@ -52,27 +53,34 @@ class RoiSavingsCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(10),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.savings_rounded, color: Colors.amberAccent, size: 22),
                     ),
-                    child: const Icon(Icons.savings_rounded, color: Colors.amberAccent, size: 22),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Precision ROI & Savings',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        l10n.get('precision_roi_savings'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -80,7 +88,7 @@ class RoiSavingsCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '$savingsPercent% SAVINGS',
+                  '$savingsPercent% ${l10n.get('roi_savings_badge')}',
                   style: const TextStyle(
                     color: Color(0xFF1B5E20),
                     fontWeight: FontWeight.bold,
@@ -107,9 +115,11 @@ class RoiSavingsCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Text(
-                'saved per acre via Spot Spraying',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
+              Expanded(
+                child: Text(
+                  l10n.get('roi_saved_per_acre'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 11.5),
+                ),
               ),
             ],
           ),
@@ -128,9 +138,11 @@ class RoiSavingsCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Traditional Blanket Spray',
-                        style: TextStyle(color: Colors.white70, fontSize: 10.5),
+                      Text(
+                        l10n.get('traditional_spray'),
+                        style: const TextStyle(color: Colors.white70, fontSize: 10.5),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -142,7 +154,7 @@ class RoiSavingsCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${blanketHerbicideVolumeLiters.toStringAsFixed(1)}L chemical',
+                        '${blanketHerbicideVolumeLiters.toStringAsFixed(1)}L ${l10n.get('chemical')}',
                         style: const TextStyle(color: Colors.white60, fontSize: 10),
                       ),
                     ],
@@ -154,9 +166,11 @@ class RoiSavingsCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'WeedGuard Spot Spray',
-                        style: TextStyle(color: Colors.amberAccent, fontSize: 10.5, fontWeight: FontWeight.bold),
+                      Text(
+                        l10n.get('weedguard_spot_spray'),
+                        style: const TextStyle(color: Colors.amberAccent, fontSize: 10.5, fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -168,7 +182,7 @@ class RoiSavingsCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${spotHerbicideVolumeLiters.toStringAsFixed(1)}L chemical',
+                        '${spotHerbicideVolumeLiters.toStringAsFixed(1)}L ${l10n.get('chemical')}',
                         style: const TextStyle(color: Colors.white70, fontSize: 10),
                       ),
                     ],
@@ -185,15 +199,15 @@ class RoiSavingsCard extends StatelessWidget {
               const Icon(Icons.water_drop_outlined, color: Colors.lightBlueAccent, size: 16),
               const SizedBox(width: 6),
               Text(
-                '$waterSavedLiters L water saved',
+                '$waterSavedLiters L ${l10n.get('water_saved_label')}',
                 style: const TextStyle(color: Colors.white70, fontSize: 11),
               ),
               const Spacer(),
               const Icon(Icons.shield_outlined, color: Colors.lightGreenAccent, size: 16),
               const SizedBox(width: 6),
-              const Text(
-                '70% less soil chemical residue',
-                style: TextStyle(color: Colors.white70, fontSize: 11),
+              Text(
+                l10n.get('less_soil_residue'),
+                style: const TextStyle(color: Colors.white70, fontSize: 11),
               ),
             ],
           ),
