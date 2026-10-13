@@ -143,6 +143,11 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    // In add_field_template.png (531x1024), the card starts at y=148px.
+    final cardTopInHeader = screenWidth * (148.0 / 531.0);
+    final overlapOffset = 180.0 - cardTopInHeader;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF6FBF7),
       body: _loading && _isEditing
@@ -151,28 +156,46 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
               slivers: [
                 // ── Header with landscape template ──
                 SliverToBoxAdapter(
-                  child: Container(
-                    height: 180,
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/add_field_template.png'),
-                        fit: BoxFit.cover,
-                        alignment: Alignment.topCenter,
+                  child: Stack(
+                    children: [
+                      Container(
+                        height: 180,
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          image: DecorationImage(
+                            image: AssetImage('assets/images/add_field_template.png'),
+                            fit: BoxFit.cover,
+                            alignment: Alignment.topCenter,
+                          ),
+                        ),
                       ),
-                    ),
+                      Positioned(
+                        top: MediaQuery.of(context).padding.top + 6,
+                        left: 10,
+                        child: GestureDetector(
+                          onTap: () => context.pop(),
+                          behavior: HitTestBehavior.opaque,
+                          child: const SizedBox(
+                            width: 44,
+                            height: 44,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
-                // ── Form Content ──
+                // ── Form Content seamlessly overlapping template ──
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                  child: Transform.translate(
+                    offset: Offset(0, -overlapOffset),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                           if (_error != null) ...[
                             Container(
                               padding: const EdgeInsets.all(12),
@@ -373,13 +396,15 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
                                     ),
                             ),
                           ),
+                          SizedBox(height: overlapOffset),
                         ],
                       ),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
     );
   }
 
