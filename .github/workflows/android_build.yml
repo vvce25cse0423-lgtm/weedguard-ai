@@ -1,4 +1,4 @@
-name: Build & Deploy
+name: Android Build
 
 on:
   push:
@@ -7,12 +7,9 @@ on:
     branches: ["**"]
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   build_apk:
-    name: Build Android APK
+    name: Build APK
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -52,44 +49,3 @@ jobs:
           name: weedguard-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
-
-  build_and_deploy_web:
-    name: Build & Deploy Web App
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.22.3"
-          channel: "stable"
-          cache: true
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build Web App
-        run: |
-          flutter build web --release \
-            --base-href "/${{ github.event.repository.name }}/" \
-            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
-            --dart-define=OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
-
-      - name: Upload Web Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: weedguard-web-build
-          path: build/web
-          retention-days: 30
-
-      - name: Deploy to GitHub Pages (gh-pages branch)
-        if: github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build/web
