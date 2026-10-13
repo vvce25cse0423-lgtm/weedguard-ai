@@ -35,6 +35,14 @@ class _ScanThumbnailImageState extends State<ScanThumbnailImage> {
   @override
   void initState() {
     super.initState();
+    final raw = widget.imageUrl;
+    if (raw != null && raw.isNotEmpty && !raw.startsWith('http')) {
+      final clean = raw.replaceFirst(RegExp(r'^file://'), '');
+      final direct = File(clean);
+      if (direct.existsSync()) {
+        _resolvedFile = direct;
+      }
+    }
     _tryResolveImage();
   }
 
@@ -42,6 +50,14 @@ class _ScanThumbnailImageState extends State<ScanThumbnailImage> {
   void didUpdateWidget(ScanThumbnailImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.imageUrl != widget.imageUrl || oldWidget.createdAt != widget.createdAt) {
+      final raw = widget.imageUrl;
+      if (raw != null && raw.isNotEmpty && !raw.startsWith('http')) {
+        final clean = raw.replaceFirst(RegExp(r'^file://'), '');
+        final direct = File(clean);
+        if (direct.existsSync()) {
+          _resolvedFile = direct;
+        }
+      }
       _tryResolveImage();
     }
   }
@@ -87,7 +103,9 @@ class _ScanThumbnailImageState extends State<ScanThumbnailImage> {
           child: Icon(
             widget.defaultIcon,
             color: const Color(0xFF2D6A4F),
-            size: (widget.width != null) ? (widget.width! * 0.48).clamp(16.0, 36.0) : 24.0,
+            size: (widget.width != null && widget.width!.isFinite)
+                ? (widget.width! * 0.48).clamp(16.0, 36.0)
+                : 24.0,
           ),
         );
   }
@@ -102,7 +120,9 @@ class _ScanThumbnailImageState extends State<ScanThumbnailImage> {
         width: widget.width,
         height: widget.height,
         fit: widget.fit,
-        cacheWidth: widget.width != null ? (widget.width! * 2.5).round() : null,
+        cacheWidth: (widget.width != null && widget.width!.isFinite)
+            ? (widget.width! * 2.5).round()
+            : null,
         errorBuilder: (_, __, ___) => _buildPlaceholder(),
       );
     } else if (widget.imageUrl != null &&
@@ -113,6 +133,9 @@ class _ScanThumbnailImageState extends State<ScanThumbnailImage> {
         width: widget.width,
         height: widget.height,
         fit: widget.fit,
+        cacheWidth: (widget.width != null && widget.width!.isFinite)
+            ? (widget.width! * 2.5).round()
+            : null,
         errorBuilder: (_, __, ___) {
           // If network 404s (e.g. Supabase bucket missing), display resolved file or placeholder
           if (_resolvedFile != null && _resolvedFile!.existsSync()) {
@@ -121,6 +144,9 @@ class _ScanThumbnailImageState extends State<ScanThumbnailImage> {
               width: widget.width,
               height: widget.height,
               fit: widget.fit,
+              cacheWidth: (widget.width != null && widget.width!.isFinite)
+                  ? (widget.width! * 2.5).round()
+                  : null,
             );
           }
           return _buildPlaceholder();
@@ -170,19 +196,38 @@ Future<File?> resolveScanFile(String? rawPath, DateTime? createdAt) async {
 
         final inRoot = File('${appDir.path}/$filename');
         if (inRoot.existsSync()) return inRoot;
+
+        final tempDir = await getTemporaryDirectory();
+        final inTemp = File('${tempDir.path}/$filename');
+        if (inTemp.existsSync()) return inTemp;
       }
     }
 
-    // 2. Scan documents directory scans folder
+    // 2. Scan documents directory scans folder + temporary directory
     final appDir = await getApplicationDocumentsDirectory();
-    final scansDir = Directory('${appDir.path}/scans');
-    if (!scansDir.existsSync()) return null;
+    final tempDir = await getTemporaryDirectory();
+    final candidateDirs = [
+      Directory('${appDir.path}/scans'),
+      appDir,
+      tempDir,
+    ];
 
-    final files = scansDir
-        .listSync()
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.jpg') || f.path.endsWith('.jpeg') || f.path.endsWith('.png'))
-        .toList();
+    final files = <File>[];
+    for (final dir in candidateDirs) {
+      if (dir.existsSync()) {
+        try {
+          files.addAll(
+            dir
+                .listSync()
+                .whereType<File>()
+                .where((f) =>
+                    f.path.toLowerCase().endsWith('.jpg') ||
+                    f.path.toLowerCase().endsWith('.jpeg') ||
+                    f.path.toLowerCase().endsWith('.png')),
+          );
+        } catch (_) {}
+      }
+    }
 
     if (files.isEmpty) return null;
 

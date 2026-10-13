@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -71,6 +72,27 @@ class ScanRepository {
       try {
         final diskFile = await resolveScanFile(null, now);
         if (diskFile != null) effectiveImageUrl = diskFile.path;
+      } catch (_) {}
+    }
+
+    // Ensure image is permanently preserved in local scans directory
+    if (effectiveImageUrl != null &&
+        effectiveImageUrl.isNotEmpty &&
+        !effectiveImageUrl.startsWith('http')) {
+      try {
+        final clean = effectiveImageUrl.replaceFirst(RegExp(r'^file://'), '');
+        final src = File(clean);
+        if (src.existsSync()) {
+          final appDir = await getApplicationDocumentsDirectory();
+          final scansDir = Directory('${appDir.path}/scans');
+          if (!scansDir.existsSync()) scansDir.createSync(recursive: true);
+          final ext = clean.contains('.') ? clean.split('.').last : 'jpg';
+          final dest = File('${scansDir.path}/scan_${now.millisecondsSinceEpoch}.$ext');
+          if (src.path != dest.path) {
+            await src.copy(dest.path);
+            effectiveImageUrl = dest.path;
+          }
+        }
       } catch (_) {}
     }
     final detectedCrop = result.detections.where((d) => d.isCrop).isNotEmpty

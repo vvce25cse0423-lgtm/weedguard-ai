@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../shared/models/scan_model.dart';
@@ -438,100 +439,922 @@ class _ScanHistoryCard extends StatelessWidget {
   }
 }
 
+class _HerbicideDetailInfo {
+  final String name;
+  final String dose;
+  final String type;
+  const _HerbicideDetailInfo({
+    required this.name,
+    required this.dose,
+    required this.type,
+  });
+}
+
+_HerbicideDetailInfo _lookupHerbicide(List<String> weedNames, String? cropName) {
+  final text = weedNames.join(' ').toLowerCase();
+
+  if (text.contains('amaranthus') || text.contains('pigweed')) {
+    return const _HerbicideDetailInfo(
+      name: 'Atrazine 50% WP',
+      dose: '2.0 kg/ha',
+      type: 'Pre & post-emergent selective',
+    );
+  }
+  if (text.contains('cyperus') ||
+      text.contains('nutgrass') ||
+      text.contains('sedge') ||
+      text.contains('motha')) {
+    return const _HerbicideDetailInfo(
+      name: 'Halosulfuron-methyl 75% WG (Sempra)',
+      dose: '67 g/ha',
+      type: 'Selective post-emergent',
+    );
+  }
+  if (text.contains('digitaria') || text.contains('crabgrass')) {
+    return const _HerbicideDetailInfo(
+      name: 'Quizalofop-ethyl 5% EC (Targa Super)',
+      dose: '1.0 L/ha',
+      type: 'Selective post-emergent grass herbicide',
+    );
+  }
+  if (text.contains('convolvulus') || text.contains('bindweed')) {
+    return const _HerbicideDetailInfo(
+      name: '2,4-D Amine Salt 58% SL',
+      dose: '1.5 L/ha',
+      type: 'Selective post-emergent broadleaf herbicide',
+    );
+  }
+  if (text.contains('echinochloa') || text.contains('barnyard')) {
+    return const _HerbicideDetailInfo(
+      name: 'Bispyribac-sodium 10% SC (Nominee Gold)',
+      dose: '200 ml/ha',
+      type: 'Selective post-emergent (Paddy/Rice)',
+    );
+  }
+  if (text.contains('parthenium') || text.contains('congress')) {
+    return const _HerbicideDetailInfo(
+      name: 'Metribuzin 70% WP (Sencor)',
+      dose: '500 g/ha',
+      type: 'Pre & post-emergent systemic',
+    );
+  }
+  if (text.contains('chenopodium') ||
+      text.contains('bathua') ||
+      text.contains('lambsquarters')) {
+    return const _HerbicideDetailInfo(
+      name: 'Pendimethalin 30% EC (Stomp Extra)',
+      dose: '1.0–1.2 L/ha',
+      type: 'Pre-emergent residual herbicide',
+    );
+  }
+  if (text.contains('oxalis') || text.contains('woodsorrel')) {
+    return const _HerbicideDetailInfo(
+      name: 'Fluroxypyr 20% EC',
+      dose: '1.0 L/ha',
+      type: 'Post-emergent broadleaf',
+    );
+  }
+  if (text.contains('portulaca') || text.contains('purslane')) {
+    return const _HerbicideDetailInfo(
+      name: 'Pendimethalin 30% EC / Oxyfluorfen',
+      dose: '2.0 L/ha',
+      type: 'Pre-emergent selective',
+    );
+  }
+  if (text.contains('eleusine') || text.contains('goosegrass')) {
+    return const _HerbicideDetailInfo(
+      name: 'Fenoxaprop-p-ethyl 9.3% EC (Whip Super)',
+      dose: '625 ml/ha',
+      type: 'Selective post-emergent',
+    );
+  }
+  if (text.contains('lantana')) {
+    return const _HerbicideDetailInfo(
+      name: 'Glyphosate 41% SL / Triclopyr',
+      dose: '3.0 L/ha',
+      type: 'Non-selective systemic herbicide',
+    );
+  }
+
+  final cropLower = (cropName ?? '').toLowerCase();
+  if (cropLower.contains('paddy') || cropLower.contains('rice')) {
+    return const _HerbicideDetailInfo(
+      name: 'Pretilachlor 50% EC / Bispyribac-sodium',
+      dose: '1.0 L/ha',
+      type: 'Selective Paddy herbicide',
+    );
+  }
+
+  return const _HerbicideDetailInfo(
+    name: '2,4-D Ethyl Ester 38% EC / Pendimethalin',
+    dose: '1.2 L/ha',
+    type: 'Broad-spectrum field herbicide',
+  );
+}
+
 class _ScanDetailSheet extends StatelessWidget {
   final ScanModel scan;
   const _ScanDetailSheet({required this.scan});
 
+  static Future<void> _launchExternalUrl(BuildContext context, String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open store link.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  static void _showStoreOptions(BuildContext context, String herbicideName) {
+    final cleanQuery = RegExp(r'\(([^)]+)\)').firstMatch(herbicideName)?.group(1) ??
+        herbicideName.replaceAll('/', ' ').replaceAll('  ', ' ').trim();
+    final query = '$cleanQuery herbicide';
+
+    final amazonUrl = 'https://www.amazon.in/s?k=${Uri.encodeComponent(query)}';
+    final flipkartUrl = 'https://www.flipkart.com/search?q=${Uri.encodeComponent(query)}';
+    final bigHaatUrl = herbicideName.toLowerCase().contains('glyphosate')
+        ? 'https://www.bighaat.com/collections/glyphosate-herbicides'
+        : (herbicideName.toLowerCase().contains('selective')
+            ? 'https://www.bighaat.com/collections/selective-herbicides'
+            : 'https://www.bighaat.com/collections/herbicides');
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Icon(Icons.shopping_bag_outlined, color: Color(0xFF2D6A4F), size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Buy $herbicideName',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1B4332),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Select your preferred marketplace to order:',
+                style: TextStyle(fontSize: 12, color: Color(0xFF757575)),
+              ),
+              const SizedBox(height: 16),
+              _DetailStoreTile(
+                title: 'Amazon India',
+                subtitle: 'Fast delivery & verified sellers',
+                imageAsset: 'assets/icons/amazon_icon.png',
+                icon: Icons.storefront_rounded,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _launchExternalUrl(context, amazonUrl);
+                },
+              ),
+              const SizedBox(height: 10),
+              _DetailStoreTile(
+                title: 'Flipkart',
+                subtitle: 'Agri store & bulk farm supplies',
+                imageAsset: 'assets/icons/flipkart_icon.png',
+                icon: Icons.shopping_cart_rounded,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _launchExternalUrl(context, flipkartUrl);
+                },
+              ),
+              const SizedBox(height: 10),
+              _DetailStoreTile(
+                title: 'BigHaat Agri Store',
+                subtitle: "India's largest certified agri-input platform",
+                imageAsset: 'assets/icons/bighaat_icon.png',
+                icon: Icons.eco_rounded,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _launchExternalUrl(context, bigHaatUrl);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final herbicide = _lookupHerbicide(scan.weedNames, scan.cropName);
+
+    // Infestation metrics
+    final double rawScore = scan.infestationScore ??
+        (scan.severity == SeverityLevel.high
+            ? 0.78
+            : scan.severity == SeverityLevel.moderate
+                ? 0.44
+                : 0.16);
+    final int infestationPercent = (rawScore * 100).round().clamp(1, 100);
+
+    final Color severityColor = scan.severity == SeverityLevel.high
+        ? const Color(0xFFC62828)
+        : (scan.severity == SeverityLevel.moderate
+            ? const Color(0xFFE65100)
+            : const Color(0xFF2E7D32));
+
+    final Color severityBg = scan.severity == SeverityLevel.high
+        ? const Color(0xFFFFEBEE)
+        : (scan.severity == SeverityLevel.moderate
+            ? const Color(0xFFFFF3E0)
+            : const Color(0xFFE8F5E9));
+
+    final String cropDisplayName = (scan.cropName != null && scan.cropName!.isNotEmpty)
+        ? scan.cropName!
+        : 'Agricultural Field Crop';
+
     return DraggableScrollableSheet(
-      initialChildSize: 0.55,
-      maxChildSize: 0.85,
-      minChildSize: 0.35,
+      initialChildSize: 0.72,
+      maxChildSize: 0.95,
+      minChildSize: 0.45,
       builder: (_, ctrl) => Container(
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(children: [
-          const SizedBox(height: 8),
-          Container(width: 40, height: 4,
-            decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 12),
-          Expanded(child: ListView(controller: ctrl, padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-            ScanThumbnailImage(
-              imageUrl: scan.imageUrl,
-              createdAt: scan.createdAt,
-              height: 200,
-              width: double.infinity,
-              borderRadius: BorderRadius.circular(14),
-              defaultIcon: Icons.grass_rounded,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 16,
+              offset: Offset(0, -4),
             ),
-            const SizedBox(height: 16),
-            Text(DateFormatter.formatDateTime(scan.createdAt),
-              style: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))),
-            const SizedBox(height: 12),
-            Row(children: [
-              _DetailStat(value: scan.weedCount.toString(), label: l10n.weedsDetected, color: const Color(0xFFC62828)),
-              const SizedBox(width: 24),
-              _DetailStat(value: '${(scan.averageConfidence * 100).toStringAsFixed(0)}%', label: l10n.confidence, color: const Color(0xFF3A86C8)),
-              const SizedBox(width: 24),
-              _DetailStat(value: scan.severity.name.toUpperCase(), label: l10n.severity, color: const Color(0xFF2D6A4F)),
-            ]),
-            const SizedBox(height: 16),
+          ],
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.all(12),
+              width: 44,
+              height: 4.5,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F8F1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFC8E6C9)),
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(3),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            const SizedBox(height: 12),
+
+            // Top Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
                 children: [
-                  Row(children: [
-                    const Icon(Icons.spa_rounded, color: Color(0xFF2E7D32), size: 16),
-                    const SizedBox(width: 8),
-                    const Text('Crop:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF1B5E20))),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        scan.cropName ?? 'Agricultural Field Crop',
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF2E7D32)),
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.document_scanner_rounded, size: 18, color: Color(0xFF2D6A4F)),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Scan Agronomy Details',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1B4332),
                       ),
                     ),
-                  ]),
-                  const SizedBox(height: 8),
-                  Row(children: [
-                    const Icon(Icons.grass_rounded, color: Color(0xFFC62828), size: 16),
-                    const SizedBox(width: 8),
-                    const Text('Weeds:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFFB71C1C))),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        scan.weedNames.isNotEmpty ? scan.weedNames.join(', ') : (scan.weedCount > 0 ? 'Detected weeds' : 'None'),
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFFC62828)),
-                      ),
-                    ),
-                  ]),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF757575)),
+                    splashRadius: 20,
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                 ],
               ),
             ),
-            if (scan.priorityZone != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: const Color(0xFFFFF3E0), borderRadius: BorderRadius.circular(10)),
-                child: Row(children: [
-                  const Icon(Icons.location_on_outlined, color: Color(0xFFE65100), size: 18),
-                  const SizedBox(width: 8),
-                  Text('Priority: ${scan.priorityZone}', style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFE65100))),
-                ]),
+            const Divider(height: 1),
+
+            Expanded(
+              child: ListView(
+                controller: ctrl,
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+                children: [
+                  // ─── 1. SCANNED IMAGE ─────────────────────────────
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      height: 220,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFC8E6C9)),
+                      ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ScanThumbnailImage(
+                            imageUrl: scan.imageUrl,
+                            createdAt: scan.createdAt,
+                            height: 220,
+                            fit: BoxFit.cover,
+                            borderRadius: BorderRadius.circular(16),
+                            defaultIcon: Icons.photo_library_outlined,
+                          ),
+                          Positioned(
+                            bottom: 10,
+                            left: 10,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.68),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.calendar_today_rounded, size: 12, color: Colors.white70),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    DateFormatter.formatDateTime(scan.createdAt),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (scan.isMockDetection)
+                            Positioned(
+                              top: 10,
+                              right: 10,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2D6A4F).withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'Demo scan',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ─── 2. INFESTATION LEVEL CARD ─────────────────────
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: severityBg,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: severityColor.withOpacity(0.35)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, size: 20, color: severityColor),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Infestation Level',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF333333),
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: severityColor,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${scan.severity.name.toUpperCase()} ($infestationPercent%)',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: (infestationPercent / 100.0).clamp(0.05, 1.0),
+                            backgroundColor: Colors.white.withOpacity(0.65),
+                            valueColor: AlwaysStoppedAnimation<Color>(severityColor),
+                            minHeight: 8,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _DetailStat(
+                                value: scan.weedCount.toString(),
+                                label: l10n.weedsDetected,
+                                color: severityColor,
+                              ),
+                            ),
+                            Container(width: 1, height: 32, color: Colors.grey[300]),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 12),
+                                child: _DetailStat(
+                                  value: '${(scan.averageConfidence * 100).toStringAsFixed(0)}%',
+                                  label: l10n.confidence,
+                                  color: const Color(0xFF1565C0),
+                                ),
+                              ),
+                            ),
+                            Container(width: 1, height: 32, color: Colors.grey[300]),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 12),
+                                child: _DetailStat(
+                                  value: scan.severity.label,
+                                  label: 'Severity Rating',
+                                  color: severityColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // ─── 3. CROP NAME CARD ────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F8F1),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFC8E6C9)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2E7D32),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.spa_rounded, color: Colors.white, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Crop Name',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF2E7D32),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                cropDisplayName,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF1B5E20),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFF81C784)),
+                          ),
+                          child: const Text(
+                            'Field Protected',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF2E7D32),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // ─── 4. WEED NAME CARD ────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF8F8),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFFFCDD2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFC62828),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.grass_rounded, color: Colors.white, size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Weed Name(s) Detected',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFB71C1C),
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${scan.weedCount} identified',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF888888),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        if (scan.weedNames.isNotEmpty)
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: scan.weedNames.map((w) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFEBEE),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFEF9A9A)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.grass_rounded, size: 14, color: Color(0xFFC62828)),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      w,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFFB71C1C),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          )
+                        else if (scan.weedCount > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFEBEE),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFEF9A9A)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.grass_rounded, size: 14, color: Color(0xFFC62828)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Detected field weeds (${scan.weedCount})',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFFB71C1C),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F5E9),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFC8E6C9)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.check_circle_outline_rounded, size: 15, color: Color(0xFF2E7D32)),
+                                SizedBox(width: 6),
+                                Text(
+                                  'No weeds detected - Clean crop',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF1B5E20),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // ─── 5. HERBICIDES NAME CARD ──────────────────────
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F7FD),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFBBDEFB)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1565C0),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.science_rounded, color: Colors.white, size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Herbicides Name',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1565C0),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Agronomic Treatment Recommendation',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Color(0xFF757575),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFE3F2FD)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                herbicide.name,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF0D47A1),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(Icons.water_drop_outlined, size: 13, color: Color(0xFF1565C0)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Dosage: ${herbicide.dose}',
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF424242),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Icon(Icons.schedule_rounded, size: 13, color: Color(0xFF1565C0)),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      herbicide.type,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF616161),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2D6A4F),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            icon: const Icon(Icons.shopping_bag_outlined, size: 18),
+                            label: const Text(
+                              'Buy Herbicide Online',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            ),
+                            onPressed: () => _showStoreOptions(context, herbicide.name),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (scan.priorityZone != null) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFFE0B2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.location_on_rounded, color: Color(0xFFE65100), size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'High Priority Treatment Zone: ${scan.priorityZone}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                              color: Color(0xFFE65100),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ],
-          ])),
-        ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailStoreTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String imageAsset;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _DetailStoreTile({
+    required this.title,
+    required this.subtitle,
+    required this.imageAsset,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F9FA),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE0E0E0)),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                imageAsset,
+                width: 28,
+                height: 28,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Icon(
+                  icon,
+                  size: 24,
+                  color: const Color(0xFF2D6A4F),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1B4332),
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF757575),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.open_in_new_rounded, size: 16, color: Color(0xFF9E9E9E)),
+          ],
+        ),
       ),
     );
   }
