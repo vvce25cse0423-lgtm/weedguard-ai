@@ -29,6 +29,7 @@
 - [Future Enhancements](#-future-enhancements)
 - [Contributing](#-contributing)
 - [License](#-license)
+- [Project Details & Team](#-project-details--team)
 
 ---
 
@@ -169,7 +170,7 @@ Before building the project, ensure you have installed:
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/weedguard-ai.git
+git clone https://github.com/vvce25cse0423-lgtm/weedguard-ai.git
 cd weedguard-ai
 ```
 
@@ -287,6 +288,20 @@ Contributions, issue reports, and feature proposals are welcome!
 
 ## 📄 License
 This project is licensed under the **MIT License**. See the `LICENSE` file for full terms and conditions.
+
+---
+
+## 👨‍💻 Project Details & Team
+
+| Field | Details |
+| :--- | :--- |
+| **Developer** | **Nitin Mahadev** |
+| **Team Name** | **root acess** |
+| **Event** | **Hacksprint 1.0** |
+| **GitHub Username** | [vvce25cse0423-lgtm](https://github.com/vvce25cse0423-lgtm) |
+| **Repository** | [https://github.com/vvce25cse0423-lgtm/weedguard-ai](https://github.com/vvce25cse0423-lgtm/weedguard-ai) |
+
+---
 
 <p align="center">
   ⭐ If you find WeedGuard AI helpful, please consider starring the repository!
