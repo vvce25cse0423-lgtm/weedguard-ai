@@ -2,10 +2,19 @@ name: Android Build
 
 on:
   push:
-    branches: ["**"]
+    branches:
+      - main
+      - master
+      - "**"
   pull_request:
-    branches: ["**"]
+    branches:
+      - main
+      - master
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build_apk:
@@ -28,7 +37,7 @@ jobs:
         with:
           flutter-version: "3.22.3"
           channel: "stable"
-          cache: true
+          cache: false
 
       - name: Accept Android licenses
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
@@ -41,7 +50,8 @@ jobs:
           flutter build apk --release \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
-            --dart-define=OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
+            --dart-define=OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }} \
+            --dart-define=GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
