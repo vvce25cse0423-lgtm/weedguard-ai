@@ -18,8 +18,6 @@ import '../../../history/presentation/screens/scan_history_screen.dart';
 import '../../../spray_window/presentation/widgets/spray_window_dialog.dart';
 import '../../../roi_calculator/presentation/widgets/roi_savings_card.dart';
 import '../../../organic/presentation/widgets/organic_management_card.dart';
-import '../../../drone/data/drone_mission_export_service.dart';
-import '../../../procurement/data/krishi_kendra_service.dart';
 import '../../../resistance/presentation/widgets/resistance_tracker_widget.dart';
 
 
@@ -140,41 +138,6 @@ class _AnalysisResultsScreenState extends State<_AnalysisResultsScreen> {
     } finally {
       if (mounted) setState(() => _isGeneratingPdf = false);
     }
-  }
-
-  Future<void> _exportDroneMission() async {
-    String? fieldName;
-    if (widget.fieldId.isNotEmpty) {
-      try {
-        final repo = FieldsRepository(Supabase.instance.client);
-        final field = await repo.getField(widget.fieldId);
-        fieldName = field.name;
-      } catch (_) {}
-    }
-    await DroneMissionExportService.exportAndShareDroneFlightPath(
-      result: widget.result,
-      fieldName: fieldName,
-    );
-  }
-
-  Future<void> _inquireKrishiKendra() async {
-    final langCode = Localizations.localeOf(context).languageCode;
-    String? fieldName;
-    String? cropType;
-    if (widget.fieldId.isNotEmpty) {
-      try {
-        final repo = FieldsRepository(Supabase.instance.client);
-        final field = await repo.getField(widget.fieldId);
-        fieldName = field.name;
-        cropType = field.cropType;
-      } catch (_) {}
-    }
-    await KrishiKendraService.sharePrescriptionToDealer(
-      result: widget.result,
-      fieldName: fieldName,
-      cropType: cropType,
-      languageCode: langCode,
-    );
   }
 
   @override
@@ -397,51 +360,6 @@ class _AnalysisResultsScreenState extends State<_AnalysisResultsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Action Buttons Row: Krishi Kendra & Drone Export
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 44,
-                          child: ElevatedButton.icon(
-                            onPressed: _inquireKrishiKendra,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1565C0),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              elevation: 0,
-                            ),
-                            icon: const Icon(Icons.storefront_rounded, size: 17),
-                            label: const Text(
-                              'Krishi Kendra Order',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: SizedBox(
-                          height: 44,
-                          child: OutlinedButton.icon(
-                            onPressed: _exportDroneMission,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF00695C),
-                              side: const BorderSide(color: Color(0xFF00695C), width: 1.3),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            icon: const Icon(Icons.flight_takeoff_rounded, size: 17),
-                            label: const Text(
-                              'Drone GeoJSON Export',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
                   // One-Tap WhatsApp / PDF Share Button
                   SizedBox(
                     width: double.infinity,
