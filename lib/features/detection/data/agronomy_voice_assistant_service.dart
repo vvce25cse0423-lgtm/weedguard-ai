@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import '../../../../shared/models/scan_model.dart';
+import 'package:weedguard/shared/models/detection_result_model.dart';
+import 'package:weedguard/shared/models/scan_model.dart';
 
 enum TtsVoiceState { stopped, playing, paused }
 
