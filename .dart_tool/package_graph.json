@@ -16,6 +16,7 @@
         "flutter_map",
         "flutter_riverpod",
         "flutter_secure_storage",
+        "flutter_tts",
         "geolocator",
         "go_router",
         "http",
@@ -2050,6 +2051,14 @@
       "dependencies": [
         "collection",
         "convert"
+      ]
+    },
+    {
+      "name": "flutter_tts",
+      "version": "4.2.5",
+      "dependencies": [
+        "flutter",
+        "flutter_web_plugins"
       ]
     }
   ],

@@ -1,4 +1,5 @@
 import '../../data/agronomy_pdf_report_service.dart';
+import '../../data/agronomy_voice_assistant_service.dart';
 import '../../../fields/data/fields_repository.dart';
 import 'dart:io';
 import 'dart:math' as math;
@@ -127,12 +128,40 @@ class _AnalysisResultsScreenState extends State<_AnalysisResultsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to generate report: ')),
+          const SnackBar(content: Text('Failed to generate report')),
         );
       }
     } finally {
       if (mounted) setState(() => _isGeneratingPdf = false);
     }
+  }
+
+  @override
+  void dispose() {
+    AgronomyVoiceAssistantService.stop();
+    super.dispose();
+  }
+
+  Future<void> _playVoiceAssistant() async {
+    String? fieldName;
+    String? cropType;
+
+    if (widget.fieldId.isNotEmpty) {
+      try {
+        final repo = FieldsRepository(Supabase.instance.client);
+        final field = await repo.getField(widget.fieldId);
+        fieldName = field.name;
+        cropType = field.cropType;
+      } catch (_) {}
+    }
+
+    final langCode = Localizations.localeOf(context).languageCode;
+    await AgronomyVoiceAssistantService.speakAnalysisReport(
+      result: widget.result,
+      languageCode: langCode,
+      cropType: cropType,
+      fieldName: fieldName,
+    );
   }
 
   @override
@@ -167,6 +196,24 @@ class _AnalysisResultsScreenState extends State<_AnalysisResultsScreen> {
             Text(AppLocalizations.of(context).appName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 17)),
           ],
         ),
+        actions: [
+          ValueListenableBuilder<TtsVoiceState>(
+            valueListenable: AgronomyVoiceAssistantService.voiceStateNotifier,
+            builder: (context, state, _) {
+              final isPlaying = state == TtsVoiceState.playing;
+              return IconButton(
+                tooltip: isPlaying ? 'Stop Read Aloud' : 'Read Aloud in Regional Language',
+                icon: Icon(
+                  isPlaying ? Icons.stop_circle_outlined : Icons.volume_up_rounded,
+                  color: isPlaying ? Colors.amberAccent : Colors.white,
+                  size: 24,
+                ),
+                onPressed: _playVoiceAssistant,
+              );
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
         elevation: 0,
       ),
       body: Column(
@@ -181,14 +228,63 @@ class _AnalysisResultsScreenState extends State<_AnalysisResultsScreen> {
                     width: double.infinity,
                     color: Colors.white,
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(AppLocalizations.of(context).analysisResults,
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
-                        const SizedBox(height: 2),
-                        const Text('Field scan completed successfully',
-                            style: TextStyle(fontSize: 13, color: Color(0xFF5C5C5C))),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(AppLocalizations.of(context).analysisResults,
+                                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
+                              const SizedBox(height: 2),
+                              const Text('Field scan completed successfully',
+                                  style: TextStyle(fontSize: 13, color: Color(0xFF5C5C5C))),
+                            ],
+                          ),
+                        ),
+                        // Voice Assistant Interactive Button
+                        ValueListenableBuilder<TtsVoiceState>(
+                          valueListenable: AgronomyVoiceAssistantService.voiceStateNotifier,
+                          builder: (context, state, _) {
+                            final isPlaying = state == TtsVoiceState.playing;
+                            return InkWell(
+                              onTap: _playVoiceAssistant,
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isPlaying ? const Color(0xFFE8F5E9) : const Color(0xFFF1F8E9),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isPlaying ? const Color(0xFF2E7D32) : const Color(0xFF81C784),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isPlaying ? Icons.graphic_eq_rounded : Icons.record_voice_over_rounded,
+                                      color: const Color(0xFF2E7D32),
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      isPlaying ? 'Listening…' : 'Read Aloud',
+                                      style: const TextStyle(
+                                        color: Color(0xFF2E7D32),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
