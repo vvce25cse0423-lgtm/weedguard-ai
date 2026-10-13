@@ -6,6 +6,6 @@ on:
 jobs:
   placeholder:
     name: Disabled
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - run: echo "This workflow is disabled"

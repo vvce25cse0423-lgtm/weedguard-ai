@@ -2,24 +2,15 @@ name: Android Build
 
 on:
   push:
-    branches:
-      - main
-      - master
-      - "**"
+    branches: ["**"]
   pull_request:
-    branches:
-      - main
-      - master
+    branches: ["**"]
   workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   build_apk:
     name: Build APK
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 60
 
     steps:
@@ -27,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: "temurin"
           java-version: "17"
@@ -47,7 +38,6 @@ jobs:
 
       - name: Build release APK
         run: |
-          echo "::notice title=Build APK::Building WeedGuard Release APK..."
           flutter build apk --release \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
@@ -60,19 +50,3 @@ jobs:
           name: weedguard-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
-
-      - name: Workflow Summary
-        if: always()
-        run: |
-          echo "### 🌿 WeedGuard CI/CD Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Checkout repository | ✅ Success |" >> $GITHUB_STEP_SUMMARY
-          echo "| Set up Java 17 | ✅ Success |" >> $GITHUB_STEP_SUMMARY
-          echo "| Set up Flutter 3.22.3 | ✅ Success |" >> $GITHUB_STEP_SUMMARY
-          echo "| Install dependencies | ✅ Success |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build release APK | ✅ Success |" >> $GITHUB_STEP_SUMMARY
-          echo "| Upload APK artifact | ✅ Success |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📦 **Artifact**: \`weedguard-release-apk\`" >> $GITHUB_STEP_SUMMARY
