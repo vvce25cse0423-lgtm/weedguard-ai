@@ -844,109 +844,23 @@ class _PlantRow extends StatelessWidget {
     required this.accentColor,
   });
 
-  String _getPlantAIImageUrl(String plantLabel, bool forCrop) {
-    final lower = plantLabel.toLowerCase();
-    if (forCrop) {
-      if (lower.contains('rice') || lower.contains('paddy') || lower.contains('oryza')) {
-        return 'https://images.unsplash.com/photo-1536657464919-892534f60d6e?w=200&auto=format&fit=crop';
-      } else if (lower.contains('wheat') || lower.contains('triticum')) {
-        return 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=200&auto=format&fit=crop';
-      } else if (lower.contains('maize') || lower.contains('corn') || lower.contains('zea')) {
-        return 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=200&auto=format&fit=crop';
-      } else if (lower.contains('cotton') || lower.contains('gossypium')) {
-        return 'https://images.unsplash.com/photo-1606041008023-472dfb5e530f?w=200&auto=format&fit=crop';
-      } else if (lower.contains('tomato') || lower.contains('solanum')) {
-        return 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=200&auto=format&fit=crop';
-      } else if (lower.contains('soybean') || lower.contains('pulse') || lower.contains('legume')) {
-        return 'https://images.unsplash.com/photo-1599421498111-ad70be5f17a9?w=200&auto=format&fit=crop';
-      }
-      return 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=200&auto=format&fit=crop';
-    } else {
-      // Weeds
-      if (lower.contains('parthenium') || lower.contains('congress')) {
-        return 'https://images.unsplash.com/photo-1597848212624-a19eb35e2651?w=200&auto=format&fit=crop';
-      } else if (lower.contains('cyperus') || lower.contains('sedge') || lower.contains('nutgrass') || lower.contains('motha')) {
-        return 'https://images.unsplash.com/photo-1533038590840-1cde6e668a91?w=200&auto=format&fit=crop';
-      } else if (lower.contains('echinochloa') || lower.contains('barnyard')) {
-        return 'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?w=200&auto=format&fit=crop';
-      } else if (lower.contains('amaranthus') || lower.contains('pigweed')) {
-        return 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=200&auto=format&fit=crop';
-      } else if (lower.contains('lantana')) {
-        return 'https://images.unsplash.com/photo-1508615039623-a25605d2b022?w=200&auto=format&fit=crop';
-      } else if (lower.contains('digitaria') || lower.contains('crabgrass')) {
-        return 'https://images.unsplash.com/photo-1528183429752-a97d0bf99b5a?w=200&auto=format&fit=crop';
-      } else if (lower.contains('chenopodium') || lower.contains('lambsquarters') || lower.contains('bathua')) {
-        return 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=200&auto=format&fit=crop';
-      }
-      return 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=200&auto=format&fit=crop';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Stack(
-              children: [
-                SizedBox(
-                  width: 50,
-                  height: 50,
-                  child: Image.network(
-                    _getPlantAIImageUrl(label, isCrop),
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return Container(
-                        color: accentColor.withOpacity(0.12),
-                        child: Center(
-                          child: SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: accentColor,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                    errorBuilder: (_, __, ___) => Container(
-                      color: accentColor.withOpacity(0.12),
-                      child: Center(
-                        child: Icon(
-                          isCrop ? Icons.spa_rounded : Icons.grass_rounded,
-                          color: accentColor,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 2,
-                  right: 2,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'AI',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: accentColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              isCrop ? Icons.spa_rounded : Icons.grass_rounded,
+              color: accentColor,
+              size: 22,
             ),
           ),
           const SizedBox(width: 12),
