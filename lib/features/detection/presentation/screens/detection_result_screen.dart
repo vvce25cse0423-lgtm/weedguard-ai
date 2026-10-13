@@ -143,6 +143,7 @@ class _AnalysisResultsScreenState extends State<_AnalysisResultsScreen> {
   }
 
   Future<void> _playVoiceAssistant() async {
+    final langCode = Localizations.localeOf(context).languageCode;
     String? fieldName;
     String? cropType;
 
@@ -155,7 +156,6 @@ class _AnalysisResultsScreenState extends State<_AnalysisResultsScreen> {
       } catch (_) {}
     }
 
-    final langCode = Localizations.localeOf(context).languageCode;
     await AgronomyVoiceAssistantService.speakAnalysisReport(
       result: widget.result,
       languageCode: langCode,

@@ -91,9 +91,12 @@ class AgronomyVoiceAssistantService {
   }) {
     final count = result.weedCount;
     final severity = result.severity.name;
-    final weeds = result.detectedWeeds.map((w) => w.commonName).toSet().toList();
+    final weeds = result.detections.where((d) => !d.isCrop).map((d) => d.label).toSet().toList();
     final weedListStr = weeds.isNotEmpty ? weeds.join(', ') : 'None';
-    final herbicides = result.recommendations.map((r) => '${r.herbicideName} (${r.dosage})').toList();
+    final herbicides = weeds.map((w) {
+      final p = _getHerbicidePrescription(w);
+      return '${p['chemical']} (${p['dose']})';
+    }).toList();
     final herbicideStr = herbicides.isNotEmpty ? herbicides.join(', ') : '';
 
     if (languageCode == 'kn') {
@@ -177,5 +180,21 @@ class AgronomyVoiceAssistantService {
       }
       return buffer.toString();
     }
+  }
+
+  static Map<String, String> _getHerbicidePrescription(String weedName) {
+    final lower = weedName.toLowerCase();
+    if (lower.contains('parthenium') || lower.contains('congress')) {
+      return {'chemical': '2,4-D Sodium Salt 80% WP or Metribuzin 70% WP', 'dose': '500g - 1kg per Acre'};
+    } else if (lower.contains('cyperus') || lower.contains('nutgrass') || lower.contains('sedge')) {
+      return {'chemical': 'Halosulfuron-methyl 75% WG', 'dose': '36g per Acre'};
+    } else if (lower.contains('echinochloa') || lower.contains('barnyard') || lower.contains('grass')) {
+      return {'chemical': 'Bispyribac-sodium 10% SC', 'dose': '80 - 100 ml per Acre'};
+    } else if (lower.contains('amaranthus') || lower.contains('pigweed')) {
+      return {'chemical': 'Atrazine 50% WP or Pendimethalin 30% EC', 'dose': '1.0 - 1.5 L per Acre'};
+    } else if (lower.contains('convolvulus') || lower.contains('morning')) {
+      return {'chemical': 'Glyphosate 41% SL or 2,4-D Amine', 'dose': '800 ml - 1 L per Acre'};
+    }
+    return {'chemical': 'Glyphosate 41% SL or Oxyfluorfen 23.5% EC', 'dose': '600 - 800 ml per Acre'};
   }
 }
