@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../scanner/data/scan_repository.dart';
 import '../../../../shared/models/detection_result_model.dart';
@@ -942,6 +943,141 @@ class _HerbicideRecommendations extends StatelessWidget {
     'grass': _HerbicideInfo('Quizalofop-p-tefuryl 4.41% EC', '750 ml/ha', 'Post-emergent', '0xFF00695C'),
   };
 
+  static String _getSearchQuery(String herbicideName) {
+    final match = RegExp(r'\(([^)]+)\)').firstMatch(herbicideName);
+    if (match != null) {
+      return '${match.group(1)} herbicide';
+    }
+    return '$herbicideName herbicide'
+        .replaceAll('/', ' ')
+        .replaceAll('  ', ' ')
+        .trim();
+  }
+
+  static Future<void> _launchStore(BuildContext context, String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open store link.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  static void _showBuyOptions(BuildContext context, String herbicideName) {
+    final query = _getSearchQuery(herbicideName);
+    final amazonUrl = 'https://www.amazon.in/s?k=${Uri.encodeComponent(query)}';
+    final flipkartUrl = 'https://www.flipkart.com/search?q=${Uri.encodeComponent(query)}';
+    final bigHaatUrl = 'https://www.bighaat.com/search?q=${Uri.encodeComponent(query)}';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF1B5E20), size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Buy Herbicide Online',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A)),
+                        ),
+                        Text(
+                          herbicideName,
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF5C5C5C), fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _StoreBuyTile(
+                title: 'Amazon India',
+                subtitle: 'Order with Prime & verified reviews',
+                badgeText: 'Amazon',
+                badgeColor: const Color(0xFFFF9900),
+                icon: Icons.shopping_cart_checkout_rounded,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _launchStore(context, amazonUrl);
+                },
+              ),
+              const SizedBox(height: 10),
+              _StoreBuyTile(
+                title: 'Flipkart',
+                subtitle: 'Check authentic agricultural listings & deals',
+                badgeText: 'Flipkart',
+                badgeColor: const Color(0xFF2874F0),
+                icon: Icons.storefront_rounded,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _launchStore(context, flipkartUrl);
+                },
+              ),
+              const SizedBox(height: 10),
+              _StoreBuyTile(
+                title: 'BigHaat Agri Store',
+                subtitle: 'Direct from India’s largest farmer agri store',
+                badgeText: 'Agri Store',
+                badgeColor: const Color(0xFF2E7D32),
+                icon: Icons.eco_rounded,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _launchStore(context, bigHaatUrl);
+                },
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   _HerbicideInfo _getHerbicide(String weedName) {
     final lower = weedName.toLowerCase();
     for (final entry in _herbicideMap.entries) {
@@ -1017,7 +1153,40 @@ class _HerbicideRecommendations extends StatelessWidget {
                           decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
                         Expanded(child: Text(weed.label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A)))),
                       ])),
-                      Expanded(flex: 3, child: Text(info.name, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color))),
+                      Expanded(flex: 3, child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(info.name, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+                          const SizedBox(height: 4),
+                          InkWell(
+                            onTap: () => _showBuyOptions(context, info.name),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF3E0),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: const Color(0xFFFFB74D), width: 0.8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.shopping_bag_outlined, size: 10, color: Color(0xFFE65100)),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'Buy Link',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFFE65100),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      )),
                       Expanded(flex: 2, child: Text(info.dose, style: const TextStyle(fontSize: 10, color: Color(0xFF5C5C5C)))),
                       Expanded(flex: 2, child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
@@ -1032,6 +1201,62 @@ class _HerbicideRecommendations extends StatelessWidget {
                   if (!isLast) const Divider(height: 1, indent: 14, endIndent: 14, color: Color(0xFFF5E6D3)),
                 ]);
               }),
+              // Direct Buying Action Banner
+              Container(
+                margin: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFFE082)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF8F00),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 14),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Order on Amazon / Flipkart',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFFE65100)),
+                          ),
+                          Text(
+                            'Direct purchase links for recommended chemicals',
+                            style: TextStyle(fontSize: 10, color: Color(0xFF6D4C41)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        final topHerbicide = uniqueWeeds.isNotEmpty
+                            ? _getHerbicide(uniqueWeeds.first.label).name
+                            : 'Herbicide';
+                        _showBuyOptions(context, topHerbicide);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE65100),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      child: const Text('Buy Links', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ),
+              ),
               // Safety note
               Container(
                 width: double.infinity,
@@ -1053,6 +1278,95 @@ class _HerbicideRecommendations extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _StoreBuyTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String badgeText;
+  final Color badgeColor;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _StoreBuyTile({
+    required this.title,
+    required this.subtitle,
+    required this.badgeText,
+    required this.badgeColor,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9F9F9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFEEEEEE)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: badgeColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: badgeColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1A1A),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: badgeColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          badgeText,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: badgeColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF757575)),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF9E9E9E)),
+          ],
+        ),
+      ),
     );
   }
 }
