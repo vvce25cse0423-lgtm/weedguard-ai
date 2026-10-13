@@ -507,20 +507,59 @@ class _HeroSection extends StatelessWidget {
                           },
                         ),
                         const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: () => context.push('/profile'),
-                          child: Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.18),
-                              border:
-                                  Border.all(color: Colors.white54, width: 1.5),
-                            ),
-                            child: const Icon(Icons.person_outline_rounded,
-                                color: Colors.white, size: 18),
-                          ),
+                        Builder(
+                          builder: (context) {
+                            final user = Supabase.instance.client.auth.currentUser;
+                            final avatar = user?.userMetadata?['avatar_url'] as String?;
+                            Widget avatarWidget = const Icon(Icons.person_outline_rounded,
+                                color: Colors.white, size: 18);
+                            if (avatar != null && avatar.isNotEmpty) {
+                              if (avatar.startsWith('http')) {
+                                avatarWidget = ClipOval(
+                                  child: Image.network(
+                                    avatar,
+                                    width: 34,
+                                    height: 34,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                        Icons.person_outline_rounded,
+                                        color: Colors.white,
+                                        size: 18),
+                                  ),
+                                );
+                              } else {
+                                final f = File(avatar);
+                                if (f.existsSync()) {
+                                  avatarWidget = ClipOval(
+                                    child: Image.file(
+                                      f,
+                                      width: 34,
+                                      height: 34,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Icon(
+                                          Icons.person_outline_rounded,
+                                          color: Colors.white,
+                                          size: 18),
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                            return GestureDetector(
+                              onTap: () => context.push('/profile'),
+                              child: Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withOpacity(0.18),
+                                  border:
+                                      Border.all(color: Colors.white54, width: 1.5),
+                                ),
+                                child: avatarWidget,
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
