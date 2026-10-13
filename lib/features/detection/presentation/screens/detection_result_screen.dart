@@ -68,7 +68,7 @@ class _DetectionResultScreenState extends ConsumerState<DetectionResultScreen> {
         await scanRepo.saveScan(
           fieldId: effectiveFieldId,
           result: widget.result,
-          imageUrl: widget.result.imageUrl,
+          imageUrl: widget.result.imageUrl ?? widget.result.imagePath,
           scanId: widget.scanId,
         );
       } catch (_) {

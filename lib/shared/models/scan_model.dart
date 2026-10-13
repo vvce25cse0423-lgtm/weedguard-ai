@@ -61,6 +61,40 @@ class ScanModel {
     required this.createdAt,
   });
 
+  ScanModel copyWith({
+    String? id,
+    String? fieldId,
+    String? userId,
+    String? imageUrl,
+    int? weedCount,
+    double? averageConfidence,
+    SeverityLevel? severity,
+    String? cropName,
+    List<String>? weedNames,
+    String? priorityZone,
+    double? infestationScore,
+    bool? isMockDetection,
+    List<FieldZoneAnalysis>? zones,
+    DateTime? createdAt,
+  }) {
+    return ScanModel(
+      id: id ?? this.id,
+      fieldId: fieldId ?? this.fieldId,
+      userId: userId ?? this.userId,
+      imageUrl: imageUrl ?? this.imageUrl,
+      weedCount: weedCount ?? this.weedCount,
+      averageConfidence: averageConfidence ?? this.averageConfidence,
+      severity: severity ?? this.severity,
+      cropName: cropName ?? this.cropName,
+      weedNames: weedNames ?? this.weedNames,
+      priorityZone: priorityZone ?? this.priorityZone,
+      infestationScore: infestationScore ?? this.infestationScore,
+      isMockDetection: isMockDetection ?? this.isMockDetection,
+      zones: zones ?? this.zones,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   factory ScanModel.fromJson(Map<String, dynamic> json) {
     final zonesJson = json['field_zones'] as List<dynamic>? ?? [];
     final weedsJson = json['weed_names'] as List<dynamic>? ?? [];

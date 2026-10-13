@@ -8,6 +8,7 @@ import '../../../shared/models/scan_model.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/errors/app_error.dart';
 import '../../fields/data/fields_repository.dart';
+import '../../../shared/widgets/scan_thumbnail_image.dart';
 
 class ScanRepository {
   final SupabaseClient _client;
@@ -65,7 +66,13 @@ class ScanRepository {
       }
     } catch (_) {}
 
-    final effectiveImageUrl = imageUrl ?? result.imageUrl ?? result.imagePath;
+    var effectiveImageUrl = imageUrl ?? result.imageUrl ?? result.imagePath;
+    if (effectiveImageUrl == null || effectiveImageUrl.isEmpty) {
+      try {
+        final diskFile = await resolveScanFile(null, now);
+        if (diskFile != null) effectiveImageUrl = diskFile.path;
+      } catch (_) {}
+    }
     final detectedCrop = result.detections.where((d) => d.isCrop).isNotEmpty
         ? result.detections.firstWhere((d) => d.isCrop).label
         : (result.detections.isNotEmpty ? result.detections.first.label : 'Crop Field');
@@ -147,7 +154,19 @@ class ScanRepository {
       if (localJson != null && localJson.isNotEmpty) {
         final list = jsonDecode(localJson) as List<dynamic>;
         for (final item in list) {
-          final s = ScanModel.fromJson(item as Map<String, dynamic>);
+          var s = ScanModel.fromJson(item as Map<String, dynamic>);
+          // If image path is missing or points to stale path, attempt to heal from disk
+          if (s.imageUrl == null ||
+              s.imageUrl!.isEmpty ||
+              (!s.imageUrl!.startsWith('http') &&
+                  !File(s.imageUrl!.replaceFirst(RegExp(r'^file://'), '')).existsSync())) {
+            try {
+              final healed = await resolveScanFile(s.imageUrl, s.createdAt);
+              if (healed != null && healed.existsSync()) {
+                s = s.copyWith(imageUrl: healed.path);
+              }
+            } catch (_) {}
+          }
           scanMap[s.id] = s;
         }
       }
@@ -165,8 +184,34 @@ class ScanRepository {
 
         if (data is List) {
           for (final j in data) {
-            final s = ScanModel.fromJson(j as Map<String, dynamic>);
-            scanMap[s.id] = s;
+            var s = ScanModel.fromJson(j as Map<String, dynamic>);
+            final existing = scanMap[s.id];
+            if (existing != null) {
+              // Never destroy a valid on-device image path with a null or broken remote URL
+              final bool existingValid = existing.imageUrl != null &&
+                  existing.imageUrl!.isNotEmpty &&
+                  (!existing.imageUrl!.startsWith('http') &&
+                      File(existing.imageUrl!.replaceFirst(RegExp(r'^file://'), '')).existsSync());
+
+              final String? mergedImage = existingValid
+                  ? existing.imageUrl
+                  : ((s.imageUrl != null && s.imageUrl!.isNotEmpty) ? s.imageUrl : existing.imageUrl);
+
+              scanMap[s.id] = s.copyWith(
+                imageUrl: mergedImage,
+                cropName: s.cropName ?? existing.cropName,
+              );
+            } else {
+              if (s.imageUrl == null || s.imageUrl!.isEmpty) {
+                try {
+                  final healed = await resolveScanFile(null, s.createdAt);
+                  if (healed != null && healed.existsSync()) {
+                    s = s.copyWith(imageUrl: healed.path);
+                  }
+                } catch (_) {}
+              }
+              scanMap[s.id] = s;
+            }
           }
           final prefs = await SharedPreferences.getInstance();
           final allJson = scanMap.values.map((s) => s.toJson()).toList();

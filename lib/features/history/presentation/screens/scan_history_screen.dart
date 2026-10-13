@@ -9,6 +9,7 @@ import '../../../../shared/models/scan_model.dart';
 import '../../../scanner/data/scan_repository.dart';
 import '../../../scanner/presentation/widgets/severity_chip.dart';
 import '../../../../shared/widgets/error_state.dart';
+import '../../../../shared/widgets/scan_thumbnail_image.dart';
 import '../../../../core/l10n/app_localizations.dart';
 
 final scanHistoryProvider = FutureProvider<List<ScanModel>>((ref) async {
@@ -268,42 +269,13 @@ class _ScanHistoryCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                ClipRRect(
+                ScanThumbnailImage(
+                  imageUrl: scan.imageUrl,
+                  createdAt: scan.createdAt,
+                  width: 44,
+                  height: 44,
                   borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    color: const Color(0xFFE8F5E9),
-                    child: scan.imageUrl != null && scan.imageUrl!.isNotEmpty
-                        ? (scan.imageUrl!.startsWith('http')
-                            ? Image.network(
-                                scan.imageUrl!,
-                                width: 44,
-                                height: 44,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.photo_camera_rounded,
-                                  color: Color(0xFF2D6A4F),
-                                  size: 20,
-                                ),
-                              )
-                            : Image.file(
-                                File(scan.imageUrl!),
-                                width: 44,
-                                height: 44,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.photo_camera_rounded,
-                                  color: Color(0xFF2D6A4F),
-                                  size: 20,
-                                ),
-                              ))
-                        : const Icon(
-                            Icons.photo_camera_rounded,
-                            color: Color(0xFF2D6A4F),
-                            size: 22,
-                          ),
-                  ),
+                  defaultIcon: Icons.photo_camera_rounded,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -488,37 +460,14 @@ class _ScanDetailSheet extends StatelessWidget {
             decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 12),
           Expanded(child: ListView(controller: ctrl, padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-            if (scan.imageUrl != null && scan.imageUrl!.isNotEmpty)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: scan.imageUrl!.startsWith('http')
-                    ? Image.network(
-                        scan.imageUrl!,
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          height: 120,
-                          color: const Color(0xFFE8F5E9),
-                          child: const Center(
-                            child: Icon(Icons.grass_rounded, color: Color(0xFF2D6A4F), size: 36),
-                          ),
-                        ),
-                      )
-                    : Image.file(
-                        File(scan.imageUrl!),
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          height: 120,
-                          color: const Color(0xFFE8F5E9),
-                          child: const Center(
-                            child: Icon(Icons.grass_rounded, color: Color(0xFF2D6A4F), size: 36),
-                          ),
-                        ),
-                      ),
-              ),
+            ScanThumbnailImage(
+              imageUrl: scan.imageUrl,
+              createdAt: scan.createdAt,
+              height: 200,
+              width: double.infinity,
+              borderRadius: BorderRadius.circular(14),
+              defaultIcon: Icons.grass_rounded,
+            ),
             const SizedBox(height: 16),
             Text(DateFormatter.formatDateTime(scan.createdAt),
               style: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))),

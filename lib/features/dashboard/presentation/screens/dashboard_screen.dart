@@ -20,6 +20,7 @@ import '../../../../core/services/notification_service.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../spray_window/presentation/widgets/spray_window_dialog.dart';
 import '../../../history/presentation/screens/scan_history_screen.dart';
+import '../../../../shared/widgets/scan_thumbnail_image.dart';
 
 final dashboardFieldsProvider = FutureProvider<List<FieldModel>>((ref) async {
   return FieldsRepository(Supabase.instance.client).getFields();
@@ -1249,43 +1250,14 @@ class _ScansList extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      // Scanned field image thumbnail instead of camera emoji
-                      ClipRRect(
+                      // Scanned field image thumbnail
+                      ScanThumbnailImage(
+                        imageUrl: s.imageUrl,
+                        createdAt: s.createdAt,
+                        width: 48,
+                        height: 48,
                         borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          width: 48,
-                          height: 48,
-                          color: const Color(0xFFE8F5E9),
-                          child: s.imageUrl != null && s.imageUrl!.isNotEmpty
-                              ? (s.imageUrl!.startsWith('http')
-                                  ? Image.network(
-                                      s.imageUrl!,
-                                      width: 48,
-                                      height: 48,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Icon(
-                                        Icons.grass_rounded,
-                                        color: Color(0xFF2D6A4F),
-                                        size: 24,
-                                      ),
-                                    )
-                                  : Image.file(
-                                      File(s.imageUrl!),
-                                      width: 48,
-                                      height: 48,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Icon(
-                                        Icons.grass_rounded,
-                                        color: Color(0xFF2D6A4F),
-                                        size: 24,
-                                      ),
-                                    ))
-                              : const Icon(
-                                  Icons.grass_rounded,
-                                  color: Color(0xFF2D6A4F),
-                                  size: 24,
-                                ),
-                        ),
+                        defaultIcon: Icons.grass_rounded,
                       ),
                       const SizedBox(width: 12),
                       Expanded(

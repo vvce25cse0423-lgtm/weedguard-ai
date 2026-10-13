@@ -56,7 +56,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               final extra = state.extra as Map<String, dynamic>;
               return DetectionResultScreen(
                 result: extra['result'] as WeedDetectionResult,
-                fieldId: extra['fieldId'] as String,
+                fieldId: (extra['fieldId'] as String?) ?? '',
                 scanId: extra['scanId'] as String?,
               );
             },
