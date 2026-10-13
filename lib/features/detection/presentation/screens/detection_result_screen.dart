@@ -974,11 +974,22 @@ class _HerbicideRecommendations extends StatelessWidget {
     }
   }
 
+  static String _getBigHaatUrl(String herbicideName) {
+    final lower = herbicideName.toLowerCase();
+    if (lower.contains('glyphosate')) {
+      return 'https://www.bighaat.com/collections/glyphosate-herbicides';
+    }
+    if (lower.contains('selective')) {
+      return 'https://www.bighaat.com/collections/selective-herbicides';
+    }
+    return 'https://www.bighaat.com/collections/herbicides';
+  }
+
   static void _showBuyOptions(BuildContext context, String herbicideName) {
     final query = _getSearchQuery(herbicideName);
     final amazonUrl = 'https://www.amazon.in/s?k=${Uri.encodeComponent(query)}';
     final flipkartUrl = 'https://www.flipkart.com/search?q=${Uri.encodeComponent(query)}';
-    final bigHaatUrl = 'https://www.bighaat.com/search?q=${Uri.encodeComponent(query)}';
+    final bigHaatUrl = _getBigHaatUrl(herbicideName);
 
     showModalBottomSheet(
       context: context,
@@ -1040,6 +1051,7 @@ class _HerbicideRecommendations extends StatelessWidget {
                 subtitle: 'Order with Prime & verified reviews',
                 badgeText: 'Amazon',
                 badgeColor: const Color(0xFFFF9900),
+                imageAsset: 'assets/icons/amazon_icon.png',
                 icon: Icons.shopping_cart_checkout_rounded,
                 onTap: () {
                   Navigator.pop(ctx);
@@ -1052,6 +1064,7 @@ class _HerbicideRecommendations extends StatelessWidget {
                 subtitle: 'Check authentic agricultural listings & deals',
                 badgeText: 'Flipkart',
                 badgeColor: const Color(0xFF2874F0),
+                imageAsset: 'assets/icons/flipkart_icon.png',
                 icon: Icons.storefront_rounded,
                 onTap: () {
                   Navigator.pop(ctx);
@@ -1064,6 +1077,7 @@ class _HerbicideRecommendations extends StatelessWidget {
                 subtitle: 'Direct from India’s largest farmer agri store',
                 badgeText: 'Agri Store',
                 badgeColor: const Color(0xFF2E7D32),
+                imageAsset: 'assets/icons/bighaat_icon.png',
                 icon: Icons.eco_rounded,
                 onTap: () {
                   Navigator.pop(ctx);
@@ -1287,6 +1301,7 @@ class _StoreBuyTile extends StatelessWidget {
   final String subtitle;
   final String badgeText;
   final Color badgeColor;
+  final String imageAsset;
   final IconData icon;
   final VoidCallback onTap;
 
@@ -1295,6 +1310,7 @@ class _StoreBuyTile extends StatelessWidget {
     required this.subtitle,
     required this.badgeText,
     required this.badgeColor,
+    required this.imageAsset,
     required this.icon,
     required this.onTap,
   });
@@ -1314,13 +1330,35 @@ class _StoreBuyTile extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
-                color: badgeColor.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
               ),
-              child: Icon(icon, color: badgeColor, size: 20),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: Image.asset(
+                  imageAsset,
+                  width: 42,
+                  height: 42,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: badgeColor.withOpacity(0.12),
+                    child: Center(
+                      child: Icon(icon, color: badgeColor, size: 22),
+                    ),
+                  ),
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
