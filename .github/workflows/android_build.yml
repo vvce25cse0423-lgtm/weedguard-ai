@@ -19,12 +19,12 @@ concurrency:
 jobs:
   build_apk:
     name: Build APK
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Set up Java 17
         uses: actions/setup-java@v5
@@ -37,7 +37,7 @@ jobs:
         with:
           flutter-version: "3.22.3"
           channel: "stable"
-          cache: false
+          cache: true
 
       - name: Accept Android licenses
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
@@ -47,6 +47,7 @@ jobs:
 
       - name: Build release APK
         run: |
+          echo "::notice title=Build APK::Building WeedGuard Release APK..."
           flutter build apk --release \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
@@ -54,8 +55,24 @@ jobs:
             --dart-define=GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: weedguard-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
+      - name: Workflow Summary
+        if: always()
+        run: |
+          echo "### 🌿 WeedGuard CI/CD Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Checkout repository | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "| Set up Java 17 | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "| Set up Flutter 3.22.3 | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "| Install dependencies | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build release APK | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "| Upload APK artifact | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Artifact**: \`weedguard-release-apk\`" >> $GITHUB_STEP_SUMMARY
