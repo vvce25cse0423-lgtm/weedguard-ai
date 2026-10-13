@@ -1,14 +1,24 @@
-name: Android Build
+name: Build & Deploy
 
 on:
   push:
     branches: ["**"]
   pull_request:
     branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   build_apk:
-    name: Build APK
+    name: Build Android APK
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -48,3 +58,56 @@ jobs:
           name: weedguard-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
+  build_and_deploy_web:
+    name: Build & Deploy Web App
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.22.3"
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Web App
+        run: |
+          flutter build web --release \
+            --base-href "/${{ github.event.repository.name }}/" \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
+            --dart-define=OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
+
+      - name: Upload Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: weedguard-web-build
+          path: build/web
+          retention-days: 30
+
+      - name: Setup GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        if: github.ref == 'refs/heads/main'
+        uses: actions/deploy-pages@v4

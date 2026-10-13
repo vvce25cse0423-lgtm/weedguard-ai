@@ -1,4 +1,18 @@
--e 
 # Environment / secrets
 .env
 *.env
+
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+
+# Web
+web/build/
