@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -58,13 +59,20 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
       final picked = await _picker.pickImage(
           source: source, maxWidth: 1920, maxHeight: 1920, imageQuality: 88);
       if (picked == null) return;
-      final file = File(picked.path);
-      final size = await file.length();
+
+      // Copy permanently into documents directory so OS cache cleaner never removes it
+      final appDir = await getApplicationDocumentsDirectory();
+      final scansDir = Directory('${appDir.path}/scans');
+      if (!scansDir.existsSync()) scansDir.createSync(recursive: true);
+      final filename = 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final permanentFile = await File(picked.path).copy('${scansDir.path}/$filename');
+
+      final size = await permanentFile.length();
       if (size > AppConstants.maxImageSizeBytes) {
         setState(() => _error = 'Image is too large. Maximum size is 10 MB.');
         return;
       }
-      setState(() { _imageFile = file; _step = _ScannerStep.preview; _error = null; });
+      setState(() { _imageFile = permanentFile; _step = _ScannerStep.preview; _error = null; });
     } catch (_) {
       setState(() => _error = 'Unable to access the image. Please try again.');
     }
@@ -82,11 +90,15 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
       try {
         final scanRepo = ScanRepository(Supabase.instance.client);
         final fid = widget.fieldId ?? '';
-        if (fid.isNotEmpty) {
-          uploadedUrl = await scanRepo.uploadScanImage(_imageFile!, fid);
-        }
+        uploadedUrl = await scanRepo.uploadScanImage(
+          _imageFile!,
+          fid.isNotEmpty ? fid : 'direct_scans',
+        );
         final savedScan = await scanRepo.saveScan(
-            fieldId: fid.isEmpty ? null : fid, result: result, imageUrl: uploadedUrl);
+          fieldId: fid.isEmpty ? null : fid,
+          result: result,
+          imageUrl: uploadedUrl ?? _imageFile!.path,
+        );
         savedScanId = savedScan.id;
       } catch (saveErr) {
         // Save/upload failed — continue to show result anyway
@@ -96,11 +108,16 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
         ref.invalidate(scanHistoryProvider);
       }
       final finalResult = WeedDetectionResult(
-        imagePath: result.imagePath, imageUrl: uploadedUrl,
-        detections: result.detections, weedCount: result.weedCount,
-        averageConfidence: result.averageConfidence, severity: result.severity,
-        infestationScore: result.infestationScore, zones: result.zones,
-        priorityZone: result.priorityZone, analyzedAt: result.analyzedAt,
+        imagePath: _imageFile!.path,
+        imageUrl: uploadedUrl ?? _imageFile!.path,
+        detections: result.detections,
+        weedCount: result.weedCount,
+        averageConfidence: result.averageConfidence,
+        severity: result.severity,
+        infestationScore: result.infestationScore,
+        zones: result.zones,
+        priorityZone: result.priorityZone,
+        analyzedAt: result.analyzedAt,
         isMockDetection: result.isMockDetection,
       );
       if (mounted) {
@@ -279,10 +296,28 @@ class _PreviewStep extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Expanded(child: Container(
-          color: Colors.black,
-          child: Image.file(imageFile, fit: BoxFit.contain, width: double.infinity),
-        )),
+        Expanded(
+          child: Container(
+            color: const Color(0xFF0D1B12),
+            child: Center(
+              child: Image.file(
+                imageFile,
+                fit: BoxFit.contain,
+                width: double.infinity,
+                errorBuilder: (_, __, ___) => const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.photo_library_outlined, size: 56, color: Colors.white54),
+                      SizedBox(height: 10),
+                      Text('Image Selected', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
         Container(
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),

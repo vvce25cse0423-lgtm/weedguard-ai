@@ -465,6 +465,42 @@ class _ScannedImageSection extends StatelessWidget {
   final WeedDetectionResult result;
   const _ScannedImageSection({required this.result});
 
+  Widget _buildImage() {
+    final path = result.imagePath ?? result.imageUrl;
+    if (path != null && path.isNotEmpty) {
+      if (path.startsWith('http')) {
+        return Image.network(
+          path,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: 240,
+          errorBuilder: (_, __, ___) => _fallback(),
+        );
+      } else {
+        final f = File(path);
+        if (f.existsSync()) {
+          return Image.file(
+            f,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: 240,
+            errorBuilder: (_, __, ___) => _fallback(),
+          );
+        }
+      }
+    }
+    return _fallback();
+  }
+
+  Widget _fallback() {
+    return Container(
+      color: const Color(0xFF1B4332),
+      child: const Center(
+        child: Icon(Icons.grass_rounded, size: 64, color: Colors.white38),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -472,12 +508,7 @@ class _ScannedImageSection extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           height: 240,
-          child: result.imagePath != null
-              ? Image.file(File(result.imagePath!), fit: BoxFit.cover)
-              : Container(
-                  color: const Color(0xFF2E7D32),
-                  child: const Center(child: Icon(Icons.image_outlined, size: 64, color: Colors.white38)),
-                ),
+          child: _buildImage(),
         ),
 
         // AI Detection bounding boxes overlay
