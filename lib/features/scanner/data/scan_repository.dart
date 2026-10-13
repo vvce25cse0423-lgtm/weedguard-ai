@@ -66,6 +66,10 @@ class ScanRepository {
     } catch (_) {}
 
     final effectiveImageUrl = imageUrl ?? result.imageUrl ?? result.imagePath;
+    final detectedCrop = result.detections.where((d) => d.isCrop).isNotEmpty
+        ? result.detections.firstWhere((d) => d.isCrop).label
+        : (result.detections.isNotEmpty ? result.detections.first.label : 'Crop Field');
+    final detectedWeeds = result.detections.where((d) => !d.isCrop).map((d) => d.label).toSet().toList();
 
     final newScan = ScanModel(
       id: effectiveScanId,
@@ -75,6 +79,8 @@ class ScanRepository {
       weedCount: result.weedCount,
       averageConfidence: result.averageConfidence,
       severity: result.severity,
+      cropName: detectedCrop,
+      weedNames: detectedWeeds,
       priorityZone: result.priorityZone,
       infestationScore: result.infestationScore,
       isMockDetection: result.isMockDetection,

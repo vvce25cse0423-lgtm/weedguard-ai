@@ -334,7 +334,75 @@ class _ScanHistoryCard extends StatelessWidget {
                 SeverityChip(severity: scan.severity, small: true),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFC8E6C9)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.spa_rounded, size: 14, color: Color(0xFF2E7D32)),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            (scan.cropName != null && scan.cropName!.isNotEmpty)
+                                ? scan.cropName!
+                                : (scan.zones.isNotEmpty ? 'Paddy / Crop' : 'Field Crop'),
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF1B5E20),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFFCDD2)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.grass_rounded, size: 14, color: Color(0xFFC62828)),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            scan.weedNames.isNotEmpty
+                                ? scan.weedNames.join(', ')
+                                : (scan.weedCount > 0 ? 'Target Weeds' : 'No Weeds'),
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFB71C1C),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
@@ -355,7 +423,14 @@ class _ScanHistoryCard extends StatelessWidget {
                     label: AppLocalizations.of(context).confidence,
                     color: const Color(0xFF3A86C8),
                   ),
-                  if (scan.priorityZone != null) ...[
+                  if (scan.cropName != null && scan.cropName!.isNotEmpty) ...[
+                    const Spacer(),
+                    _Stat(
+                      value: scan.cropName!.split(' ').first,
+                      label: 'Crop',
+                      color: const Color(0xFF2E7D32),
+                    ),
+                  ] else if (scan.priorityZone != null) ...[
                     const Spacer(),
                     _Stat(
                       value: scan.priorityZone!,
@@ -455,8 +530,47 @@ class _ScanDetailSheet extends StatelessWidget {
               const SizedBox(width: 24),
               _DetailStat(value: scan.severity.name.toUpperCase(), label: l10n.severity, color: const Color(0xFF2D6A4F)),
             ]),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F8F1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFC8E6C9)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Icon(Icons.spa_rounded, color: Color(0xFF2E7D32), size: 16),
+                    const SizedBox(width: 8),
+                    const Text('Crop:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF1B5E20))),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        scan.cropName ?? 'Agricultural Field Crop',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF2E7D32)),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    const Icon(Icons.grass_rounded, color: Color(0xFFC62828), size: 16),
+                    const SizedBox(width: 8),
+                    const Text('Weeds:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFFB71C1C))),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        scan.weedNames.isNotEmpty ? scan.weedNames.join(', ') : (scan.weedCount > 0 ? 'Detected weeds' : 'None'),
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFFC62828)),
+                      ),
+                    ),
+                  ]),
+                ],
+              ),
+            ),
             if (scan.priorityZone != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(color: const Color(0xFFFFF3E0), borderRadius: BorderRadius.circular(10)),

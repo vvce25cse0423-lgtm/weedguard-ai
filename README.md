@@ -296,7 +296,7 @@ This project is licensed under the **MIT License**. See the `LICENSE` file for f
 | Field | Details |
 | :--- | :--- |
 | **Developer** | **Nitin Mahadev** |
-| **Team Name** | **root acess** |
+| **Team Name** | **Root Access** |
 | **Event** | **Hacksprint 1.0** |
 | **GitHub Username** | [vvce25cse0423-lgtm](https://github.com/vvce25cse0423-lgtm) |
 | **Repository** | [https://github.com/vvce25cse0423-lgtm/weedguard-ai](https://github.com/vvce25cse0423-lgtm/weedguard-ai) |

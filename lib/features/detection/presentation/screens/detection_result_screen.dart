@@ -46,9 +46,26 @@ class _DetectionResultScreenState extends ConsumerState<DetectionResultScreen> {
     if (!_scanSaved) {
       _scanSaved = true;
       try {
+        String effectiveFieldId = widget.fieldId;
+        if (effectiveFieldId.isEmpty) {
+          final fieldsRepo = FieldsRepository(Supabase.instance.client);
+          final cropLabel = widget.result.detections.where((d) => d.isCrop).isNotEmpty
+              ? widget.result.detections.firstWhere((d) => d.isCrop).label
+              : (widget.result.detections.isNotEmpty ? widget.result.detections.first.label : 'Crop');
+          final cleanCrop = cropLabel.replaceAll(RegExp(r'\(.*?\)'), '').trim();
+          final fieldCrop = cleanCrop.isNotEmpty ? cleanCrop : 'Crop';
+          final newField = await fieldsRepo.createField(
+            name: '$fieldCrop Field',
+            cropType: fieldCrop,
+            areaHectares: 1.0,
+            locationLabel: 'Scanned Plot',
+          );
+          effectiveFieldId = newField.id;
+        }
+
         final scanRepo = ScanRepository(Supabase.instance.client);
         await scanRepo.saveScan(
-          fieldId: widget.fieldId.isEmpty ? null : widget.fieldId,
+          fieldId: effectiveFieldId,
           result: widget.result,
           imageUrl: widget.result.imageUrl,
           scanId: widget.scanId,
@@ -60,7 +77,16 @@ class _DetectionResultScreenState extends ConsumerState<DetectionResultScreen> {
     ref.invalidate(dashboardScansProvider);
     ref.invalidate(dashboardFieldsProvider);
     ref.invalidate(scanHistoryProvider);
-    if (mounted) context.go('/history');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Scan saved successfully to My Fields and History!'),
+          backgroundColor: Color(0xFF1B5E20),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      context.go('/history');
+    }
   }
 
   @override
@@ -751,22 +777,109 @@ class _PlantRow extends StatelessWidget {
     required this.accentColor,
   });
 
+  String _getPlantAIImageUrl(String plantLabel, bool forCrop) {
+    final lower = plantLabel.toLowerCase();
+    if (forCrop) {
+      if (lower.contains('rice') || lower.contains('paddy') || lower.contains('oryza')) {
+        return 'https://images.unsplash.com/photo-1536657464919-892534f60d6e?w=200&auto=format&fit=crop';
+      } else if (lower.contains('wheat') || lower.contains('triticum')) {
+        return 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=200&auto=format&fit=crop';
+      } else if (lower.contains('maize') || lower.contains('corn') || lower.contains('zea')) {
+        return 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=200&auto=format&fit=crop';
+      } else if (lower.contains('cotton') || lower.contains('gossypium')) {
+        return 'https://images.unsplash.com/photo-1606041008023-472dfb5e530f?w=200&auto=format&fit=crop';
+      } else if (lower.contains('tomato') || lower.contains('solanum')) {
+        return 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=200&auto=format&fit=crop';
+      } else if (lower.contains('soybean') || lower.contains('pulse') || lower.contains('legume')) {
+        return 'https://images.unsplash.com/photo-1599421498111-ad70be5f17a9?w=200&auto=format&fit=crop';
+      }
+      return 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=200&auto=format&fit=crop';
+    } else {
+      // Weeds
+      if (lower.contains('parthenium') || lower.contains('congress')) {
+        return 'https://images.unsplash.com/photo-1597848212624-a19eb35e2651?w=200&auto=format&fit=crop';
+      } else if (lower.contains('cyperus') || lower.contains('sedge') || lower.contains('nutgrass') || lower.contains('motha')) {
+        return 'https://images.unsplash.com/photo-1533038590840-1cde6e668a91?w=200&auto=format&fit=crop';
+      } else if (lower.contains('echinochloa') || lower.contains('barnyard')) {
+        return 'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?w=200&auto=format&fit=crop';
+      } else if (lower.contains('amaranthus') || lower.contains('pigweed')) {
+        return 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=200&auto=format&fit=crop';
+      } else if (lower.contains('lantana')) {
+        return 'https://images.unsplash.com/photo-1508615039623-a25605d2b022?w=200&auto=format&fit=crop';
+      } else if (lower.contains('digitaria') || lower.contains('crabgrass')) {
+        return 'https://images.unsplash.com/photo-1528183429752-a97d0bf99b5a?w=200&auto=format&fit=crop';
+      } else if (lower.contains('chenopodium') || lower.contains('lambsquarters') || lower.contains('bathua')) {
+        return 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=200&auto=format&fit=crop';
+      }
+      return 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=200&auto=format&fit=crop';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          Container(
-            width: 48, height: 48,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              color: accentColor.withOpacity(0.12),
-            ),
-            child: Icon(
-              isCrop ? Icons.spa_outlined : Icons.grass,
-              color: accentColor,
-              size: 26,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Stack(
+              children: [
+                SizedBox(
+                  width: 50,
+                  height: 50,
+                  child: Image.network(
+                    _getPlantAIImageUrl(label, isCrop),
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return Container(
+                        color: accentColor.withOpacity(0.12),
+                        child: Center(
+                          child: SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: accentColor,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) => Container(
+                      color: accentColor.withOpacity(0.12),
+                      child: Center(
+                        child: Icon(
+                          isCrop ? Icons.spa_rounded : Icons.grass_rounded,
+                          color: accentColor,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 2,
+                  right: 2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'AI',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 12),
@@ -820,16 +933,32 @@ class _HerbicideRecommendations extends StatelessWidget {
   }
 
   static const Map<String, _HerbicideInfo> _herbicideMap = {
-    'amaranthus': _HerbicideInfo('Atrazine 50WP', '2.0 kg/ha', 'Pre & post-emergent', '0xFF1565C0'),
-    'cyperus': _HerbicideInfo('Halosulfuron-methyl', '67 g/ha', 'Post-emergent', '0xFF6A1B9A'),
-    'digitaria': _HerbicideInfo('Quizalofop-ethyl', '1.0 L/ha', 'Post-emergent', '0xFF00695C'),
-    'convolvulus': _HerbicideInfo('2,4-D Amine', '1.5 L/ha', 'Post-emergent', '0xFFE65100'),
-    'echinochloa': _HerbicideInfo('Butachlor 50EC', '1.5 L/ha', 'Pre-emergent', '0xFF1565C0'),
-    'lantana': _HerbicideInfo('Triclopyr', '3.0 L/ha', 'Post-emergent', '0xFF6A1B9A'),
-    'parthenium': _HerbicideInfo('Metribuzin', '0.5 kg/ha', 'Pre & post-emergent', '0xFF4E342E'),
-    'chenopodium': _HerbicideInfo('Pendimethalin', '1.0 kg/ha', 'Pre-emergent', '0xFF00695C'),
-    'oxalis': _HerbicideInfo('Fluroxypyr', '1.0 L/ha', 'Post-emergent', '0xFFE65100'),
-    'portulaca': _HerbicideInfo('Glyphosate 41%', '2.5 L/ha', 'Post-emergent', '0xFF558B2F'),
+    'amaranthus': _HerbicideInfo('Atrazine 50% WP', '2.0 kg/ha', 'Pre & post-emergent', '0xFF1565C0'),
+    'pigweed': _HerbicideInfo('Atrazine 50% WP', '2.0 kg/ha', 'Pre & post-emergent', '0xFF1565C0'),
+    'cyperus': _HerbicideInfo('Halosulfuron-methyl 75% WG (Sempra)', '67 g/ha', 'Post-emergent', '0xFF6A1B9A'),
+    'nutgrass': _HerbicideInfo('Halosulfuron-methyl 75% WG', '67 g/ha', 'Post-emergent', '0xFF6A1B9A'),
+    'sedge': _HerbicideInfo('Halosulfuron-methyl 75% WG', '67 g/ha', 'Post-emergent', '0xFF6A1B9A'),
+    'motha': _HerbicideInfo('Halosulfuron-methyl 75% WG', '67 g/ha', 'Post-emergent', '0xFF6A1B9A'),
+    'digitaria': _HerbicideInfo('Quizalofop-ethyl 5% EC (Targa Super)', '1.0 L/ha', 'Post-emergent', '0xFF00695C'),
+    'crabgrass': _HerbicideInfo('Quizalofop-ethyl 5% EC', '1.0 L/ha', 'Post-emergent', '0xFF00695C'),
+    'convolvulus': _HerbicideInfo('2,4-D Amine Salt 58% SL', '1.5 L/ha', 'Post-emergent', '0xFFE65100'),
+    'bindweed': _HerbicideInfo('2,4-D Amine Salt 58% SL', '1.5 L/ha', 'Post-emergent', '0xFFE65100'),
+    'echinochloa': _HerbicideInfo('Bispyribac-sodium 10% SC (Nominee Gold)', '200 ml/ha', 'Post-emergent', '0xFF1565C0'),
+    'barnyard': _HerbicideInfo('Bispyribac-sodium 10% SC', '200 ml/ha', 'Post-emergent', '0xFF1565C0'),
+    'lantana': _HerbicideInfo('Glyphosate 41% SL / Triclopyr', '3.0 L/ha', 'Post-emergent', '0xFF6A1B9A'),
+    'parthenium': _HerbicideInfo('Metribuzin 70% WP (Sencor)', '500 g/ha', 'Pre & post-emergent', '0xFF4E342E'),
+    'congress': _HerbicideInfo('Metribuzin 70% WP', '500 g/ha', 'Pre & post-emergent', '0xFF4E342E'),
+    'chenopodium': _HerbicideInfo('Pendimethalin 30% EC (Stomp)', '1.0–1.2 L/ha', 'Pre-emergent', '0xFF00695C'),
+    'bathua': _HerbicideInfo('Pendimethalin 30% EC', '1.0–1.2 L/ha', 'Pre-emergent', '0xFF00695C'),
+    'lambsquarters': _HerbicideInfo('Pendimethalin 30% EC', '1.0–1.2 L/ha', 'Pre-emergent', '0xFF00695C'),
+    'oxalis': _HerbicideInfo('Fluroxypyr 20% EC', '1.0 L/ha', 'Post-emergent', '0xFFE65100'),
+    'woodsorrel': _HerbicideInfo('Fluroxypyr 20% EC', '1.0 L/ha', 'Post-emergent', '0xFFE65100'),
+    'portulaca': _HerbicideInfo('Pendimethalin 30% EC / Oxyfluorfen', '2.0 L/ha', 'Pre-emergent', '0xFF558B2F'),
+    'purslane': _HerbicideInfo('Pendimethalin 30% EC', '2.0 L/ha', 'Pre-emergent', '0xFF558B2F'),
+    'eleusine': _HerbicideInfo('Fenoxaprop-p-ethyl 9.3% EC (Whip Super)', '625 ml/ha', 'Post-emergent', '0xFF1565C0'),
+    'goosegrass': _HerbicideInfo('Fenoxaprop-p-ethyl 9.3% EC', '625 ml/ha', 'Post-emergent', '0xFF1565C0'),
+    'broadleaf': _HerbicideInfo('2,4-D Ethyl Ester 38% EC', '1.2 L/ha', 'Post-emergent', '0xFFE65100'),
+    'grass': _HerbicideInfo('Quizalofop-p-tefuryl 4.41% EC', '750 ml/ha', 'Post-emergent', '0xFF00695C'),
   };
 
   _HerbicideInfo _getHerbicide(String weedName) {

@@ -341,179 +341,188 @@ class _HeroSection extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          RichText(
+                            text: const TextSpan(children: [
+                              TextSpan(
+                                text: 'Weed',
+                                style: TextStyle(
+                                    fontSize: 21,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    letterSpacing: -0.3),
+                              ),
+                              TextSpan(
+                                text: 'Guard',
+                                style: TextStyle(
+                                    fontSize: 21,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF95D5B2),
+                                    letterSpacing: -0.3),
+                              ),
+                            ]),
+                          ),
+                          const Text(
+                            'Healthier Crops • Higher Yields',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 9.5,
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w400,
+                                letterSpacing: 0.2),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        RichText(
-                          text: const TextSpan(children: [
-                            TextSpan(
-                              text: 'Weed',
-                              style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: -0.3),
-                            ),
-                            TextSpan(
-                              text: 'Guard',
-                              style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF95D5B2),
-                                  letterSpacing: -0.3),
-                            ),
-                          ]),
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final weatherAsync = ref.watch(weatherProvider);
+                            final cachedData = weatherAsync.valueOrNull;
+                            return GestureDetector(
+                              onTap: () => context.push('/weather', extra: cachedData),
+                              child: weatherAsync.when(
+                                loading: () => Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.18),
+                                    border: Border.all(color: Colors.white38, width: 1.5),
+                                  ),
+                                  child: const Icon(Icons.thermostat_outlined, color: Colors.white70, size: 16),
+                                ),
+                                error: (_, __) => Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.18),
+                                    border: Border.all(color: Colors.white38, width: 1.5),
+                                  ),
+                                  child: const Icon(Icons.thermostat_outlined, color: Colors.white, size: 16),
+                                ),
+                                data: (weather) {
+                                  final temp = weather?['temp'];
+                                  final tempStr = temp != null ? '${temp.round()}°' : '28°';
+                                  return Container(
+                                    height: 34,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(17),
+                                      color: Colors.white.withOpacity(0.18),
+                                      border: Border.all(color: Colors.white54, width: 1.5),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.thermostat_outlined, color: Colors.white, size: 14),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          tempStr,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          },
                         ),
-                        const Text(
-                          'Healthier Crops • Higher Yields',
-                          style: TextStyle(
-                              fontSize: 9.5,
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w400,
-                              letterSpacing: 0.2),
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: () => SprayWindowDialog.show(context),
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.18),
+                              border: Border.all(color: Colors.white54, width: 1.5),
+                            ),
+                            child: const Icon(Icons.wb_twilight_rounded,
+                                color: Colors.amberAccent, size: 18),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        ValueListenableBuilder<int>(
+                          valueListenable: NotificationService.unreadCountNotifier,
+                          builder: (context, unreadCount, _) {
+                            return GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const NotificationsScreen()),
+                              ),
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: 34,
+                                    height: 34,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white.withOpacity(0.18),
+                                      border: Border.all(
+                                          color: Colors.white54, width: 1.5),
+                                    ),
+                                    child: const Icon(Icons.notifications_outlined,
+                                        color: Colors.white, size: 18),
+                                  ),
+                                  if (unreadCount > 0)
+                                    Positioned(
+                                      right: -2,
+                                      top: -2,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(3),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.redAccent,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Text(
+                                          '$unreadCount',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: () => context.push('/profile'),
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.18),
+                              border:
+                                  Border.all(color: Colors.white54, width: 1.5),
+                            ),
+                            child: const Icon(Icons.person_outline_rounded,
+                                color: Colors.white, size: 18),
+                          ),
                         ),
                       ],
-                    ),
-                    const Spacer(),
-                    Consumer(
-                      builder: (context, ref, _) {
-                        final weatherAsync = ref.watch(weatherProvider);
-                        final cachedData = weatherAsync.valueOrNull;
-                        return GestureDetector(
-                          onTap: () => context.push('/weather', extra: cachedData),
-                          child: weatherAsync.when(
-                            loading: () => Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white.withOpacity(0.15),
-                                border: Border.all(color: Colors.white38, width: 1.5),
-                              ),
-                              child: const Icon(Icons.thermostat_outlined, color: Colors.white70, size: 18),
-                            ),
-                            error: (_, __) => Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white.withOpacity(0.15),
-                                border: Border.all(color: Colors.white38, width: 1.5),
-                              ),
-                              child: const Icon(Icons.thermostat_outlined, color: Colors.white, size: 18),
-                            ),
-                            data: (weather) {
-                              final temp = weather?['temp'];
-                              final tempStr = temp != null ? '${temp.round()}°' : '28°';
-                              return Container(
-                                height: 38,
-                                padding: const EdgeInsets.symmetric(horizontal: 10),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(19),
-                                  color: Colors.white.withOpacity(0.18),
-                                  border: Border.all(color: Colors.white54, width: 1.5),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.thermostat_outlined, color: Colors.white, size: 16),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      tempStr,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => SprayWindowDialog.show(context),
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.18),
-                          border: Border.all(color: Colors.white54, width: 1.5),
-                        ),
-                        child: const Icon(Icons.wb_twilight_rounded,
-                            color: Colors.amberAccent, size: 20),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ValueListenableBuilder<int>(
-                      valueListenable: NotificationService.unreadCountNotifier,
-                      builder: (context, unreadCount, _) {
-                        return GestureDetector(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const NotificationsScreen()),
-                          ),
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Container(
-                                width: 38,
-                                height: 38,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white.withOpacity(0.18),
-                                  border: Border.all(
-                                      color: Colors.white54, width: 1.5),
-                                ),
-                                child: const Icon(Icons.notifications_outlined,
-                                    color: Colors.white, size: 20),
-                              ),
-                              if (unreadCount > 0)
-                                Positioned(
-                                  right: -2,
-                                  top: -2,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.redAccent,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Text(
-                                      '$unreadCount',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => context.push('/profile'),
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border:
-                              Border.all(color: Colors.white54, width: 1.5),
-                        ),
-                        child: const Icon(Icons.person_outline_rounded,
-                            color: Colors.white, size: 20),
-                      ),
                     ),
                   ],
                 ),
@@ -613,6 +622,7 @@ class _StatsCards extends StatelessWidget {
               waveColor: const Color(0xFFD8F3DC),
               arrowColor: const Color(0xFF2D6A4F),
               customIconAsset: 'assets/icons/fields_icon.png',
+              onTap: () => context.push('/fields'),
             ),
           ),
           const SizedBox(width: 10),
@@ -626,6 +636,7 @@ class _StatsCards extends StatelessWidget {
               waveColor: const Color(0xFFDBEAF7),
               arrowColor: const Color(0xFF3A86C8),
               customIconAsset: 'assets/icons/scans_icon.png',
+              onTap: () => context.push('/history'),
             ),
           ),
           const SizedBox(width: 10),
@@ -639,6 +650,7 @@ class _StatsCards extends StatelessWidget {
               waveColor: const Color(0xFFFFF3CD),
               arrowColor: const Color(0xFF2D6A4F),
               customIconAsset: 'assets/icons/severity_icon.png',
+              onTap: () => context.push('/history'),
             ),
           ),
         ],
@@ -653,6 +665,7 @@ class _StatCard extends StatelessWidget {
   final int count;
   final Color iconBg, iconColor, waveColor, arrowColor;
   final String? customIconAsset;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.icon,
@@ -663,12 +676,18 @@ class _StatCard extends StatelessWidget {
     required this.waveColor,
     required this.arrowColor,
     this.customIconAsset,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 132,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          height: 132,
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
@@ -746,7 +765,9 @@ class _StatCard extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }
 

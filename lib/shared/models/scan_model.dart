@@ -36,6 +36,8 @@ class ScanModel {
   final int weedCount;
   final double averageConfidence;
   final SeverityLevel severity;
+  final String? cropName;
+  final List<String> weedNames;
   final String? priorityZone;
   final double? infestationScore;
   final bool isMockDetection;
@@ -50,6 +52,8 @@ class ScanModel {
     required this.weedCount,
     required this.averageConfidence,
     required this.severity,
+    this.cropName,
+    this.weedNames = const [],
     this.priorityZone,
     this.infestationScore,
     this.isMockDetection = false,
@@ -59,6 +63,7 @@ class ScanModel {
 
   factory ScanModel.fromJson(Map<String, dynamic> json) {
     final zonesJson = json['field_zones'] as List<dynamic>? ?? [];
+    final weedsJson = json['weed_names'] as List<dynamic>? ?? [];
     return ScanModel(
       id: json['id'] as String,
       fieldId: json['field_id'] as String? ?? '',
@@ -67,6 +72,8 @@ class ScanModel {
       weedCount: json['weed_count'] as int? ?? 0,
       averageConfidence: (json['average_confidence'] as num?)?.toDouble() ?? 0.0,
       severity: SeverityLevelExtension.fromString(json['severity'] as String? ?? 'low'),
+      cropName: json['crop_name'] as String?,
+      weedNames: weedsJson.map((e) => e.toString()).toList(),
       priorityZone: json['priority_zone'] as String?,
       infestationScore: (json['infestation_score'] as num?)?.toDouble(),
       isMockDetection: json['is_mock_detection'] as bool? ?? false,
@@ -83,6 +90,8 @@ class ScanModel {
         'weed_count': weedCount,
         'average_confidence': averageConfidence,
         'severity': severity.dbValue,
+        if (cropName != null) 'crop_name': cropName,
+        'weed_names': weedNames,
         'priority_zone': priorityZone,
         'infestation_score': infestationScore,
         'is_mock_detection': isMockDetection,
