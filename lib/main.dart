@@ -42,6 +42,18 @@ class WeedGuardApp extends ConsumerWidget {
       ],
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        if (child == null) return const SizedBox.shrink();
+        return Container(
+          color: const Color(0xFF0F172A),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: ClipRect(child: child),
+            ),
+          ),
+        );
+      },
     );
   }
 }
