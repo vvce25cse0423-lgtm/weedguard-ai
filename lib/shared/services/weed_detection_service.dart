@@ -27,7 +27,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     ].map((b) => b ^ 42),
   );
   static const _groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
-  static const _groqModel = 'llama-3.2-11b-vision-preview';
+  static const _groqModel = 'qwen/qwen3.8-27b';
   static const _openRouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
   static const _openRouterModel = 'meta-llama/llama-3.2-11b-vision-instruct:free';
 
