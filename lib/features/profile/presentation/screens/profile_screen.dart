@@ -5,7 +5,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/constants/app_constants.dart';
-import '../../../../core/theme/app_theme.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -309,154 +308,294 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final email = Supabase.instance.client.auth.currentUser?.email ?? '';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Profile Photo Header
-              Center(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: const Text(
+          'Profile',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1B4332),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Color(0xFF1B4332)),
+      ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background Image
+          Image.asset(
+            'assets/images/profile_bg.png',
+            fit: BoxFit.cover,
+          ),
+          // Content
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Form(
+                key: _formKey,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Stack(
-                      children: [
-                        GestureDetector(
-                          onTap: _loading ? null : _showPhotoOptions,
-                          child: Container(
-                            width: 96,
-                            height: 96,
+                    // Profile Photo Header
+                    Center(
+                      child: Column(
+                        children: [
+                          Stack(
+                            children: [
+                              GestureDetector(
+                                onTap: _loading ? null : _showPhotoOptions,
+                                child: Container(
+                                  width: 96,
+                                  height: 96,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white,
+                                    border: Border.all(color: const Color(0xFF2E7D32), width: 3),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color(0x22000000),
+                                        blurRadius: 10,
+                                        offset: Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipOval(
+                                    child: _buildAvatarImage(),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: GestureDetector(
+                                  onTap: _loading ? null : _showPhotoOptions,
+                                  child: Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: const Color(0xFF1B5E20),
+                                      border: Border.all(color: Colors.white, width: 2),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x33000000),
+                                          blurRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt_rounded,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton.icon(
+                            onPressed: _loading ? null : _showPhotoOptions,
+                            icon: const Icon(Icons.add_a_photo_outlined, size: 16, color: Color(0xFF1B5E20)),
+                            label: Text(
+                              _photoPath != null ? 'Change Profile Photo' : 'Add Profile Photo',
+                              style: const TextStyle(
+                                color: Color(0xFF1B5E20),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.white.withOpacity(0.85),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                side: const BorderSide(color: Color(0xFFC8E6C9)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFC8E6C9), width: 1.2),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0F000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle,
                               color: const Color(0xFFE8F5E9),
-                              border: Border.all(color: const Color(0xFF2E7D32), width: 3),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x1A000000),
-                                  blurRadius: 10,
-                                  offset: Offset(0, 4),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.verified_user_rounded, color: Color(0xFF2E7D32), size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  email.isNotEmpty ? email : 'Farmer Account',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1B4332),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Verified Farmer Account',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF2E7D32),
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ],
                             ),
-                            child: ClipOval(
-                              child: _buildAvatarImage(),
-                            ),
                           ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: GestureDetector(
-                            onTap: _loading ? null : _showPhotoOptions,
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: const Color(0xFF1B5E20),
-                                border: Border.all(color: Colors.white, width: 2),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x33000000),
-                                    blurRadius: 4,
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.camera_alt_rounded,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: _loading ? null : _showPhotoOptions,
-                      icon: const Icon(Icons.add_a_photo_outlined, size: 16, color: Color(0xFF1B5E20)),
-                      label: Text(
-                        _photoPath != null ? 'Change Profile Photo' : 'Add Profile Photo',
-                        style: const TextStyle(
-                          color: Color(0xFF1B5E20),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
+                    const SizedBox(height: 18),
 
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryContainer,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
+                    if (_error != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFEBEE),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFFFCDD2)),
+                        ),
+                        child: Text(_error!, style: const TextStyle(color: Color(0xFFC62828), fontSize: 13, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                    if (_saved) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFC8E6C9)),
+                        ),
+                        child: const Text('Profile updated successfully.', style: TextStyle(color: Color(0xFF2E7D32), fontSize: 13, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFC8E6C9), width: 1.2),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x10000000),
+                            blurRadius: 12,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(email, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 2),
-                          Text('Farmer account', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w500)),
+                          TextFormField(
+                            controller: _nameCtrl,
+                            style: const TextStyle(fontSize: 14.5, color: Color(0xFF1A1A1A), fontWeight: FontWeight.w600),
+                            decoration: InputDecoration(
+                              labelText: 'Full name',
+                              labelStyle: const TextStyle(color: Color(0xFF4A7A4A), fontSize: 13.5),
+                              prefixIcon: const Icon(Icons.person_outline_rounded, color: Color(0xFF2E7D32), size: 20),
+                              filled: true,
+                              fillColor: const Color(0xFFF9FBF9),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFD0E1D0))),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFD0E1D0))),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 1.5)),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          TextFormField(
+                            controller: _phoneCtrl,
+                            keyboardType: TextInputType.phone,
+                            style: const TextStyle(fontSize: 14.5, color: Color(0xFF1A1A1A), fontWeight: FontWeight.w600),
+                            decoration: InputDecoration(
+                              labelText: 'Phone number',
+                              labelStyle: const TextStyle(color: Color(0xFF4A7A4A), fontSize: 13.5),
+                              prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF2E7D32), size: 20),
+                              filled: true,
+                              fillColor: const Color(0xFFF9FBF9),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFD0E1D0))),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFD0E1D0))),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 1.5)),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          TextFormField(
+                            controller: _locationCtrl,
+                            style: const TextStyle(fontSize: 14.5, color: Color(0xFF1A1A1A), fontWeight: FontWeight.w600),
+                            decoration: InputDecoration(
+                              labelText: 'Location / Region',
+                              labelStyle: const TextStyle(color: Color(0xFF4A7A4A), fontSize: 13.5),
+                              prefixIcon: const Icon(Icons.location_on_outlined, color: Color(0xFF2E7D32), size: 20),
+                              filled: true,
+                              fillColor: const Color(0xFFF9FBF9),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFD0E1D0))),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFD0E1D0))),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 1.5)),
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton.icon(
+                              onPressed: _loading ? null : _save,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1B5E20),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 2,
+                              ),
+                              icon: _loading
+                                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Icon(Icons.save_rounded, size: 18),
+                              label: Text(
+                                _loading ? 'Saving...' : 'Save Changes',
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              if (_error != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: AppColors.errorContainer, borderRadius: BorderRadius.circular(6)),
-                  child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
-                ),
-                const SizedBox(height: 16),
-              ],
-              if (_saved) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: AppColors.primaryContainer, borderRadius: BorderRadius.circular(6)),
-                  child: const Text('Profile updated.', style: TextStyle(color: AppColors.primary, fontSize: 13)),
-                ),
-                const SizedBox(height: 16),
-              ],
-              TextFormField(
-                controller: _nameCtrl,
-                decoration: const InputDecoration(labelText: 'Full name'),
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _phoneCtrl,
-                decoration: const InputDecoration(labelText: 'Phone number'),
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _locationCtrl,
-                decoration: const InputDecoration(labelText: 'Location'),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _loading ? null : _save,
-                child: _loading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Save changes'),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
