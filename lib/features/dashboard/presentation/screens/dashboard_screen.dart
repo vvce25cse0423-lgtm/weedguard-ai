@@ -60,12 +60,24 @@ final weatherProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
         perm = await Geolocator.requestPermission();
       }
       if (perm == LocationPermission.whileInUse || perm == LocationPermission.always) {
-        final pos = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 6),
-        );
-        lat = pos.latitude;
-        lon = pos.longitude;
+        try {
+          final lastPos = await Geolocator.getLastKnownPosition();
+          if (lastPos != null) {
+            lat = lastPos.latitude;
+            lon = lastPos.longitude;
+          }
+        } catch (_) {}
+
+        if (lat == null || lon == null) {
+          try {
+            final pos = await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.medium,
+              timeLimit: const Duration(seconds: 4),
+            );
+            lat = pos.latitude;
+            lon = pos.longitude;
+          } catch (_) {}
+        }
       }
     } catch (_) {
       // GPS unavailable or timed out

@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/l10n/app_localizations.dart';
+import '../../dashboard/presentation/screens/dashboard_screen.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with TickerProviderStateMixin {
   late final AnimationController _loadingController;
   late final AnimationController _fadeController;
@@ -26,6 +28,11 @@ class _SplashScreenState extends State<SplashScreen>
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
     ));
+
+    // Prefetch user's real location weather immediately during splash launch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(weatherProvider);
+    });
 
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),

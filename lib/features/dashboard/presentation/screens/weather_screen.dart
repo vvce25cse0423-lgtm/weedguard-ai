@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import 'dashboard_screen.dart';
 
 const _owmApiKey = '624d64f50bcf3cf596ccf7693dce142f';
 
@@ -25,7 +26,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
   bool _showSuggestions = false;
 
   // Selected or active location
-  String _currentCity = 'Bengaluru';
+  String _currentCity = '';
   double _lat = 12.9716;
   double _lon = 77.5946;
 
@@ -58,11 +59,12 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialData != null && widget.initialData!.isNotEmpty) {
-      _weatherData = widget.initialData;
-      _currentCity = widget.initialData!['city'] as String? ?? _currentCity;
-      _lat = (widget.initialData!['lat'] as num?)?.toDouble() ?? _lat;
-      _lon = (widget.initialData!['lon'] as num?)?.toDouble() ?? _lon;
+    final prefetched = widget.initialData ?? ref.read(weatherProvider).valueOrNull;
+    if (prefetched != null && prefetched.isNotEmpty) {
+      _weatherData = prefetched;
+      _currentCity = prefetched['city'] as String? ?? '';
+      _lat = (prefetched['lat'] as num?)?.toDouble() ?? _lat;
+      _lon = (prefetched['lon'] as num?)?.toDouble() ?? _lon;
       _isLoading = false;
     } else {
       _fetchDeviceGpsLocation();
@@ -381,11 +383,15 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final temp = (_weatherData?['temp'] as num?)?.toDouble() ?? 26.0;
-    final wind = (_weatherData?['wind_speed'] as num?)?.toDouble() ?? 2.2;
-    final humidity = (_weatherData?['humidity'] as num?)?.toDouble() ?? 62.0;
-    final condition = (_weatherData?['main'] as String?) ?? 'Clear';
-    final desc = (_weatherData?['desc'] as String?) ?? 'clear sky';
+    final liveWeather = ref.watch(weatherProvider).valueOrNull;
+    final activeData = _weatherData ?? liveWeather;
+    final effectiveCity = _currentCity.isNotEmpty ? _currentCity : (activeData?['city'] as String? ?? '');
+
+    final temp = (activeData?['temp'] as num?)?.toDouble() ?? 26.0;
+    final wind = (activeData?['wind_speed'] as num?)?.toDouble() ?? 2.2;
+    final humidity = (activeData?['humidity'] as num?)?.toDouble() ?? 62.0;
+    final condition = (activeData?['main'] as String?) ?? 'Clear';
+    final desc = (activeData?['desc'] as String?) ?? 'clear sky';
     final advisory = _calculateSprayAdvisory(temp, wind, humidity, condition);
 
     return Scaffold(
@@ -436,7 +442,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
                 ],
 
                 // ── Weather Overview Card ─────────────────────────────────────────
-                _buildWeatherCard(temp, desc, condition, wind, humidity),
+                _buildWeatherCard(temp, desc, condition, wind, humidity, effectiveCity),
                 const SizedBox(height: 20),
 
                 // ── Herbicide Spray Advisory Card ─────────────────────────────────
@@ -581,7 +587,10 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
     );
   }
 
-  Widget _buildWeatherCard(double temp, String desc, String condition, double wind, double humidity) {
+  Widget _buildWeatherCard(double temp, String desc, String condition, double wind, double humidity, [String? cityName]) {
+    final displayName = (cityName != null && cityName.isNotEmpty)
+        ? cityName
+        : (_currentCity.isNotEmpty ? _currentCity : 'Current Location');
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -609,7 +618,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  _currentCity,
+                  displayName,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
