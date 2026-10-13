@@ -10,7 +10,7 @@ import '../models/scan_model.dart';
 import '../../core/constants/app_constants.dart';
 
 abstract class WeedDetectionService {
-  Future<WeedDetectionResult> analyzeImage(File imageFile);
+  Future<WeedDetectionResult> analyzeImage(File imageFile, {String? cropHint});
   bool get isMock;
 }
 
@@ -37,8 +37,96 @@ class GeminiWeedDetectionService implements WeedDetectionService {
   @override
   bool get isMock => false;
 
+  static const _knownWeedKeywords = [
+    'parthenium', 'congress grass', 'carrot grass', 'gajjar ghas',
+    'cyperus', 'nutsedge', 'nut grass', 'motha', 'difformis', 'iria',
+    'echinochloa', 'barnyard grass', 'jungle rice', 'shama', 'sawa', 'crus-galli', 'colona',
+    'amaranthus', 'pigweed', 'chaulai', 'viridis', 'spinosus',
+    'cynodon', 'bermuda grass', 'doob', 'hariali', 'dactylon',
+    'digitaria', 'crabgrass', 'sanguinalis',
+    'convolvulus', 'bindweed', 'field bindweed', 'hiran khuri', 'arvensis',
+    'chenopodium', 'lambsquarters', 'bathua', 'album',
+    'solanum nigrum', 'black nightshade', 'makoi',
+    'portulaca', 'purslane', 'kulfa', 'oleracea',
+    'eleusine', 'goosegrass', 'indica',
+    'commelina', 'dayflower', 'benghalensis', 'kankawa',
+    'xanthium', 'cocklebur', 'strumarium',
+    'argemone', 'prickly poppy', 'mexicana',
+    'lantana', 'camara',
+    'trianthema', 'horse purslane', 'itsit', 'portulacastrum',
+    'eichhornia', 'water hyacinth', 'crassipes',
+    'striga', 'witchweed', 'asiatica',
+    'orobanche', 'broomrape',
+    'cuscuta', 'dodder', 'amarbel',
+    'dactyloctenium', 'crowfoot grass', 'aegyptium',
+    'phalaris', 'canary grass', 'gulli danda', 'minor',
+    'avena fatua', 'wild oat', 'jangli jai',
+    'ageratum', 'billygoat weed', 'conyzoides',
+    'mimosa pudica', 'touch-me-not',
+    'sorghum halepense', 'johnsongrass', 'baru',
+    'rumex', 'dock', 'dentatus',
+    'abutilon', 'velvetleaf', 'theophrasti',
+    'melilotus', 'sweet clover', 'indica',
+    'anagallis', 'blue pimpernel',
+    'polygonum', 'knotweed',
+    'setaria', 'foxtail', 'glauca', 'viridis',
+    'poa annua', 'annual bluegrass',
+    'cirsium', 'thistle', 'canada thistle',
+    'sonchus', 'sow thistle',
+    'sphenoclea', 'gooseweed', 'zeylanica',
+    'monochoria', 'vaginalis',
+    'ludwigia', 'water primrose',
+    'alternanthera', 'alligator weed',
+    'euphorbia', 'spurge', 'hirta', 'geniculata',
+    'physalis', 'groundcherry',
+    'weed', 'invasive', 'wild plant', 'sedge',
+  ];
+
+  static bool _isWeedName(String name) {
+    final lower = name.toLowerCase();
+    for (final weed in _knownWeedKeywords) {
+      if (lower.contains(weed)) return true;
+    }
+    return false;
+  }
+
+  static String _buildVisionPrompt(String? cropHint) {
+    final hintContext = (cropHint != null && cropHint.trim().isNotEmpty)
+        ? '\n[FARMER FIELD CONTEXT]: The planted cultivated crop in this field is "$cropHint". Verify if this crop is present in the field, and distinguish it from invasive weeds.'
+        : '';
+    return 'You are an elite agricultural botanist and crop protection specialist with deep expertise in Asian and global agronomy.\n'
+        'Examine this agricultural field photograph with scientific precision.\n'
+        '$hintContext\n\n'
+        'CRITICAL IDENTIFICATION RULES:\n'
+        '1. CROP IDENTIFIED:\n'
+        '   - Identify the cultivated commercial crop visible (e.g. "Rice / Paddy (Oryza sativa)", "Wheat (Triticum aestivum)", "Maize / Corn (Zea mays)", "Cotton (Gossypium hirsutum)", "Sugarcane (Saccharum officinarum)", "Tomato (Solanum lycopersicum)", "Soybean (Glycine max)", "Chili (Capsicum annuum)", "Onion (Allium cepa)", "Groundnut (Arachis hypogaea)").\n'
+        '   - NEVER label weeds, wild plants, or invasive species as "crop_identified".\n'
+        '   - If the photo is a close-up of a weed plant with NO visible cultivated crop foliage, set "crop_identified" to ${cropHint != null ? '"$cropHint"' : 'null'}.\n\n'
+        '2. WEEDS IDENTIFIED:\n'
+        '   - Identify ALL weed species, unwanted flora, sedges, or competitive grasses (e.g. "Parthenium / Congress Grass (Parthenium hysterophorus)", "Purple Nutsedge (Cyperus rotundus)", "Barnyard Grass (Echinochloa crus-galli)", "Wild Amaranth (Amaranthus viridis)", "Bermuda Grass (Cynodon dactylon)", "Crabgrass (Digitaria sanguinalis)", "Field Bindweed (Convolvulus arvensis)", "Lambsquarters (Chenopodium album)", "Black Nightshade (Solanum nigrum)").\n'
+        '   - For each weed provide specific name with botanical name, count, confidence (0.0 to 1.0), and severity.\n\n'
+        'Respond ONLY with valid JSON (no markdown formatting, no backticks):\n'
+        '{\n'
+        '  "crop_identified": "Exact common and botanical crop name",\n'
+        '  "crop_confidence": 0.95,\n'
+        '  "crop_growth_stage": "seedling|vegetative|reproductive|maturity",\n'
+        '  "weeds": [\n'
+        '    {\n'
+        '      "name": "Weed name (Botanical name)",\n'
+        '      "count": 3,\n'
+        '      "confidence": 0.90,\n'
+        '      "severity": "low|moderate|high"\n'
+        '    }\n'
+        '  ],\n'
+        '  "total_weed_count": 3,\n'
+        '  "overall_severity": "low|moderate|high",\n'
+        '  "infestation_score": 0.20,\n'
+        '  "recommended_action": "Specific herbicide or agronomic practice advisory"\n'
+        '}';
+  }
+
   @override
-  Future<WeedDetectionResult> analyzeImage(File imageFile) async {
+  Future<WeedDetectionResult> analyzeImage(File imageFile, {String? cropHint}) async {
     // ── 1. Resize + compress image ───────────────────────────────────────────
     final rawBytes = await imageFile.readAsBytes();
     final decoded = img.decodeImage(rawBytes);
@@ -80,31 +168,20 @@ class GeminiWeedDetectionService implements WeedDetectionService {
           apiKey: openRouterKey,
           base64Image: base64Image,
           imagePath: imageFile.path,
+          cropHint: cropHint,
         );
         if (result != null) return result;
       } catch (_) {}
     }
 
-    // ── 4. Attempt Groq Vision (llama-3.2-11b-vision-preview) ────────────────
+    // ── 4. Attempt Groq Vision ───────────────────────────────────────────────
     try {
       final result = await _callGroqVision(
         apiKey: groqKey,
         model: _groqModel,
         base64Image: base64Image,
         imagePath: imageFile.path,
-      );
-      if (result != null) {
-        return result;
-      }
-    } catch (_) {}
-
-    // Fallback model on Groq
-    try {
-      final result = await _callGroqVision(
-        apiKey: groqKey,
-        model: 'llama-3.2-90b-vision-preview',
-        base64Image: base64Image,
-        imagePath: imageFile.path,
+        cropHint: cropHint,
       );
       if (result != null) {
         return result;
@@ -112,36 +189,14 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     } catch (_) {}
 
     // ── 5. Ecological on-device vision analysis ──────────────────────────────
-    return _analyzeImageLocally(imageFile.path, decoded);
+    return _analyzeImageLocally(imageFile.path, decoded, cropHint: cropHint);
   }
-
-  static const _visionPrompt =
-      'You are an expert agricultural botanist and agronomist. Analyze this agricultural field/plant photo carefully.\n'
-      '1. CROP IDENTIFIED: Identify the cultivated agricultural crop visible in the image. Give common name and botanical name (e.g. "Rice / Paddy (Oryza sativa)", "Wheat (Triticum aestivum)", "Maize / Corn (Zea mays)", "Cotton (Gossypium hirsutum)", "Sugarcane (Saccharum officinarum)", "Tomato (Solanum lycopersicum)", "Soybean (Glycine max)", "Chili (Capsicum annuum)"). If the crop is visible, name it with high precision.\n'
-      '2. WEEDS IDENTIFIED: Identify ALL weed species, unwanted wild plants, sedges, or grass weeds competing in the field (e.g. "Parthenium / Congress Grass (Parthenium hysterophorus)", "Purple Nutsedge (Cyperus rotundus)", "Barnyard Grass (Echinochloa crus-galli)", "Wild Amaranth (Amaranthus viridis)", "Bermuda Grass (Cynodon dactylon)", "Crabgrass (Digitaria sanguinalis)", "Field Bindweed (Convolvulus arvensis)", "Lambsquarters (Chenopodium album)").\n\n'
-      'Respond ONLY with valid JSON (no markdown formatting, no backticks):\n'
-      '{\n'
-      '  "crop_identified": "Exact common and botanical crop name",\n'
-      '  "crop_confidence": 0.94,\n'
-      '  "crop_growth_stage": "seedling|vegetative|reproductive|maturity",\n'
-      '  "weeds": [\n'
-      '    {\n'
-      '      "name": "Weed name (Botanical name)",\n'
-      '      "count": 3,\n'
-      '      "confidence": 0.88,\n'
-      '      "severity": "low|moderate|high"\n'
-      '    }\n'
-      '  ],\n'
-      '  "total_weed_count": 3,\n'
-      '  "overall_severity": "low|moderate|high",\n'
-      '  "infestation_score": 0.20,\n'
-      '  "recommended_action": "Targeted herbicide or hand weeding advisory"\n'
-      '}';
 
   Future<WeedDetectionResult?> _callOpenRouterVision({
     required String apiKey,
     required String base64Image,
     required String imagePath,
+    String? cropHint,
   }) async {
     final models = [
       _openRouterModel,
@@ -158,7 +213,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
             {
               'role': 'user',
               'content': [
-                {'type': 'text', 'text': _visionPrompt},
+                {'type': 'text', 'text': _buildVisionPrompt(cropHint)},
                 {
                   'type': 'image_url',
                   'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
@@ -184,7 +239,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
             .timeout(const Duration(seconds: 20));
 
         if (response.statusCode == 200) {
-          final res = _parseJsonResponse(response.body, imagePath);
+          final res = _parseJsonResponse(response.body, imagePath, cropHint: cropHint);
           if (res != null) return res;
         }
       } catch (_) {}
@@ -197,6 +252,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     required String model,
     required String base64Image,
     required String imagePath,
+    String? cropHint,
   }) async {
     final body = jsonEncode({
       'model': model,
@@ -204,7 +260,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
         {
           'role': 'user',
           'content': [
-            {'type': 'text', 'text': _visionPrompt},
+            {'type': 'text', 'text': _buildVisionPrompt(cropHint)},
             {
               'type': 'image_url',
               'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
@@ -231,10 +287,10 @@ class GeminiWeedDetectionService implements WeedDetectionService {
       return null;
     }
 
-    return _parseJsonResponse(utf8.decode(response.bodyBytes), imagePath);
+    return _parseJsonResponse(utf8.decode(response.bodyBytes), imagePath, cropHint: cropHint);
   }
 
-  WeedDetectionResult? _parseJsonResponse(String responseBody, String imagePath) {
+  WeedDetectionResult? _parseJsonResponse(String responseBody, String imagePath, {String? cropHint}) {
     try {
       final jsonResponse = jsonDecode(responseBody) as Map<String, dynamic>;
       final choices = jsonResponse['choices'] as List<dynamic>?;
@@ -248,13 +304,13 @@ class GeminiWeedDetectionService implements WeedDetectionService {
 
       rawText = rawText.substring(jsonStart, jsonEnd + 1);
       final parsed = jsonDecode(rawText) as Map<String, dynamic>;
-      return _buildResult(imagePath, parsed);
+      return _buildResult(imagePath, parsed, cropHint: cropHint);
     } catch (_) {
       return null;
     }
   }
 
-  WeedDetectionResult _analyzeImageLocally(String imagePath, img.Image image) {
+  WeedDetectionResult _analyzeImageLocally(String imagePath, img.Image image, {String? cropHint}) {
     final width = image.width;
     final height = image.height;
     final midX = width ~/ 2;
@@ -368,7 +424,51 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     List<String> weedCatalog;
     double cropConf;
 
-    if (avgG > avgR * 1.15 && avgG > avgB * 1.1) {
+    if (cropHint != null && cropHint.trim().isNotEmpty) {
+      selectedCrop = cropHint.trim();
+      cropConf = 0.94;
+      final lower = selectedCrop.toLowerCase();
+      if (lower.contains('rice') || lower.contains('paddy')) {
+        weedCatalog = [
+          'Barnyard Grass (Echinochloa crus-galli)',
+          'Purple Nutsedge (Cyperus rotundus)',
+          'Smallflower Sedge (Cyperus difformis)',
+          'Gooseweed (Sphenoclea zeylanica)',
+        ];
+      } else if (lower.contains('wheat')) {
+        weedCatalog = [
+          'Wild Oat (Avena fatua)',
+          'Field Bindweed (Convolvulus arvensis)',
+          'Lambsquarters / Bathua (Chenopodium album)',
+          'Canary Grass (Phalaris minor)',
+        ];
+      } else if (lower.contains('cotton')) {
+        weedCatalog = [
+          'Purple Nutsedge (Cyperus rotundus)',
+          'Wild Amaranth (Amaranthus viridis)',
+          'Congress Grass (Parthenium hysterophorus)',
+        ];
+      } else if (lower.contains('maize') || lower.contains('corn')) {
+        weedCatalog = [
+          'Congress Grass (Parthenium hysterophorus)',
+          'Crabgrass (Digitaria sanguinalis)',
+          'Wild Amaranth (Amaranthus viridis)',
+          'Goosegrass (Eleusine indica)',
+        ];
+      } else if (lower.contains('tomato') || lower.contains('chili') || lower.contains('vegetable')) {
+        weedCatalog = [
+          'Black Nightshade (Solanum nigrum)',
+          'Purslane (Portulaca oleracea)',
+          'Wild Amaranth (Amaranthus viridis)',
+        ];
+      } else {
+        weedCatalog = [
+          'Congress Grass (Parthenium hysterophorus)',
+          'Purple Nutsedge (Cyperus rotundus)',
+          'Bermuda Grass (Cynodon dactylon)',
+        ];
+      }
+    } else if (avgG > avgR * 1.15 && avgG > avgB * 1.1) {
       if (avgB > 85) {
         selectedCrop = 'Rice / Paddy (Oryza sativa)';
         weedCatalog = [
@@ -468,8 +568,9 @@ class GeminiWeedDetectionService implements WeedDetectionService {
 
   WeedDetectionResult _buildResult(
     String imagePath,
-    Map<String, dynamic> parsed,
-  ) {
+    Map<String, dynamic> parsed, {
+    String? cropHint,
+  }) {
     final rawCropName = parsed['crop_identified'] as String?;
     final cropConf = (parsed['crop_confidence'] as num?)?.toDouble() ?? 0.0;
 
@@ -479,19 +580,49 @@ class GeminiWeedDetectionService implements WeedDetectionService {
           .replaceAll(RegExp(r'\s*\((unspecified|unidentified|unknown)\)', caseSensitive: false), '')
           .replaceAll(RegExp(r'\b(unspecified|unknown)\b', caseSensitive: false), '')
           .trim();
-      if (cleanCropName.isEmpty || cleanCropName.toLowerCase() == 'null' || cleanCropName.toLowerCase() == 'crop') {
+      if (cleanCropName.isEmpty ||
+          cleanCropName.toLowerCase() == 'null' ||
+          cleanCropName.toLowerCase() == 'crop' ||
+          cleanCropName.toLowerCase() == 'none') {
         cleanCropName = null;
       }
+    }
+
+    final rawWeedsList = parsed['weeds'] as List<dynamic>? ?? [];
+    final weedsJson = List<Map<String, dynamic>>.from(
+      rawWeedsList.map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+
+    // Safeguard: Check if model mistakenly put a known weed into crop_identified
+    if (cleanCropName != null && _isWeedName(cleanCropName)) {
+      final weedLabel = cleanCropName;
+      final alreadyInWeeds = weedsJson.any((w) {
+        final name = (w['name'] as String? ?? '').toLowerCase();
+        return name.contains(weedLabel.toLowerCase()) ||
+            weedLabel.toLowerCase().contains(name);
+      });
+      if (!alreadyInWeeds) {
+        weedsJson.add({
+          'name': weedLabel,
+          'count': 1,
+          'confidence': math.max(cropConf, 0.85),
+          'severity': 'high',
+        });
+      }
+      cleanCropName = (cropHint != null && cropHint.trim().isNotEmpty) ? cropHint.trim() : null;
+    }
+
+    if (cleanCropName == null && cropHint != null && cropHint.trim().isNotEmpty) {
+      cleanCropName = cropHint.trim();
     }
 
     final cropName =
         (cleanCropName != null &&
             cleanCropName.isNotEmpty &&
-            cropConf >= 0.35)
+            (cropConf >= 0.30 || cropHint != null))
         ? cleanCropName
         : null;
 
-    final weedsJson = parsed['weeds'] as List<dynamic>? ?? [];
     final totalWeedCount =
         (parsed['total_weed_count'] as num?)?.toInt() ??
         weedsJson.fold<int>(
@@ -505,16 +636,19 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     final detections = <WeedDetection>[];
 
     if (cropName != null) {
-      detections.add(WeedDetection(label: cropName, confidence: cropConf, isCrop: true));
+      detections.add(WeedDetection(
+        label: cropName,
+        confidence: cropConf > 0.3 ? cropConf : 0.90,
+        isCrop: true,
+      ));
     }
 
     for (final w in weedsJson) {
-      final wMap = w as Map<String, dynamic>;
-      final count = (wMap['count'] as num?)?.toInt() ?? 1;
-      final weedName = wMap['name'] as String? ?? 'Unknown weed';
-      final conf = (wMap['confidence'] as num?)?.toDouble() ?? 0.75;
+      final count = (w['count'] as num?)?.toInt() ?? 1;
+      final weedName = w['name'] as String? ?? 'Unknown weed';
+      final conf = (w['confidence'] as num?)?.toDouble() ?? 0.75;
 
-      if (conf < 0.35) continue;
+      if (conf < 0.30) continue;
       if (cropName != null &&
           weedName.toLowerCase().contains(
             cropName.split('(').first.trim().toLowerCase(),
@@ -653,16 +787,20 @@ class MockWeedDetectionService implements WeedDetectionService {
   static int _scenarioIndex = 0;
 
   @override
-  Future<WeedDetectionResult> analyzeImage(File imageFile) async {
+  Future<WeedDetectionResult> analyzeImage(File imageFile, {String? cropHint}) async {
     await Future.delayed(const Duration(milliseconds: 1800));
 
     final scenario = _demoScenarios[_scenarioIndex % _demoScenarios.length];
     _scenarioIndex++;
 
+    final cropLabel = (cropHint != null && cropHint.trim().isNotEmpty)
+        ? cropHint.trim()
+        : scenario.crop;
+
     final detections = <WeedDetection>[
-      WeedDetection(label: scenario.crop, confidence: scenario.cropConf),
+      WeedDetection(label: cropLabel, confidence: scenario.cropConf, isCrop: true),
       ...scenario.weeds.map(
-        (w) => WeedDetection(label: w.name, confidence: w.confidence),
+        (w) => WeedDetection(label: w.name, confidence: w.confidence, isCrop: false),
       ),
     ];
 

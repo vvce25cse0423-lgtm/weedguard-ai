@@ -12,6 +12,7 @@ import '../../../../shared/services/weed_detection_service.dart';
 import '../../../../shared/models/detection_result_model.dart';
 import '../../../../shared/models/scan_model.dart';
 import '../../../scanner/data/scan_repository.dart';
+import '../../../fields/data/fields_repository.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../history/presentation/screens/scan_history_screen.dart';
 import '../../../../core/l10n/app_localizations.dart';
@@ -84,7 +85,26 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
     _analysisMessage = AppLocalizations.of(context).analyzing;
     _runAnalysisMessages(context);
     try {
-      final result = await _detectionService.analyzeImage(_imageFile!);
+      String? cropHint;
+      try {
+        final fid = widget.fieldId;
+        if (fid != null && fid.isNotEmpty) {
+          final fields = ref.read(dashboardFieldsProvider).value;
+          if (fields != null) {
+            final match = fields.where((f) => f.id == fid).firstOrNull;
+            if (match != null && match.cropType.isNotEmpty) {
+              cropHint = match.cropType;
+            }
+          }
+          if (cropHint == null) {
+            final repo = FieldsRepository(Supabase.instance.client);
+            final field = await repo.getField(fid);
+            cropHint = field.cropType;
+          }
+        }
+      } catch (_) {}
+
+      final result = await _detectionService.analyzeImage(_imageFile!, cropHint: cropHint);
       String? savedScanId;
       String? uploadedUrl;
       try {

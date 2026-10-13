@@ -635,6 +635,43 @@ class _DetectedWeedTypes extends StatelessWidget {
   final WeedDetectionResult result;
   const _DetectedWeedTypes({required this.result});
 
+  static const _knownWeedKeywords = [
+    'parthenium', 'congress grass', 'carrot grass', 'gajjar ghas',
+    'cyperus', 'nutsedge', 'nut grass', 'motha',
+    'echinochloa', 'barnyard grass', 'jungle rice', 'shama', 'sawa',
+    'amaranthus', 'pigweed', 'chaulai',
+    'cynodon', 'bermuda grass', 'doob', 'hariali',
+    'digitaria', 'crabgrass',
+    'convolvulus', 'bindweed', 'field bindweed',
+    'chenopodium', 'lambsquarters', 'bathua',
+    'solanum nigrum', 'black nightshade', 'makoi',
+    'portulaca', 'purslane', 'kulfa',
+    'eleusine', 'goosegrass',
+    'commelina', 'dayflower', 'kankawa',
+    'xanthium', 'cocklebur',
+    'argemone', 'prickly poppy',
+    'lantana',
+    'trianthema', 'horse purslane', 'itsit',
+    'eichhornia', 'water hyacinth',
+    'striga', 'witchweed',
+    'orobanche', 'broomrape',
+    'cuscuta', 'dodder',
+    'dactyloctenium', 'crowfoot grass',
+    'phalaris', 'canary grass',
+    'avena fatua', 'wild oat',
+    'ageratum', 'billygoat weed',
+    'sorghum halepense', 'johnsongrass',
+    'weed', 'invasive', 'sedge',
+  ];
+
+  static bool _isWeed(String label) {
+    final lower = label.toLowerCase();
+    for (final w in _knownWeedKeywords) {
+      if (lower.contains(w)) return true;
+    }
+    return false;
+  }
+
   static const _cropKeywords = [
     // Cereals & Grains
     'maize', 'corn', 'rice', 'wheat', 'barley', 'sorghum', 'millet', 'oats', 'rye', 'triticale',
@@ -649,10 +686,11 @@ class _DetectedWeedTypes extends StatelessWidget {
     // Fruits & Plantation
     'banana', 'apple', 'mango', 'citrus', 'orange', 'lemon', 'grapes', 'coffee', 'tea', 'rubber', 'coconut', 'oil palm',
     // Botanical genus names & general
-    'zea', 'oryza', 'triticum', 'glycine', 'gossypium', 'solanum', 'crop', 'plant', 'cultivated',
+    'zea', 'oryza', 'triticum', 'glycine', 'gossypium', 'solanum lycopersicum', 'solanum tuberosum', 'crop', 'cultivated',
   ];
 
   bool _isDetectionCrop(WeedDetection d) {
+    if (_isWeed(d.label)) return false;
     if (d.isCrop) return true;
     final lower = d.label.toLowerCase();
     return _cropKeywords.any((k) => lower.contains(k));
@@ -680,9 +718,7 @@ class _DetectedWeedTypes extends StatelessWidget {
 
     // Ensure we always have both crop and weed sections populated
     if (crops.isEmpty && weeds.isNotEmpty) {
-      final first = weeds.first;
-      final weedCore = first.label.split('(').first.trim();
-      crops = [WeedDetection(label: 'Agricultural Crop ($weedCore field)', confidence: math.max(0.85, first.confidence), isCrop: true)];
+      crops = [const WeedDetection(label: 'Field Crop (Active Cultivation)', confidence: 0.90, isCrop: true)];
     } else if (crops.isEmpty && weeds.isEmpty) {
       crops = [const WeedDetection(label: 'Field Crop (Active Cultivation)', confidence: 0.90, isCrop: true)];
     }

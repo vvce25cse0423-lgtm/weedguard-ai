@@ -9,8 +9,9 @@ class DetectionOverlayPainter extends CustomPainter {
   static const _cropKeywords = ['maize', 'rice', 'wheat', 'soybean', 'cotton', 'corn',
     'sugarcane', 'barley', 'sorghum', 'sunflower', 'tomato', 'potato', 'crop'];
 
-  bool _isCrop(String label) {
-    final lower = label.toLowerCase();
+  bool _isCrop(WeedDetection d) {
+    if (d.isCrop) return true;
+    final lower = d.label.toLowerCase();
     return _cropKeywords.any((k) => lower.contains(k));
   }
 
@@ -25,7 +26,7 @@ class DetectionOverlayPainter extends CustomPainter {
 
     for (final d in detections) {
       if (d.boundingBox == null) continue;
-      final isCrop = _isCrop(d.label);
+      final isCrop = _isCrop(d);
       final primaryColor = isCrop ? const Color(0xFF2E7D32) : const Color(0xFFE53935);
       final glowColor = primaryColor.withOpacity(0.35);
 
