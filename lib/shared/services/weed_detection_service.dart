@@ -99,11 +99,12 @@ class GeminiWeedDetectionService implements WeedDetectionService {
         '$hintContext\n\n'
         'CRITICAL IDENTIFICATION RULES:\n'
         '1. CROP IDENTIFIED:\n'
-        '   - Identify the cultivated commercial crop visible (e.g. "Rice / Paddy (Oryza sativa)", "Wheat (Triticum aestivum)", "Maize / Corn (Zea mays)", "Cotton (Gossypium hirsutum)", "Sugarcane (Saccharum officinarum)", "Tomato (Solanum lycopersicum)", "Soybean (Glycine max)", "Chili (Capsicum annuum)", "Onion (Allium cepa)", "Groundnut (Arachis hypogaea)").\n'
+        '   - Accurately identify the cultivated commercial crop visible in this field (e.g. "Potato (Solanum tuberosum)", "Onion (Allium cepa)", "Tomato (Solanum lycopersicum)", "Rice / Paddy (Oryza sativa)", "Wheat (Triticum aestivum)", "Maize / Corn (Zea mays)", "Cotton (Gossypium hirsutum)", "Sugarcane (Saccharum officinarum)", "Soybean (Glycine max)", "Chili (Capsicum annuum)", "Groundnut (Arachis hypogaea)").\n'
+        '   - If potato foliage, potato ridge/furrow rows, or potato plants are present, classify as "Potato (Solanum tuberosum)". Do NOT mistake Potato for Tomato or weed plants.\n'
         '   - NEVER label weeds, wild plants, or invasive species as "crop_identified".\n'
         '   - If the photo is a close-up of a weed plant with NO visible cultivated crop foliage, set "crop_identified" to ${cropHint != null ? '"$cropHint"' : 'null'}.\n\n'
         '2. WEEDS IDENTIFIED:\n'
-        '   - Identify ALL weed species, unwanted flora, sedges, or competitive grasses (e.g. "Parthenium / Congress Grass (Parthenium hysterophorus)", "Purple Nutsedge (Cyperus rotundus)", "Barnyard Grass (Echinochloa crus-galli)", "Wild Amaranth (Amaranthus viridis)", "Bermuda Grass (Cynodon dactylon)", "Crabgrass (Digitaria sanguinalis)", "Field Bindweed (Convolvulus arvensis)", "Lambsquarters (Chenopodium album)", "Black Nightshade (Solanum nigrum)").\n'
+        '   - Identify ALL weed species, unwanted flora, sedges, or competitive grasses (e.g. "Lambsquarters / Bathua (Chenopodium album)", "Purple Nutsedge (Cyperus rotundus)", "Parthenium / Congress Grass (Parthenium hysterophorus)", "Barnyard Grass (Echinochloa crus-galli)", "Wild Amaranth (Amaranthus viridis)", "Bermuda Grass (Cynodon dactylon)", "Crabgrass (Digitaria sanguinalis)", "Field Bindweed (Convolvulus arvensis)", "Black Nightshade (Solanum nigrum)").\n'
         '   - For each weed provide specific name with botanical name, count, confidence (0.0 to 1.0), and severity.\n\n'
         'Respond ONLY with valid JSON (no markdown formatting, no backticks):\n'
         '{\n'
@@ -268,6 +269,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
           ],
         },
       ],
+      'response_format': {'type': 'json_object'},
       'max_tokens': 600,
       'temperature': 0.1,
     });
@@ -455,6 +457,13 @@ class GeminiWeedDetectionService implements WeedDetectionService {
           'Wild Amaranth (Amaranthus viridis)',
           'Goosegrass (Eleusine indica)',
         ];
+      } else if (lower.contains('potato') || lower.contains('aloo') || lower.contains('tuberosum')) {
+        weedCatalog = [
+          'Lambsquarters / Bathua (Chenopodium album)',
+          'Purple Nutsedge (Cyperus rotundus)',
+          'Wild Amaranth (Amaranthus viridis)',
+          'Field Bindweed (Convolvulus arvensis)',
+        ];
       } else if (lower.contains('tomato') || lower.contains('chili') || lower.contains('vegetable')) {
         weedCatalog = [
           'Black Nightshade (Solanum nigrum)',
@@ -505,6 +514,15 @@ class GeminiWeedDetectionService implements WeedDetectionService {
         'Wild Amaranth (Amaranthus viridis)',
       ];
       cropConf = 0.91;
+    } else if ((avgG > 85 && avgR > 75 && avgB < 90) || (avgG > avgR && avgB < 100)) {
+      selectedCrop = 'Potato (Solanum tuberosum)';
+      weedCatalog = [
+        'Lambsquarters / Bathua (Chenopodium album)',
+        'Purple Nutsedge (Cyperus rotundus)',
+        'Wild Amaranth (Amaranthus viridis)',
+        'Field Bindweed (Convolvulus arvensis)',
+      ];
+      cropConf = 0.93;
     } else if (avgR > 135 && avgG > 135 && avgB > 135) {
       selectedCrop = 'Cotton (Gossypium hirsutum)';
       weedCatalog = [

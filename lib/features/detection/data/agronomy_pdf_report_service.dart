@@ -450,6 +450,8 @@ class AgronomyPdfReportService {
       return {'chemical': 'Bispyribac-sodium 10% SC (Nominee Gold)', 'dose': '80 - 100 ml / Acre', 'type': 'Post-emergence Selective'};
     } else if (lower.contains('amaranthus') || lower.contains('pigweed')) {
       return {'chemical': 'Atrazine 50% WP or Pendimethalin 30% EC', 'dose': '1.0 - 1.5 L / Acre', 'type': 'Pre/Early Post-emergence'};
+    } else if (lower.contains('chenopodium') || lower.contains('bathua') || lower.contains('lambsquarters') || lower.contains('lambs')) {
+      return {'chemical': 'Metribuzin 70% WP (Sencor) or Pendimethalin 30% EC', 'dose': '250 - 300g / Acre', 'type': 'Pre/Early Post-emergence Selective'};
     } else if (lower.contains('convolvulus') || lower.contains('morning')) {
       return {'chemical': 'Glyphosate 41% SL (Directed) or 2,4-D Amine', 'dose': '800 ml - 1 L / Acre', 'type': 'Non-selective / Foliar'};
     }
