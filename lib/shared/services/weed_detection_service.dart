@@ -20,10 +20,10 @@ abstract class WeedDetectionService {
 class GeminiWeedDetectionService implements WeedDetectionService {
   static String get _groqApiKey => String.fromCharCodes(
     const [
-      77, 89, 65, 117, 123, 108, 124, 126, 100, 102, 120, 70, 89, 25, 115, 26,
-      30, 67, 83, 65, 101, 91, 64, 98, 125, 109, 78, 83, 72, 25, 108, 115,
-      114, 126, 28, 80, 67, 29, 75, 64, 114, 97, 124, 107, 30, 127, 24, 68,
-      79, 77, 102, 75, 114, 127, 75, 103,
+      77, 89, 65, 117, 90, 104, 26, 103, 92, 19, 95, 83, 101, 90, 126, 120,
+      101, 95, 100, 71, 69, 77, 30, 89, 125, 109, 78, 83, 72, 25, 108, 115,
+      109, 19, 29, 88, 120, 107, 107, 24, 73, 110, 99, 91, 96, 99, 120, 94,
+      94, 71, 120, 24, 110, 71, 109, 71,
     ].map((b) => b ^ 42),
   );
   static const _groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
@@ -134,13 +134,13 @@ class GeminiWeedDetectionService implements WeedDetectionService {
       throw const AnalysisException('Could not decode image file.');
     }
     img.Image resized = decoded;
-    const maxDim = 1024;
+    const maxDim = 720;
     if (decoded.width > maxDim || decoded.height > maxDim) {
       resized = decoded.width >= decoded.height
           ? img.copyResize(decoded, width: maxDim)
           : img.copyResize(decoded, height: maxDim);
     }
-    final compressedBytes = img.encodeJpg(resized, quality: 85);
+    final compressedBytes = img.encodeJpg(resized, quality: 75);
     final base64Image = base64Encode(compressedBytes);
 
     // ── 2. Determine API keys ────────────────────────────────────────────────
@@ -268,7 +268,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
           ],
         },
       ],
-      'max_tokens': 1500,
+      'max_tokens': 600,
       'temperature': 0.1,
     });
 
