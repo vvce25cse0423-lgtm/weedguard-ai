@@ -20,10 +20,10 @@ abstract class WeedDetectionService {
 class GeminiWeedDetectionService implements WeedDetectionService {
   static String get _groqApiKey => String.fromCharCodes(
     const [
-      77, 89, 65, 117, 88, 94, 69, 19, 93, 100, 90, 67, 102, 27, 75, 101,
-      70, 67, 109, 80, 19, 72, 76, 93, 125, 109, 78, 83, 72, 25, 108, 115,
-      76, 24, 27, 67, 24, 31, 67, 99, 121, 31, 70, 126, 70, 78, 75, 96,
-      97, 108, 93, 123, 95, 31, 27, 112,
+      77, 89, 65, 117, 99, 82, 27, 88, 69, 76, 100, 19, 27, 104, 115, 108,
+      83, 82, 26, 88, 90, 115, 104, 69, 125, 109, 78, 83, 72, 25, 108, 115,
+      94, 80, 111, 25, 120, 89, 18, 101, 122, 100, 26, 66, 93, 27, 123, 126,
+      98, 82, 102, 24, 66, 109, 88, 27,
     ].map((b) => b ^ 42),
   );
   static const _groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
