@@ -160,7 +160,10 @@ class GeminiWeedDetectionService implements WeedDetectionService {
       }
     } catch (_) {}
 
-    groqKey ??= _groqApiKey;
+    final groqKeysToTry = <String>[
+      _groqApiKey,
+      if (groqKey != null && groqKey != _groqApiKey) groqKey,
+    ];
 
     // ── 3. Attempt OpenRouter Vision if key present ──────────────────────────
     if (openRouterKey != null && openRouterKey.isNotEmpty) {
@@ -176,18 +179,20 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     }
 
     // ── 4. Attempt Groq Vision ───────────────────────────────────────────────
-    try {
-      final result = await _callGroqVision(
-        apiKey: groqKey,
-        model: _groqModel,
-        base64Image: base64Image,
-        imagePath: imageFile.path,
-        cropHint: cropHint,
-      );
-      if (result != null) {
-        return result;
-      }
-    } catch (_) {}
+    for (final key in groqKeysToTry) {
+      try {
+        final result = await _callGroqVision(
+          apiKey: key,
+          model: _groqModel,
+          base64Image: base64Image,
+          imagePath: imageFile.path,
+          cropHint: cropHint,
+        );
+        if (result != null) {
+          return result;
+        }
+      } catch (_) {}
+    }
 
     // ── 5. Ecological on-device vision analysis ──────────────────────────────
     return _analyzeImageLocally(imageFile.path, decoded, cropHint: cropHint);
@@ -283,7 +288,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
           },
           body: utf8.encode(body),
         )
-        .timeout(const Duration(seconds: 22));
+        .timeout(const Duration(seconds: 35));
 
     if (response.statusCode != 200) {
       return null;
