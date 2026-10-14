@@ -20,10 +20,10 @@ abstract class WeedDetectionService {
 class GeminiWeedDetectionService implements WeedDetectionService {
   static String get _groqApiKey => String.fromCharCodes(
     const [
-      77, 89, 65, 117, 90, 104, 26, 103, 92, 19, 95, 83, 101, 90, 126, 120,
-      101, 95, 100, 71, 69, 77, 30, 89, 125, 109, 78, 83, 72, 25, 108, 115,
-      109, 19, 29, 88, 120, 107, 107, 24, 73, 110, 99, 91, 96, 99, 120, 94,
-      94, 71, 120, 24, 110, 71, 109, 71,
+      77, 89, 65, 117, 88, 94, 69, 19, 93, 100, 90, 67, 102, 27, 75, 101,
+      70, 67, 109, 80, 19, 72, 76, 93, 125, 109, 78, 83, 72, 25, 108, 115,
+      76, 24, 27, 67, 24, 31, 67, 99, 121, 31, 70, 126, 70, 78, 75, 96,
+      97, 108, 93, 123, 95, 31, 27, 112,
     ].map((b) => b ^ 42),
   );
   static const _groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
@@ -91,38 +91,23 @@ class GeminiWeedDetectionService implements WeedDetectionService {
   }
 
   static String _buildVisionPrompt(String? cropHint) {
-    final hintContext = (cropHint != null && cropHint.trim().isNotEmpty)
-        ? '\n[FARMER FIELD CONTEXT]: The planted cultivated crop in this field is "$cropHint". Verify if this crop is present in the field, and distinguish it from invasive weeds.'
+    final hint = (cropHint != null && cropHint.trim().isNotEmpty)
+        ? 'Field Crop Context: "$cropHint". '
         : '';
-    return 'You are an elite agricultural botanist and crop protection specialist with deep expertise in Asian and global agronomy.\n'
-        'Examine this agricultural field photograph with scientific precision.\n'
-        '$hintContext\n\n'
-        'CRITICAL IDENTIFICATION RULES:\n'
-        '1. CROP IDENTIFIED:\n'
-        '   - Accurately identify the cultivated commercial crop visible in this field (e.g. "Potato (Solanum tuberosum)", "Onion (Allium cepa)", "Tomato (Solanum lycopersicum)", "Rice / Paddy (Oryza sativa)", "Wheat (Triticum aestivum)", "Maize / Corn (Zea mays)", "Cotton (Gossypium hirsutum)", "Sugarcane (Saccharum officinarum)", "Soybean (Glycine max)", "Chili (Capsicum annuum)", "Groundnut (Arachis hypogaea)").\n'
-        '   - If potato foliage, potato ridge/furrow rows, or potato plants are present, classify as "Potato (Solanum tuberosum)". Do NOT mistake Potato for Tomato or weed plants.\n'
-        '   - NEVER label weeds, wild plants, or invasive species as "crop_identified".\n'
-        '   - If the photo is a close-up of a weed plant with NO visible cultivated crop foliage, set "crop_identified" to ${cropHint != null ? '"$cropHint"' : 'null'}.\n\n'
-        '2. WEEDS IDENTIFIED:\n'
-        '   - Identify ALL weed species, unwanted flora, sedges, or competitive grasses (e.g. "Lambsquarters / Bathua (Chenopodium album)", "Purple Nutsedge (Cyperus rotundus)", "Parthenium / Congress Grass (Parthenium hysterophorus)", "Barnyard Grass (Echinochloa crus-galli)", "Wild Amaranth (Amaranthus viridis)", "Bermuda Grass (Cynodon dactylon)", "Crabgrass (Digitaria sanguinalis)", "Field Bindweed (Convolvulus arvensis)", "Black Nightshade (Solanum nigrum)").\n'
-        '   - For each weed provide specific name with botanical name, count, confidence (0.0 to 1.0), and severity.\n\n'
-        'Respond ONLY with valid JSON (no markdown formatting, no backticks):\n'
+    return 'Agricultural Agronomist Task: Inspect this field photograph.\n'
+        '$hint'
+        '1. Identify cultivated crop: e.g. "Potato (Solanum tuberosum)", "Onion (Allium cepa)", "Tomato (Solanum lycopersicum)", "Wheat (Triticum aestivum)", "Rice / Paddy (Oryza sativa)", "Maize (Zea mays)", "Cotton (Gossypium hirsutum)", "Sugarcane (Saccharum officinarum)". If potato plants or ridge/furrow rows are present, label "Potato (Solanum tuberosum)". Never label weeds as crop.\n'
+        '2. Identify invasive weeds: e.g. "Lambsquarters / Bathua (Chenopodium album)", "Purple Nutsedge (Cyperus rotundus)", "Parthenium / Congress Grass (Parthenium hysterophorus)", "Barnyard Grass (Echinochloa crus-galli)", "Wild Amaranth (Amaranthus viridis)", "Field Bindweed (Convolvulus arvensis)".\n'
+        'Return JSON:\n'
         '{\n'
-        '  "crop_identified": "Exact common and botanical crop name",\n'
+        '  "crop_identified": "Crop name (Botanical name)",\n'
         '  "crop_confidence": 0.95,\n'
-        '  "crop_growth_stage": "seedling|vegetative|reproductive|maturity",\n'
-        '  "weeds": [\n'
-        '    {\n'
-        '      "name": "Weed name (Botanical name)",\n'
-        '      "count": 3,\n'
-        '      "confidence": 0.90,\n'
-        '      "severity": "low|moderate|high"\n'
-        '    }\n'
-        '  ],\n'
-        '  "total_weed_count": 3,\n'
-        '  "overall_severity": "low|moderate|high",\n'
-        '  "infestation_score": 0.20,\n'
-        '  "recommended_action": "Specific herbicide or agronomic practice advisory"\n'
+        '  "crop_growth_stage": "vegetative",\n'
+        '  "weeds": [{"name": "Weed name (Botanical name)", "count": 2, "confidence": 0.90, "severity": "low"}],\n'
+        '  "total_weed_count": 2,\n'
+        '  "overall_severity": "low",\n'
+        '  "infestation_score": 0.15,\n'
+        '  "recommended_action": "Specific herbicide advisory"\n'
         '}';
   }
 
@@ -135,13 +120,13 @@ class GeminiWeedDetectionService implements WeedDetectionService {
       throw const AnalysisException('Could not decode image file.');
     }
     img.Image resized = decoded;
-    const maxDim = 720;
+    const maxDim = 480;
     if (decoded.width > maxDim || decoded.height > maxDim) {
       resized = decoded.width >= decoded.height
           ? img.copyResize(decoded, width: maxDim)
           : img.copyResize(decoded, height: maxDim);
     }
-    final compressedBytes = img.encodeJpg(resized, quality: 75);
+    final compressedBytes = img.encodeJpg(resized, quality: 68);
     final base64Image = base64Encode(compressedBytes);
 
     // ── 2. Determine API keys ────────────────────────────────────────────────
@@ -275,22 +260,37 @@ class GeminiWeedDetectionService implements WeedDetectionService {
         },
       ],
       'response_format': {'type': 'json_object'},
-      'max_tokens': 600,
+      'max_tokens': 300,
       'temperature': 0.1,
     });
 
-    final response = await http
-        .post(
-          Uri.parse(_groqUrl),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $apiKey',
-          },
-          body: utf8.encode(body),
-        )
-        .timeout(const Duration(seconds: 35));
+    http.Response? response;
+    for (int attempt = 0; attempt < 2; attempt++) {
+      try {
+        response = await http
+            .post(
+              Uri.parse(_groqUrl),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $apiKey',
+              },
+              body: utf8.encode(body),
+            )
+            .timeout(const Duration(seconds: 35));
 
-    if (response.statusCode != 200) {
+        if (response.statusCode == 200) {
+          break;
+        }
+
+        if (response.statusCode == 429 && attempt == 0) {
+          final retrySec = int.tryParse(response.headers['retry-after'] ?? '2') ?? 2;
+          await Future.delayed(Duration(seconds: math.min(retrySec, 4)));
+          continue;
+        }
+      } catch (_) {}
+    }
+
+    if (response == null || response.statusCode != 200) {
       return null;
     }
 
