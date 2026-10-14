@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
@@ -27,13 +26,45 @@ class AgronomyPdfReportService {
 
     final formattedDate = DateFormat('dd MMM yyyy, hh:mm a').format(result.analyzedAt);
     final severityStr = result.severity.name.toUpperCase();
-    final severityColor = result.severity == SeverityLevel.high
-        ? PdfColors.red700
-        : (result.severity == SeverityLevel.moderate ? PdfColors.orange700 : PdfColors.green700);
 
-    // Group weeds & crops
-    final weedDetections = result.detections.where((d) => !d.isCrop).toList();
-    final cropDetections = result.detections.where((d) => d.isCrop).toList();
+    // ── High Contrast Color Themes for Metrics (No translucent alpha that renders opaque in mobile PDF viewers) ──
+    final PdfColor metricSeverityBg;
+    final PdfColor metricSeverityBorder;
+    final PdfColor metricSeverityText;
+
+    if (result.severity == SeverityLevel.high) {
+      metricSeverityBg = PdfColor.fromHex('#FFEBEE');
+      metricSeverityBorder = PdfColor.fromHex('#E57373');
+      metricSeverityText = PdfColor.fromHex('#C62828');
+    } else if (result.severity == SeverityLevel.moderate) {
+      metricSeverityBg = PdfColor.fromHex('#FFF3E0');
+      metricSeverityBorder = PdfColor.fromHex('#FFB74D');
+      metricSeverityText = PdfColor.fromHex('#E65100');
+    } else {
+      metricSeverityBg = PdfColor.fromHex('#E8F5E9');
+      metricSeverityBorder = PdfColor.fromHex('#81C784');
+      metricSeverityText = PdfColor.fromHex('#1B5E20');
+    }
+
+    // ── 1 Single Crop Name and 1 Single Weed Name (Deduplicated cleanly) ──
+    String singleCropName = (cropType != null && cropType.trim().isNotEmpty) ? cropType.trim() : '';
+    if (singleCropName.isEmpty) {
+      final cropDets = result.detections.where((d) => d.isCrop).toList();
+      if (cropDets.isNotEmpty) {
+        singleCropName = cropDets.first.label;
+      } else {
+        singleCropName = 'Field Crop (Active Cultivation)';
+      }
+    }
+
+    String singleWeedName = 'No Invasive Weeds (Clean Field)';
+    double singleWeedConfidence = 0.95;
+    final weedDets = result.detections.where((d) => !d.isCrop).toList();
+    final bool hasWeeds = weedDets.isNotEmpty && result.weedCount > 0;
+    if (hasWeeds) {
+      singleWeedName = weedDets.first.label;
+      singleWeedConfidence = weedDets.first.confidence;
+    }
 
     pdf.addPage(
       pw.MultiPage(
@@ -50,6 +81,7 @@ class AgronomyPdfReportService {
               ),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
                 children: [
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -64,19 +96,20 @@ class AgronomyPdfReportService {
                       ),
                       pw.SizedBox(height: 4),
                       pw.Text(
-                        'Precision Crop Health & Herbicide Prescription',
-                        style: const pw.TextStyle(
-                          color: PdfColors.green100,
+                        'Precision Crop Health & Herbicide Prescription Advisory',
+                        style: pw.TextStyle(
+                          color: PdfColors.white,
                           fontSize: 10,
+                          fontWeight: pw.FontWeight.normal,
                         ),
                       ),
                     ],
                   ),
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: pw.BoxDecoration(
+                    decoration: const pw.BoxDecoration(
                       color: PdfColors.white,
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                      borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
                     ),
                     child: pw.Text(
                       'STATUS: VERIFIED',
@@ -96,9 +129,9 @@ class AgronomyPdfReportService {
             pw.Container(
               padding: const pw.EdgeInsets.all(12),
               decoration: pw.BoxDecoration(
-                color: PdfColor.fromHex('#F4F9F4'),
+                color: PdfColor.fromHex('#F9FBF9'),
                 borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
-                border: pw.Border.all(color: PdfColor.fromHex('#C8E6C9')),
+                border: pw.Border.all(color: PdfColor.fromHex('#C8E6C9'), width: 1),
               ),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -107,16 +140,16 @@ class AgronomyPdfReportService {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       _buildMetaRow('Date & Time:', formattedDate),
-                      pw.SizedBox(height: 4),
-                      _buildMetaRow('Field / Plot:', fieldName ?? 'Active Cultivation Field'),
+                      pw.SizedBox(height: 6),
+                      _buildMetaRow('Field / Plot:', fieldName ?? 'Cultivated Farmland Plot'),
                     ],
                   ),
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      _buildMetaRow('Location / GPS:', locationLabel ?? 'Field Geo-Tagged'),
-                      pw.SizedBox(height: 4),
-                      _buildMetaRow('Target Crop:', cropType ?? 'Standing Agricultural Crop'),
+                      _buildMetaRow('Location / GPS:', locationLabel ?? 'Geo-Tagged Field'),
+                      pw.SizedBox(height: 6),
+                      _buildMetaRow('Target Crop:', singleCropName),
                     ],
                   ),
                 ],
@@ -124,13 +157,15 @@ class AgronomyPdfReportService {
             ),
             pw.SizedBox(height: 16),
 
-            // ── Executive Diagnostic Summary ──
+            // ── Executive Diagnostic Summary (High Contrast Text & Backgrounds) ──
             pw.Row(
               children: [
                 pw.Expanded(
                   child: _buildMetricBox(
                     'Weeds Identified',
                     '${result.weedCount}',
+                    PdfColor.fromHex('#E8F5E9'),
+                    PdfColor.fromHex('#81C784'),
                     PdfColor.fromHex('#1B5E20'),
                   ),
                 ),
@@ -139,7 +174,9 @@ class AgronomyPdfReportService {
                   child: _buildMetricBox(
                     'Infestation Severity',
                     severityStr,
-                    severityColor,
+                    metricSeverityBg,
+                    metricSeverityBorder,
+                    metricSeverityText,
                   ),
                 ),
                 pw.SizedBox(width: 10),
@@ -147,7 +184,9 @@ class AgronomyPdfReportService {
                   child: _buildMetricBox(
                     'AI Confidence',
                     '${(result.averageConfidence * 100).toStringAsFixed(1)}%',
-                    PdfColor.fromHex('#2E7D32'),
+                    PdfColor.fromHex('#E3F2FD'),
+                    PdfColor.fromHex('#90CAF9'),
+                    PdfColor.fromHex('#0D47A1'),
                   ),
                 ),
               ],
@@ -161,7 +200,7 @@ class AgronomyPdfReportService {
                 width: double.infinity,
                 decoration: pw.BoxDecoration(
                   borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
-                  border: pw.Border.all(color: PdfColors.grey300),
+                  border: pw.Border.all(color: PdfColor.fromHex('#D0D7DE'), width: 1),
                 ),
                 child: pw.ClipRRect(
                   horizontalRadius: 8,
@@ -175,7 +214,7 @@ class AgronomyPdfReportService {
               pw.SizedBox(height: 16),
             ],
 
-            // ── Section 1: Detected Weed Species ──
+            // ── Section 1: Identified Species Breakdown (1 Crop Name & 1 Weed Name) ──
             pw.Text(
               '1. IDENTIFIED SPECIES BREAKDOWN',
               style: pw.TextStyle(
@@ -185,26 +224,34 @@ class AgronomyPdfReportService {
               ),
             ),
             pw.SizedBox(height: 6),
-            if (weedDetections.isEmpty)
-              pw.Text('No invasive weeds detected. Crop foliage appears clean and healthy.',
-                  style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700))
-            else
-              pw.TableHelper.fromTextArray(
-                border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
-                headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-                headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#2E7D32')),
-                cellStyle: const pw.TextStyle(fontSize: 8.5),
-                cellPadding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                headers: ['Species / Target', 'Category', 'Confidence', 'Risk Assessment'],
-                data: weedDetections.map((w) {
-                  return [
-                    w.label,
-                    'Invasive Weed',
-                    '${(w.confidence * 100).toStringAsFixed(0)}%',
-                    result.severity == SeverityLevel.high ? 'High Yield Depletion' : 'Nutrient Competition',
-                  ];
-                }).toList(),
-              ),
+            pw.TableHelper.fromTextArray(
+              border: pw.TableBorder.all(color: PdfColor.fromHex('#E0E0E0'), width: 0.8),
+              headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+              headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#1B5E20')),
+              cellStyle: pw.TextStyle(fontSize: 8.5, color: PdfColor.fromHex('#1A1A1A')),
+              cellPadding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              headers: ['Species / Target', 'Category', 'Confidence', 'Risk Assessment'],
+              data: [
+                // 1 Crop Name
+                [
+                  singleCropName,
+                  'Cultivated Crop',
+                  '${(result.averageConfidence * 100).toStringAsFixed(0)}%',
+                  'Active Standing Crop',
+                ],
+                // 1 Weed Name
+                [
+                  singleWeedName,
+                  hasWeeds ? 'Invasive Weed' : 'Flora Clean',
+                  '${(singleWeedConfidence * 100).toStringAsFixed(0)}%',
+                  hasWeeds
+                      ? (result.severity == SeverityLevel.high
+                          ? 'High Yield Depletion'
+                          : 'Nutrient Competition')
+                      : 'Zero Infestation Risk',
+                ],
+              ],
+            ),
             pw.SizedBox(height: 16),
 
             // ── Section 2: Recommended Herbicide Prescription ──
@@ -218,45 +265,68 @@ class AgronomyPdfReportService {
             ),
             pw.SizedBox(height: 6),
             pw.TableHelper.fromTextArray(
-              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+              border: pw.TableBorder.all(color: PdfColor.fromHex('#E0E0E0'), width: 0.8),
               headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-              headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#E65100')),
-              cellStyle: const pw.TextStyle(fontSize: 8.5),
-              cellPadding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#D84315')),
+              cellStyle: pw.TextStyle(fontSize: 8.5, color: PdfColor.fromHex('#1A1A1A')),
+              cellPadding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               headers: ['Target Weed', 'Prescribed Chemical', 'Standard Dosage', 'Application Method'],
-              data: weedDetections.isNotEmpty
-                  ? weedDetections.map((w) {
-                      final p = _getPrescription(w.label);
-                      return [w.label, p['chemical']!, p['dose']!, p['type']!];
-                    }).toList()
-                  : [
-                      ['Preventative', 'Pre-emergence Pendimethalin 30% EC', '1.0 - 1.5 L / Acre', 'Soil Surface Spray'],
-                    ],
+              data: [
+                if (hasWeeds) ...[
+                  () {
+                    final p = _getPrescription(singleWeedName);
+                    return [singleWeedName, p['chemical']!, p['dose']!, p['type']!];
+                  }(),
+                ] else ...[
+                  [
+                    'Preventative Care',
+                    'Pre-emergence Pendimethalin 30% EC',
+                    '1.0 - 1.5 L / Acre',
+                    'Soil Surface Spray',
+                  ],
+                ],
+              ],
             ),
-            pw.SizedBox(height: 14),
+            pw.SizedBox(height: 16),
 
-            // ── Section 3: Safety & Field Rules ──
+            // ── Section 3: Mandatory Agronomy Guidelines (Native PDF Dot Badges - No X Marks) ──
             pw.Container(
-              padding: const pw.EdgeInsets.all(10),
+              padding: const pw.EdgeInsets.all(12),
               decoration: pw.BoxDecoration(
-                color: PdfColor.fromHex('#FFF8E1'),
+                color: PdfColor.fromHex('#FFFDE7'),
                 borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                border: pw.Border.all(color: PdfColor.fromHex('#FFE082')),
+                border: pw.Border.all(color: PdfColor.fromHex('#FFE082'), width: 1),
               ),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   pw.Text(
                     'MANDATORY AGRONOMY & SAFETY GUIDELINES:',
-                    style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#B78103')),
+                    style: pw.TextStyle(
+                      fontSize: 9,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColor.fromHex('#B78103'),
+                    ),
                   ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    '• Weather Check: Spray only in calm conditions (wind < 4 m/s) and avoid spraying before rainfall.\n'
-                    '• Protection: Wear chemical-resistant gloves, goggles, and respiratory masks during mixing.\n'
-                    '• Dilution: Mix in 150-200 Litres of clean water per acre with flat-fan nozzles for uniform coverage.\n'
-                    '• Consultation: Verify with your local Krishi Vigyan Kendra (KVK) or authorized agronomy officer before purchase.',
-                    style: const pw.TextStyle(fontSize: 7.8, color: PdfColors.grey800, lineSpacing: 1.5),
+                  pw.SizedBox(height: 8),
+                  _buildGuidelineItem(
+                    '1',
+                    'Weather Check: Spray only in calm conditions (wind < 4 m/s) and avoid spraying before rainfall.',
+                  ),
+                  pw.SizedBox(height: 5),
+                  _buildGuidelineItem(
+                    '2',
+                    'Protection: Wear chemical-resistant gloves, goggles, and respiratory masks during mixing.',
+                  ),
+                  pw.SizedBox(height: 5),
+                  _buildGuidelineItem(
+                    '3',
+                    'Dilution: Mix in 150-200 Litres of clean water per acre with flat-fan nozzles for uniform coverage.',
+                  ),
+                  pw.SizedBox(height: 5),
+                  _buildGuidelineItem(
+                    '4',
+                    'Consultation: Verify with your local Krishi Vigyan Kendra (KVK) or authorized agronomy officer before purchase.',
                   ),
                 ],
               ),
@@ -264,12 +334,13 @@ class AgronomyPdfReportService {
             pw.SizedBox(height: 16),
 
             // ── Footer ──
-            pw.Divider(color: PdfColors.grey300),
+            pw.Divider(color: PdfColor.fromHex('#E0E0E0'), thickness: 0.8),
+            pw.SizedBox(height: 4),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text('Generated by WeedGuard AI System • Field Intelligence',
-                    style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600)),
+                    style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700)),
                 pw.Text('Share directly with Krishi Kendra & Retailers',
                     style: pw.TextStyle(fontSize: 7.5, color: PdfColor.fromHex('#1B5E20'), fontWeight: pw.FontWeight.bold)),
               ],
@@ -289,37 +360,83 @@ class AgronomyPdfReportService {
     await Share.shareXFiles(
       [XFile(file.path, mimeType: 'application/pdf')],
       subject: 'WeedGuard AI Field Agronomy Report',
-      text: '🌱 WeedGuard AI Agronomy & Weed Diagnosis Report for ${fieldName ?? "Field Plot"}. Attached PDF summary with prescribed herbicide treatments.',
+      text: 'WeedGuard AI Agronomy & Weed Diagnosis Report for ${fieldName ?? "Field Plot"}. Attached PDF summary with prescribed herbicide treatments.',
     );
   }
 
   static pw.Widget _buildMetaRow(String label, String value) {
     return pw.Row(
       children: [
-        pw.Text('$label ', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800)),
-        pw.Text(value, style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey900)),
+        pw.Text('$label ', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#333333'))),
+        pw.Text(value, style: pw.TextStyle(fontSize: 8.5, color: PdfColor.fromHex('#1B5E20'), fontWeight: pw.FontWeight.bold)),
       ],
     );
   }
 
-  static pw.Widget _buildMetricBox(String title, String val, PdfColor col) {
-    final bgColor = PdfColor(col.red, col.green, col.blue, 0.12);
-    final borderColor = PdfColor(col.red, col.green, col.blue, 0.45);
+  static pw.Widget _buildMetricBox(
+    String title,
+    String val,
+    PdfColor bgColor,
+    PdfColor borderColor,
+    PdfColor textColor,
+  ) {
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 10),
       decoration: pw.BoxDecoration(
         color: bgColor,
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-        border: pw.Border.all(color: borderColor),
+        border: pw.Border.all(color: borderColor, width: 1.2),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(title, style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
-          pw.SizedBox(height: 2),
-          pw.Text(val, style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: col)),
+          pw.Text(
+            title,
+            style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#424242')),
+          ),
+          pw.SizedBox(height: 3),
+          pw.Text(
+            val,
+            style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: textColor),
+          ),
         ],
       ),
+    );
+  }
+
+  static pw.Widget _buildGuidelineItem(String number, String text) {
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Container(
+          width: 14,
+          height: 14,
+          margin: const pw.EdgeInsets.only(top: 1, right: 6),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromHex('#1B5E20'),
+            shape: pw.BoxShape.circle,
+          ),
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            number,
+            style: pw.TextStyle(
+              fontSize: 7.5,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.white,
+            ),
+          ),
+        ),
+        pw.Expanded(
+          child: pw.Text(
+            text,
+            style: pw.TextStyle(
+              fontSize: 8,
+              color: PdfColor.fromHex('#212121'),
+              lineSpacing: 1.3,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
