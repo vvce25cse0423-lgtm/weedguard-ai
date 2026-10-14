@@ -48,20 +48,13 @@ class _DetectionResultScreenState extends ConsumerState<DetectionResultScreen> {
       _scanSaved = true;
       try {
         String effectiveFieldId = widget.fieldId;
+        final fieldsRepo = FieldsRepository(Supabase.instance.client);
         if (effectiveFieldId.isEmpty) {
-          final fieldsRepo = FieldsRepository(Supabase.instance.client);
           final cropLabel = widget.result.detections.where((d) => d.isCrop).isNotEmpty
               ? widget.result.detections.firstWhere((d) => d.isCrop).label
               : (widget.result.detections.isNotEmpty ? widget.result.detections.first.label : 'Crop');
-          final cleanCrop = cropLabel.replaceAll(RegExp(r'\(.*?\)'), '').trim();
-          final fieldCrop = cleanCrop.isNotEmpty ? cleanCrop : 'Crop';
-          final newField = await fieldsRepo.createField(
-            name: '$fieldCrop Field',
-            cropType: fieldCrop,
-            areaHectares: 1.0,
-            locationLabel: 'Scanned Plot',
-          );
-          effectiveFieldId = newField.id;
+          final field = await fieldsRepo.getOrCreateFieldForCrop(cropLabel);
+          effectiveFieldId = field.id;
         }
 
         final scanRepo = ScanRepository(Supabase.instance.client);

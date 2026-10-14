@@ -9,6 +9,7 @@ import '../../../../shared/models/field_model.dart';
 import '../../../../shared/models/scan_model.dart';
 import '../../data/fields_repository.dart';
 import '../../../scanner/presentation/widgets/severity_chip.dart';
+import '../../../history/presentation/screens/scan_history_screen.dart';
 
 final fieldDetailProvider = FutureProvider.family<FieldModel, String>((ref, id) async {
   return FieldsRepository(Supabase.instance.client).getField(id);
@@ -88,8 +89,8 @@ class FieldDetailScreen extends ConsumerWidget {
                     return Column(
                       children: scans
                           .map((s) => Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: _ScanHistoryTile(scan: s),
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: ScanHistoryCard(scan: s),
                               ))
                           .toList(),
                     );
@@ -266,59 +267,6 @@ class _NoScansCard extends StatelessWidget {
               height: 1.4,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ScanHistoryTile extends StatelessWidget {
-  final ScanModel scan;
-  const _ScanHistoryTile({required this.scan});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8F0E8), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  DateFormatter.formatDateTime(scan.createdAt),
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: Color(0xFF6B8F71),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${scan.weedCount} weeds detected',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1B4332),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SeverityChip(severity: scan.severity, small: true),
         ],
       ),
     );

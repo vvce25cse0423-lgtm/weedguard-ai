@@ -118,7 +118,7 @@ class _ScanHistoryScreenState extends ConsumerState<ScanHistoryScreen> {
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                         itemCount: filtered.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) => _ScanHistoryCard(scan: filtered[i]),
+                        itemBuilder: (_, i) => ScanHistoryCard(scan: filtered[i]),
                       ),
                 ),
               ],
@@ -233,9 +233,9 @@ class _EmptyHistoryView extends StatelessWidget {
   }
 }
 
-class _ScanHistoryCard extends StatelessWidget {
+class ScanHistoryCard extends StatelessWidget {
   final ScanModel scan;
-  const _ScanHistoryCard({required this.scan});
+  const ScanHistoryCard({super.key, required this.scan});
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +247,7 @@ class _ScanHistoryCard extends StatelessWidget {
           context: context,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
-          builder: (_) => _ScanDetailSheet(scan: scan),
+          builder: (_) => ScanDetailSheet(scan: scan),
         );
       },
       child: Container(
@@ -551,9 +551,9 @@ _HerbicideDetailInfo _lookupHerbicide(List<String> weedNames, String? cropName) 
   );
 }
 
-class _ScanDetailSheet extends StatelessWidget {
+class ScanDetailSheet extends StatelessWidget {
   final ScanModel scan;
-  const _ScanDetailSheet({required this.scan});
+  const ScanDetailSheet({super.key, required this.scan});
 
   static Future<void> _launchExternalUrl(BuildContext context, String url) async {
     try {

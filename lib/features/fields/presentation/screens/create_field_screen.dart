@@ -9,8 +9,8 @@ import '../../../../shared/models/field_model.dart';
 import '../../data/fields_repository.dart';
 
 const _cropTypes = [
-  'Rice','Wheat','Sugarcane','Cotton','Maize','Soybean','Pulses',
-  'Vegetables','Groundnut','Sunflower','Other',
+  'Onion', 'Tomato', 'Potato', 'Chilli', 'Rice', 'Wheat', 'Sugarcane', 'Cotton', 'Maize', 'Soybean', 'Pulses',
+  'Vegetables', 'Groundnut', 'Sunflower', 'Other',
 ];
 
 class CreateFieldScreen extends StatefulWidget {
@@ -122,16 +122,32 @@ class _CreateFieldScreenState extends State<CreateFieldScreen> {
           notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
         ));
       } else {
-        await repo.createField(
-          name: _nameCtrl.text.trim(),
-          cropType: _cropType,
-          areaHectares: _areaCtrl.text.isEmpty ? null : double.tryParse(_areaCtrl.text),
-          latitude: _latitude,
-          longitude: _longitude,
-          locationLabel: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
-          plantingDate: _plantingDate,
-          notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
-        );
+        final existingFields = await repo.getFields();
+        final nameInput = _nameCtrl.text.trim();
+        final duplicate = existingFields.where((f) => f.name.toLowerCase().trim() == nameInput.toLowerCase()).toList();
+        if (duplicate.isNotEmpty) {
+          // Re-use and update existing field instead of adding duplicate
+          await repo.updateField(duplicate.first.copyWith(
+            cropType: _cropType,
+            areHectares: _areaCtrl.text.isEmpty ? duplicate.first.areHectares : double.tryParse(_areaCtrl.text),
+            latitude: _latitude ?? duplicate.first.latitude,
+            longitude: _longitude ?? duplicate.first.longitude,
+            locationLabel: _locationCtrl.text.trim().isEmpty ? duplicate.first.locationLabel : _locationCtrl.text.trim(),
+            plantingDate: _plantingDate ?? duplicate.first.plantingDate,
+            notes: _notesCtrl.text.trim().isEmpty ? duplicate.first.notes : _notesCtrl.text.trim(),
+          ));
+        } else {
+          await repo.createField(
+            name: _nameCtrl.text.trim(),
+            cropType: _cropType,
+            areaHectares: _areaCtrl.text.isEmpty ? null : double.tryParse(_areaCtrl.text),
+            latitude: _latitude,
+            longitude: _longitude,
+            locationLabel: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
+            plantingDate: _plantingDate,
+            notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+          );
+        }
       }
       if (mounted) context.pop();
     } catch (e) {

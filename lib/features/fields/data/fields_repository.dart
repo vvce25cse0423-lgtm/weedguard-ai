@@ -193,7 +193,98 @@ class FieldsRepository {
     } catch (_) {}
   }
 
+  Future<FieldModel> getOrCreateFieldForCrop(String cropName) async {
+    final cleanCrop = cropName.replaceAll(RegExp(r'\(.*?\)'), '').trim();
+    final effectiveCrop = cleanCrop.isNotEmpty ? cleanCrop : 'Crop';
+    final cropLower = effectiveCrop.toLowerCase();
+
+    final existingFields = await getFields();
+    // Check if a field already exists for this crop
+    for (final f in existingFields) {
+      final fCrop = f.cropType.toLowerCase().trim();
+      final fName = f.name.toLowerCase().trim();
+      if (fCrop == cropLower ||
+          fCrop.contains(cropLower) ||
+          cropLower.contains(fCrop) ||
+          fName.contains(cropLower)) {
+        return f; // Reuse existing field!
+      }
+    }
+
+    // No field exists yet for this crop, create one
+    final fieldName = effectiveCrop.toLowerCase().contains('field')
+        ? effectiveCrop
+        : '$effectiveCrop Field';
+
+    return await createField(
+      name: fieldName,
+      cropType: effectiveCrop,
+      areaHectares: 1.5,
+      locationLabel: 'Scanned Farmland',
+    );
+  }
+
   Future<List<ScanModel>> getScansForField(String fieldId) async {
-    return [];
+    final List<ScanModel> result = [];
+    final Set<String> seenIds = {};
+
+    FieldModel? currentField;
+    try {
+      final fields = await getFields();
+      for (final f in fields) {
+        if (f.id == fieldId) {
+          currentField = f;
+          break;
+        }
+      }
+    } catch (_) {}
+
+    // 1. Read from local storage
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final localJson = prefs.getString('weedguard_local_scans_v1');
+      if (localJson != null && localJson.isNotEmpty) {
+        final list = jsonDecode(localJson) as List<dynamic>;
+        for (final item in list) {
+          final s = ScanModel.fromJson(item as Map<String, dynamic>);
+          final matchesFieldId = s.fieldId != null && s.fieldId == fieldId;
+          final matchesCrop = currentField != null &&
+              s.cropName != null &&
+              s.cropName!.isNotEmpty &&
+              (s.cropName!.toLowerCase().contains(currentField.cropType.toLowerCase()) ||
+               currentField.cropType.toLowerCase().contains(s.cropName!.toLowerCase()) ||
+               currentField.name.toLowerCase().contains(s.cropName!.toLowerCase()));
+
+          if ((matchesFieldId || ((s.fieldId == null || s.fieldId!.isEmpty) && matchesCrop)) &&
+              seenIds.add(s.id)) {
+            result.add(s);
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fetch from Supabase
+    try {
+      final user = _client.auth.currentUser;
+      if (user != null) {
+        final data = await _client
+            .from('scans')
+            .select()
+            .eq('user_id', user.id)
+            .eq('field_id', fieldId)
+            .order('created_at', ascending: false);
+        if (data is List) {
+          for (final j in data) {
+            final s = ScanModel.fromJson(j as Map<String, dynamic>);
+            if (seenIds.add(s.id)) {
+              result.add(s);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    result.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return result;
   }
 }

@@ -48,22 +48,23 @@ class ScanRepository {
     final now = DateTime.now();
     final uid = _uid;
 
+    final detectedCrop = result.detections.where((d) => d.isCrop).isNotEmpty
+        ? result.detections.firstWhere((d) => d.isCrop).label
+        : (result.detections.isNotEmpty ? result.detections.first.label : 'Crop Field');
+    final detectedWeeds = result.detections.where((d) => !d.isCrop).map((d) => d.label).toSet().toList();
+
     String effectiveFieldId = fieldId ?? '';
     try {
       final fieldsRepo = FieldsRepository(_client);
-      final existingFields = await fieldsRepo.getFields();
-      if (effectiveFieldId.isEmpty) {
-        if (existingFields.isNotEmpty) {
-          effectiveFieldId = existingFields.first.id;
-        } else {
-          final detectedCrop = result.detections.isNotEmpty ? result.detections.first.label : 'Crop';
-          final newField = await fieldsRepo.createField(
-            name: '$detectedCrop Field',
-            cropType: detectedCrop,
-            areaHectares: 1.5,
-          );
-          effectiveFieldId = newField.id;
+      if (effectiveFieldId.isNotEmpty) {
+        final existingFields = await fieldsRepo.getFields();
+        if (!existingFields.any((f) => f.id == effectiveFieldId)) {
+          effectiveFieldId = '';
         }
+      }
+      if (effectiveFieldId.isEmpty) {
+        final field = await fieldsRepo.getOrCreateFieldForCrop(detectedCrop);
+        effectiveFieldId = field.id;
       }
     } catch (_) {}
 
@@ -95,10 +96,6 @@ class ScanRepository {
         }
       } catch (_) {}
     }
-    final detectedCrop = result.detections.where((d) => d.isCrop).isNotEmpty
-        ? result.detections.firstWhere((d) => d.isCrop).label
-        : (result.detections.isNotEmpty ? result.detections.first.label : 'Crop Field');
-    final detectedWeeds = result.detections.where((d) => !d.isCrop).map((d) => d.label).toSet().toList();
 
     final newScan = ScanModel(
       id: effectiveScanId,
