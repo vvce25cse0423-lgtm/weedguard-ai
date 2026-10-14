@@ -107,6 +107,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
       final result = await _detectionService.analyzeImage(_imageFile!, cropHint: cropHint);
       String? savedScanId;
       String? uploadedUrl;
+      ScanModel? savedScan;
       try {
         final scanRepo = ScanRepository(Supabase.instance.client);
         final fid = widget.fieldId ?? '';
@@ -114,7 +115,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
           _imageFile!,
           fid.isNotEmpty ? fid : 'direct_scans',
         );
-        final savedScan = await scanRepo.saveScan(
+        savedScan = await scanRepo.saveScan(
           fieldId: fid.isEmpty ? null : fid,
           result: result,
           imageUrl: uploadedUrl ?? _imageFile!.path,
@@ -135,8 +136,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
         averageConfidence: result.averageConfidence,
         severity: result.severity,
         infestationScore: result.infestationScore,
-        zones: result.zones,
-        priorityZone: result.priorityZone,
+        zones: (savedScan != null && savedScan.zones.isNotEmpty) ? savedScan.zones : result.zones,
+        priorityZone: savedScan?.priorityZone ?? result.priorityZone,
         analyzedAt: result.analyzedAt,
         isMockDetection: result.isMockDetection,
       );

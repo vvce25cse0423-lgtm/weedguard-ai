@@ -7,7 +7,6 @@ import 'package:uuid/uuid.dart';
 import '../../../shared/models/detection_result_model.dart';
 import '../../../shared/models/scan_model.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/errors/app_error.dart';
 import '../../fields/data/fields_repository.dart';
 import '../../../shared/widgets/scan_thumbnail_image.dart';
 
@@ -97,6 +96,28 @@ class ScanRepository {
       } catch (_) {}
     }
 
+    // Compute sequential Zone A, Zone B, Zone C... for this field
+    String effectiveZone = result.priorityZone ?? 'Zone A';
+    List<FieldZoneAnalysis> effectiveZones = result.zones;
+
+    try {
+      final fieldsRepo = FieldsRepository(_client);
+      final fieldScans = await fieldsRepo.getScansForField(effectiveFieldId);
+      final existingIdx = fieldScans.indexWhere((s) => s.id == effectiveScanId);
+      final int zoneIndex = (existingIdx >= 0) ? existingIdx : fieldScans.length;
+      final zoneLetter = String.fromCharCode(65 + (zoneIndex % 26));
+      effectiveZone = 'Zone $zoneLetter';
+      effectiveZones = [
+        FieldZoneAnalysis(
+          zoneId: zoneLetter.toLowerCase(),
+          zoneLabel: effectiveZone,
+          severity: result.severity,
+          weedCount: result.weedCount,
+          coveragePercent: (result.infestationScore * 100).clamp(5, 100).toDouble(),
+        ),
+      ];
+    } catch (_) {}
+
     final newScan = ScanModel(
       id: effectiveScanId,
       fieldId: effectiveFieldId,
@@ -107,10 +128,10 @@ class ScanRepository {
       severity: result.severity,
       cropName: detectedCrop,
       weedNames: detectedWeeds,
-      priorityZone: result.priorityZone,
+      priorityZone: effectiveZone,
       infestationScore: result.infestationScore,
       isMockDetection: result.isMockDetection,
-      zones: result.zones,
+      zones: effectiveZones,
       createdAt: now,
     );
 

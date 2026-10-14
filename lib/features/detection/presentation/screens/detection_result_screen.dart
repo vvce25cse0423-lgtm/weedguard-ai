@@ -1427,10 +1427,15 @@ class _FieldZonesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zones = result.zones.isNotEmpty ? result.zones : _mockZones;
-    final priorityZone = result.priorityZone ?? zones
-        .reduce((a, b) => a.weedCount >= b.weedCount ? a : b)
-        .zoneLabel;
+    final activeZoneLabel = result.priorityZone ?? (result.zones.isNotEmpty ? result.zones.first.zoneLabel : 'Zone A');
+    final activeZone = FieldZoneAnalysis(
+      zoneId: activeZoneLabel.toLowerCase().replaceAll(' ', '_'),
+      zoneLabel: activeZoneLabel,
+      severity: result.severity,
+      weedCount: result.weedCount,
+      coveragePercent: (result.infestationScore * 100).clamp(5, 100).toDouble(),
+    );
+    final weedSpecies = result.detections.where((d) => !d.isCrop).map((d) => d.label).toSet().toList();
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -1462,19 +1467,6 @@ class _FieldZonesScreen extends StatelessWidget {
             Text(AppLocalizations.of(context).appName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 17)),
           ],
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Container(
-              width: 32, height: 32,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.add_photo_alternate_outlined, color: Colors.white, size: 18),
-            ),
-          ),
-        ],
         elevation: 0,
       ),
       body: Column(
@@ -1491,26 +1483,27 @@ class _FieldZonesScreen extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text('Field Zones',
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
-                        SizedBox(height: 2),
-                        Text('Priority areas based on weed concentration',
+                      children: [
+                        Text('$activeZoneLabel Priority Analysis',
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
+                        const SizedBox(height: 2),
+                        const Text('Priority regions on scanned image',
                             style: TextStyle(fontSize: 13, color: Color(0xFF5C5C5C))),
                       ],
                     ),
                   ),
-                  // Zone map
-                  _ZoneMapWidget(zones: zones),
+                  const SizedBox(height: 12),
+                  // Zone map with uploaded image background
+                  _ZoneMapWidget(result: result, zone: activeZone),
                   // Legend
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                     child: Row(
-                      children: [
+                      children: const [
                         _LegendItem(color: AppColors.severityLow, label: 'Low'),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16),
                         _LegendItem(color: AppColors.severityModerate, label: 'Moderate'),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16),
                         _LegendItem(color: AppColors.severityHigh, label: 'High'),
                       ],
                     ),
@@ -1519,13 +1512,13 @@ class _FieldZonesScreen extends StatelessWidget {
                   // Priority zone banner
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: _PriorityZoneBanner(priorityZone: priorityZone),
+                    child: _PriorityZoneBanner(priorityZone: activeZoneLabel),
                   ),
                   const SizedBox(height: 16),
-                  // Zone-wise summary
+                  // Zone-wise summary showing only active zone
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: _ZoneSummary(zones: zones),
+                    child: _ZoneSummary(zones: [activeZone], weedNames: weedSpecies),
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -1558,18 +1551,12 @@ class _FieldZonesScreen extends StatelessWidget {
       ),
     );
   }
-
-  static List<FieldZoneAnalysis> get _mockZones => [
-    const FieldZoneAnalysis(zoneId: 'a', zoneLabel: 'Zone A', severity: SeverityLevel.low, weedCount: 2, coveragePercent: 12),
-    const FieldZoneAnalysis(zoneId: 'b', zoneLabel: 'Zone B', severity: SeverityLevel.high, weedCount: 6, coveragePercent: 35),
-    const FieldZoneAnalysis(zoneId: 'c', zoneLabel: 'Zone C', severity: SeverityLevel.moderate, weedCount: 4, coveragePercent: 28),
-    const FieldZoneAnalysis(zoneId: 'd', zoneLabel: 'Zone D', severity: SeverityLevel.low, weedCount: 1, coveragePercent: 15),
-  ];
 }
 
 class _ZoneMapWidget extends StatelessWidget {
-  final List<FieldZoneAnalysis> zones;
-  const _ZoneMapWidget({required this.zones});
+  final WeedDetectionResult result;
+  final FieldZoneAnalysis zone;
+  const _ZoneMapWidget({required this.result, required this.zone});
 
   Color _severityColor(SeverityLevel s) {
     switch (s) {
@@ -1579,98 +1566,112 @@ class _ZoneMapWidget extends StatelessWidget {
     }
   }
 
+  Widget _buildImage() {
+    final path = result.imagePath;
+    final url = result.imageUrl;
+    if (path != null && path.isNotEmpty) {
+      final clean = path.replaceFirst(RegExp(r'^file://'), '');
+      final f = File(clean);
+      if (f.existsSync()) {
+        return Image.file(f, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
+      }
+    }
+    if (url != null && url.isNotEmpty) {
+      if (url.startsWith('http')) {
+        return Image.network(url, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
+      }
+      final clean = url.replaceFirst(RegExp(r'^file://'), '');
+      final f = File(clean);
+      if (f.existsSync()) {
+        return Image.file(f, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
+      }
+    }
+    return Container(color: const Color(0xFF2E7D32));
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Arrange zones: top-left=A(low), top-right=B(high), bottom-left=C(moderate), bottom-right=D(low)
-    final zoneMap = <String, FieldZoneAnalysis>{};
-    for (final z in zones) {
-      zoneMap[z.zoneLabel] = z;
-    }
+    final color = _severityColor(zone.severity);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-      height: 220,
+      height: 240,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: const Color(0xFF388E3C).withOpacity(0.3),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          // Background aerial field color
-          Container(color: const Color(0xFF4CAF50).withOpacity(0.4)),
-          // 4 zone quadrants
-          Column(
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    _ZoneCell(zone: zones.isNotEmpty ? zones[0] : null, label: 'Zone A', color: _severityColor(zones.isNotEmpty ? zones[0].severity : SeverityLevel.low)),
-                    _ZoneCell(zone: zones.length > 1 ? zones[1] : null, label: 'Zone B', color: _severityColor(zones.length > 1 ? zones[1].severity : SeverityLevel.high)),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Row(
-                  children: [
-                    _ZoneCell(zone: zones.length > 2 ? zones[2] : null, label: 'Zone C', color: _severityColor(zones.length > 2 ? zones[2].severity : SeverityLevel.moderate)),
-                    _ZoneCell(zone: zones.length > 3 ? zones[3] : null, label: 'Zone D', color: _severityColor(zones.length > 3 ? zones[3].severity : SeverityLevel.low)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          // North indicator
-          Positioned(
-            top: 10, right: 10,
-            child: Container(
-              width: 28, height: 28,
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.85), shape: BoxShape.circle),
-              child: const Icon(Icons.navigation, size: 16, color: Color(0xFF1A1A1A)),
-            ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-    );
-  }
-}
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. Uploaded scanned image as background
+          _buildImage(),
 
-class _ZoneCell extends StatelessWidget {
-  final FieldZoneAnalysis? zone;
-  final String label;
-  final Color color;
+          // 2. Translucent priority region overlay tint
+          Container(
+            color: color.withOpacity(0.18),
+          ),
 
-  const _ZoneCell({this.zone, required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final z = zone;
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.55),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: color.withOpacity(0.7), width: 1.5),
-        ),
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          // 3. Highlighted priority boundary
+          Container(
+            margin: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.85),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(z?.zoneLabel ?? label,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
-                Text(z?.severity.label ?? '',
-                    style: const TextStyle(fontSize: 11, color: Colors.white70)),
-              ],
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color, width: 2.5),
             ),
           ),
-        ),
+
+          // 4. North direction indicator
+          Positioned(
+            top: 14,
+            right: 14,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.65),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.navigation_rounded, size: 16, color: Colors.white),
+            ),
+          ),
+
+          // 5. Priority Zone Floating Badge
+          Positioned(
+            bottom: 16,
+            left: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.75),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: color, width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${zone.zoneLabel} • ${zone.severity.label} Priority (${zone.weedCount} weeds)',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1710,7 +1711,7 @@ class _PriorityZoneBanner extends StatelessWidget {
         children: [
           Container(
             width: 32, height: 32,
-            decoration: BoxDecoration(color: const Color(0xFFFFEBEE), shape: BoxShape.circle),
+            decoration: const BoxDecoration(color: Color(0xFFFFEBEE), shape: BoxShape.circle),
             child: const Icon(Icons.warning_rounded, color: Color(0xFFC62828), size: 18),
           ),
           const SizedBox(width: 12),
@@ -1737,7 +1738,8 @@ class _PriorityZoneBanner extends StatelessWidget {
 
 class _ZoneSummary extends StatelessWidget {
   final List<FieldZoneAnalysis> zones;
-  const _ZoneSummary({required this.zones});
+  final List<String> weedNames;
+  const _ZoneSummary({required this.zones, this.weedNames = const []});
 
   Color _severityColor(SeverityLevel s) {
     switch (s) {
@@ -1757,20 +1759,37 @@ class _ZoneSummary extends StatelessWidget {
         const SizedBox(height: 10),
         ...zones.map((z) {
           final color = _severityColor(z.severity);
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE8F0E8)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text('${z.zoneLabel} (${z.severity.label})',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF1A1A1A))),
+                Row(
+                  children: [
+                    Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text('${z.zoneLabel} (${z.severity.label} Priority)',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
+                    ),
+                    Text(
+                      '${z.weedCount} ${z.weedCount == 1 ? 'weed' : 'weeds'}',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
+                    ),
+                  ],
                 ),
-                Text(
-                  '${z.weedCount} ${z.weedCount == 1 ? 'weed' : 'weeds'}  ·  ${z.coveragePercent.toStringAsFixed(0)}% area',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF5C5C5C)),
-                ),
+                if (weedNames.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Identified Species: ${weedNames.join(', ')}',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF5C5C5C), fontWeight: FontWeight.w500),
+                  ),
+                ],
               ],
             ),
           );
