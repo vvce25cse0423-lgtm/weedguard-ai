@@ -1,7 +1,8 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:weedguard/shared/models/detection_result_model.dart';
 import 'package:weedguard/shared/models/scan_model.dart';
+import 'package:weedguard/core/l10n/app_localizations.dart';
 
 enum TtsVoiceState { stopped, playing, paused }
 
@@ -91,8 +92,16 @@ class AgronomyVoiceAssistantService {
   }) {
     final count = result.weedCount;
     final severity = result.severity.name;
+    final l10n = AppLocalizations(Locale(languageCode));
     final weeds = result.detections.where((d) => !d.isCrop).map((d) => d.label).toSet().toList();
-    final weedListStr = weeds.isNotEmpty ? weeds.join(', ') : 'None';
+    final effectiveCrop = (cropType != null && cropType.isNotEmpty)
+        ? cropType
+        : (result.detections.any((d) => d.isCrop)
+            ? result.detections.firstWhere((d) => d.isCrop).label
+            : null);
+    final translatedCrop = effectiveCrop != null ? l10n.translateCrop(effectiveCrop).split('(').first.trim() : null;
+    final translatedWeeds = weeds.map((w) => l10n.translateWeed(w).split('(').first.trim()).toList();
+    final weedListStr = translatedWeeds.isNotEmpty ? translatedWeeds.join(', ') : 'None';
     final herbicides = weeds.map((w) {
       final p = _getHerbicidePrescription(w);
       return '${p['chemical']} (${p['dose']})';
@@ -106,8 +115,8 @@ class AgronomyVoiceAssistantService {
       if (fieldName != null && fieldName.isNotEmpty) {
         buffer.write('ಹೊಲ: $fieldName. ');
       }
-      if (cropType != null && cropType.isNotEmpty) {
-        buffer.write('ಬೆಳೆ: $cropType. ');
+      if (translatedCrop != null && translatedCrop.isNotEmpty) {
+        buffer.write('ಬೆಳೆ: $translatedCrop. ');
       }
 
       if (count == 0) {
@@ -134,8 +143,8 @@ class AgronomyVoiceAssistantService {
       if (fieldName != null && fieldName.isNotEmpty) {
         buffer.write('खेत: $fieldName. ');
       }
-      if (cropType != null && cropType.isNotEmpty) {
-        buffer.write('फसल: $cropType. ');
+      if (translatedCrop != null && translatedCrop.isNotEmpty) {
+        buffer.write('फसल: $translatedCrop. ');
       }
 
       if (count == 0) {

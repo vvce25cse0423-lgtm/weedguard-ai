@@ -298,41 +298,295 @@ class AppLocalizations {
     if (lang == 'en') return cropName;
 
     final lower = cropName.toLowerCase();
-    if (lower.contains('tomato')) {
-      return lang == 'kn' ? 'ಟೊಮ್ಯಾಟೊ (Tomato)' : 'टमाटर (Tomato)';
-    }
+
+    // ── 1. Cereals & Millets ──
     if (lower.contains('paddy') || lower.contains('rice') || lower.contains('oryza')) {
       return lang == 'kn' ? 'ಭತ್ತ (Paddy/Rice)' : 'धान / चावल (Paddy)';
     }
     if (lower.contains('wheat') || lower.contains('triticum')) {
       return lang == 'kn' ? 'ಗೋಧಿ (Wheat)' : 'गेहूं (Wheat)';
     }
-    if (lower.contains('cotton') || lower.contains('gossypium')) {
-      return lang == 'kn' ? 'ಹತ್ತಿ (Cotton)' : 'कपास (Cotton)';
-    }
     if (lower.contains('maize') || lower.contains('corn') || lower.contains('zea')) {
       return lang == 'kn' ? 'ಮೆಕ್ಕೆಜೋಳ (Corn/Maize)' : 'मक्का (Maize)';
     }
-    if (lower.contains('sugarcane')) {
-      return lang == 'kn' ? 'ಕಬ್ಬು (Sugarcane)' : 'गन्ना (Sugarcane)';
+    if (lower.contains('ragi') || lower.contains('finger millet') || lower.contains('eleusine coracana')) {
+      return lang == 'kn' ? 'ರಾಗಿ (Finger Millet/Ragi)' : 'रागी / मडुआ (Ragi)';
     }
-    if (lower.contains('soybean') || lower.contains('soya') || lower.contains('glycine')) {
-      return lang == 'kn' ? 'ಸೋಯಾಬೀನ್ (Soybean)' : 'सोयाबीन (Soybean)';
+    if (lower.contains('sorghum') || lower.contains('jowar') || lower.contains('bicolor')) {
+      return lang == 'kn' ? 'ಜೋಳ (Jowar/Sorghum)' : 'ज्वार (Jowar)';
+    }
+    if (lower.contains('bajra') || lower.contains('pearl millet') || lower.contains('pennisetum')) {
+      return lang == 'kn' ? 'ಸಜ್ಜೆ (Bajra/Pearl Millet)' : 'बाजरा (Bajra)';
+    }
+    if (lower.contains('foxtail millet') || lower.contains('navane') || lower.contains('setaria italica')) {
+      return lang == 'kn' ? 'ನವಣೆ (Foxtail Millet)' : 'कंगनी (Foxtail Millet)';
+    }
+    if (lower.contains('little millet') || lower.contains('same') || lower.contains('panicum sumatrense')) {
+      return lang == 'kn' ? 'ಸಾಮೆ (Little Millet)' : 'कुटकी (Little Millet)';
+    }
+    if (lower.contains('kodo millet') || lower.contains('haraka') || lower.contains('paspalum scrobiculatum')) {
+      return lang == 'kn' ? 'ಹಾರಕ (Kodo Millet)' : 'कोदो (Kodo Millet)';
+    }
+    if (lower.contains('proso millet') || lower.contains('baragu') || lower.contains('panicum miliaceum')) {
+      return lang == 'kn' ? 'ಬರಗು (Proso Millet)' : 'चीना (Proso Millet)';
+    }
+    if (lower.contains('barnyard millet') || lower.contains('oodalu') || lower.contains('echinochloa frumentacea')) {
+      return lang == 'kn' ? 'ಊದಲು (Barnyard Millet)' : 'सांवा / झंगोरा (Barnyard Millet)';
+    }
+    if (lower.contains('barley') || lower.contains('hordeum')) {
+      return lang == 'kn' ? 'ಬಾರ್ಲಿ (Barley)' : 'जौ (Barley)';
+    }
+    if (lower.contains('oats') || lower.contains('avena')) {
+      return lang == 'kn' ? 'ಓಟ್ಸ್ (Oats)' : 'जई (Oats)';
+    }
+    if (lower.contains('millet')) {
+      return lang == 'kn' ? 'ಸಿರಿಧಾನ್ಯ / ರಾಗಿ (Millet)' : 'मोटा अनाज / बाजरा (Millet)';
+    }
+
+    // ── 2. Vegetables ──
+    if (lower.contains('tomato') || lower.contains('lycopersicum')) {
+      return lang == 'kn' ? 'ಟೊಮ್ಯಾಟೊ (Tomato)' : 'टमाटर (Tomato)';
     }
     if (lower.contains('potato') || lower.contains('tuberosum')) {
       return lang == 'kn' ? 'ಆಲೂಗಡ್ಡೆ (Potato)' : 'आलू (Potato)';
     }
-    if (lower.contains('chilli') || lower.contains('chili') || lower.contains('pepper')) {
-      return lang == 'kn' ? 'ಮೆಣಸಿನಕಾಯಿ (Chilli)' : 'मिर्च (Chilli)';
-    }
-    if (lower.contains('onion')) {
+    if (lower.contains('onion') || lower.contains('cepa')) {
       return lang == 'kn' ? 'ಈರುಳ್ಳಿ (Onion)' : 'प्याज (Onion)';
     }
-    if (lower.contains('groundnut') || lower.contains('peanut')) {
+    if (lower.contains('garlic') || lower.contains('sativum') && lower.contains('allium')) {
+      return lang == 'kn' ? 'ಬೆಳ್ಳುಳ್ಳಿ (Garlic)' : 'लहसुन (Garlic)';
+    }
+    if (lower.contains('ginger') || lower.contains('zingiber')) {
+      return lang == 'kn' ? 'ಶುಂಠಿ (Ginger)' : 'अदरक (Ginger)';
+    }
+    if (lower.contains('turmeric') || lower.contains('curcuma')) {
+      return lang == 'kn' ? 'ಅರಿಶಿನ (Turmeric)' : 'हल्दी (Turmeric)';
+    }
+    if (lower.contains('chilli') || lower.contains('chili') || lower.contains('capsicum') || lower.contains('mirchi')) {
+      return lang == 'kn' ? 'ಮೆಣಸಿನಕಾಯಿ (Chilli)' : 'मिर्च (Chilli)';
+    }
+    if (lower.contains('brinjal') || lower.contains('eggplant') || lower.contains('aubergine') || lower.contains('baingan') || lower.contains('melongena')) {
+      return lang == 'kn' ? 'ಬದನೆಕಾಯಿ (Brinjal/Eggplant)' : 'बैंगन (Brinjal)';
+    }
+    if (lower.contains('okra') || lower.contains('bhendi') || lower.contains('bhindi') || lower.contains('ladies finger') || lower.contains('esculentus')) {
+      return lang == 'kn' ? 'ಬೆಂಡೆಕಾಯಿ (Okra/Bhendi)' : 'भिंडी (Okra)';
+    }
+    if (lower.contains('cabbage') || lower.contains('capitata')) {
+      return lang == 'kn' ? 'ಎಲೆಕೋಸು (Cabbage)' : 'पत्ता गोभी (Cabbage)';
+    }
+    if (lower.contains('cauliflower') || lower.contains('botrytis')) {
+      return lang == 'kn' ? 'ಹೂಕೋಸು (Cauliflower)' : 'फूलगोभी (Cauliflower)';
+    }
+    if (lower.contains('carrot') || lower.contains('carota')) {
+      return lang == 'kn' ? 'ಕ್ಯಾರೆಟ್ (Carrot)' : 'गाजर (Carrot)';
+    }
+    if (lower.contains('radish') || lower.contains('raphanus') || lower.contains('mooli')) {
+      return lang == 'kn' ? 'ಮೂಲಂಗಿ (Radish)' : 'मूली (Radish)';
+    }
+    if (lower.contains('beetroot') || lower.contains('beta vulgaris')) {
+      return lang == 'kn' ? 'ಬೀಟ್‌ರೂಟ್ (Beetroot)' : 'चुकंदर (Beetroot)';
+    }
+    if (lower.contains('cucumber') || lower.contains('cucumis sativus')) {
+      return lang == 'kn' ? 'ಸೌತೆಕಾಯಿ (Cucumber)' : 'खीरा (Cucumber)';
+    }
+    if (lower.contains('bitter gourd') || lower.contains('karela') || lower.contains('charantia')) {
+      return lang == 'kn' ? 'ಹಾಗಲಕಾಯಿ (Bitter Gourd)' : 'करेला (Bitter Gourd)';
+    }
+    if (lower.contains('bottle gourd') || lower.contains('lauki') || lower.contains('siceraria')) {
+      return lang == 'kn' ? 'ಸೋರೆಕಾಯಿ (Bottle Gourd)' : 'लौकी (Bottle Gourd)';
+    }
+    if (lower.contains('ridge gourd') || lower.contains('turai') || lower.contains('acutangula')) {
+      return lang == 'kn' ? 'ಹೀರೆಕಾಯಿ (Ridge Gourd)' : 'तोरई (Ridge Gourd)';
+    }
+    if (lower.contains('snake gourd') || lower.contains('cucumerina')) {
+      return lang == 'kn' ? 'ಪಡವಲಕಾಯಿ (Snake Gourd)' : 'चिचिंडा (Snake Gourd)';
+    }
+    if (lower.contains('ash gourd') || lower.contains('winter melon') || lower.contains('hispida')) {
+      return lang == 'kn' ? 'ಬೂದುಗುಂಬಳಕಾಯಿ (Ash Gourd)' : 'पेठा (Ash Gourd)';
+    }
+    if (lower.contains('pumpkin') || lower.contains('cucurbita') || lower.contains('kaddu')) {
+      return lang == 'kn' ? 'ಕುಂಬಳಕಾಯಿ (Pumpkin)' : 'कद्दू (Pumpkin)';
+    }
+    if (lower.contains('drumstick') || lower.contains('moringa')) {
+      return lang == 'kn' ? 'ನುಗ್ಗೆಕಾಯಿ (Drumstick/Moringa)' : 'सहजन / मोरिंगा (Drumstick)';
+    }
+    if (lower.contains('spinach') || lower.contains('palak') || lower.contains('spinacia')) {
+      return lang == 'kn' ? 'ಪಾಲಕ್ ಸೊಪ್ಪು (Spinach)' : 'पालक (Spinach)';
+    }
+    if (lower.contains('fenugreek') || lower.contains('methi') || lower.contains('trigonella')) {
+      return lang == 'kn' ? 'ಮೆಂತೆ ಸೊಪ್ಪು (Fenugreek/Methi)' : 'मेथी (Fenugreek)';
+    }
+    if (lower.contains('coriander') || lower.contains('cilantro') || lower.contains('coriandrum') || lower.contains('dhania')) {
+      return lang == 'kn' ? 'ಕೊತ್ತಂಬರಿ (Coriander)' : 'धनिया (Coriander)';
+    }
+    if (lower.contains('mint') || lower.contains('pudina') || lower.contains('mentha')) {
+      return lang == 'kn' ? 'ಪುದೀನ (Mint)' : 'पुदीना (Mint)';
+    }
+    if (lower.contains('curry leaf') || lower.contains('curry leaves') || lower.contains('koenigii')) {
+      return lang == 'kn' ? 'ಕರಿಬೇವು (Curry Leaves)' : 'कढ़ी पत्ता (Curry Leaves)';
+    }
+    if (lower.contains('sweet potato') || lower.contains('batatas')) {
+      return lang == 'kn' ? 'ಗೆಣಸು (Sweet Potato)' : 'शकरकंद (Sweet Potato)';
+    }
+    if (lower.contains('tapioca') || lower.contains('cassava') || lower.contains('manihot')) {
+      return lang == 'kn' ? 'ಮರಗೆಣಸು (Tapioca/Cassava)' : 'कसावा (Tapioca)';
+    }
+    if (lower.contains('peas') || lower.contains('pea') || lower.contains('pisum') || lower.contains('matar')) {
+      return lang == 'kn' ? 'ಬಟಾಣಿ (Green Peas)' : 'मटर (Green Peas)';
+    }
+    if (lower.contains('french bean') || lower.contains('beans') || lower.contains('phaseolus')) {
+      return lang == 'kn' ? 'ಹುರುಳಿಕಾಯಿ / ಬೀನ್ಸ್ (Beans)' : 'बीन्स / फलियां (Beans)';
+    }
+
+    // ── 3. Pulses & Legumes ──
+    if (lower.contains('soybean') || lower.contains('soya') || lower.contains('glycine')) {
+      return lang == 'kn' ? 'ಸೋಯಾಬೀನ್ (Soybean)' : 'सोयाबीन (Soybean)';
+    }
+    if (lower.contains('groundnut') || lower.contains('peanut') || lower.contains('arachis')) {
       return lang == 'kn' ? 'ಕಡಲೆಕಾಯಿ (Groundnut)' : 'मूंगफली (Groundnut)';
     }
-    if (lower.contains('field crop') || lower.contains('agricultural') || lower.contains('crop field') || lower.contains('cultivation')) {
+    if (lower.contains('bengal gram') || lower.contains('chickpea') || lower.contains('chana') || lower.contains('cicer')) {
+      return lang == 'kn' ? 'ಕಡಲೆ (Bengal Gram/Chickpea)' : 'चना / छोले (Chickpea)';
+    }
+    if (lower.contains('red gram') || lower.contains('pigeon pea') || lower.contains('tur') || lower.contains('toor') || lower.contains('arhar') || lower.contains('cajanus')) {
+      return lang == 'kn' ? 'ತೊಗರಿ (Red Gram/Toor)' : 'अरहर / तुअर (Pigeon Pea)';
+    }
+    if (lower.contains('green gram') || lower.contains('moong') || lower.contains('mung') || lower.contains('radiata')) {
+      return lang == 'kn' ? 'ಹೆಸರುಕಾಳು (Green Gram/Moong)' : 'मूंग (Green Gram)';
+    }
+    if (lower.contains('black gram') || lower.contains('urad') || lower.contains('mungo')) {
+      return lang == 'kn' ? 'ಉದ್ದಿನಕಾಳು (Black Gram/Urad)' : 'उड़द (Black Gram)';
+    }
+    if (lower.contains('cowpea') || lower.contains('lobia') || lower.contains('alasande') || lower.contains('unguiculata')) {
+      return lang == 'kn' ? 'ಅಲಸಂದೆ (Cowpea)' : 'लोबिया (Cowpea)';
+    }
+    if (lower.contains('horse gram') || lower.contains('hurali') || lower.contains('kulthi') || lower.contains('uniflorum')) {
+      return lang == 'kn' ? 'ಹುರುಳಿ (Horse Gram)' : 'कुलथी (Horse Gram)';
+    }
+    if (lower.contains('lentil') || lower.contains('masoor') || lower.contains('culinaris')) {
+      return lang == 'kn' ? 'ಮಸೂರ (Lentil/Masoor)' : 'मसूर (Lentil)';
+    }
+
+    // ── 4. Cash, Commercial & Plantation Crops ──
+    if (lower.contains('cotton') || lower.contains('gossypium')) {
+      return lang == 'kn' ? 'ಹತ್ತಿ (Cotton)' : 'कपास (Cotton)';
+    }
+    if (lower.contains('sugarcane') || lower.contains('saccharum')) {
+      return lang == 'kn' ? 'ಕಬ್ಬು (Sugarcane)' : 'गन्ना (Sugarcane)';
+    }
+    if (lower.contains('tobacco') || lower.contains('nicotiana')) {
+      return lang == 'kn' ? 'ತಂಬಾಕು / ಹೊಗೆಸೊಪ್ಪು (Tobacco)' : 'तंबाकू (Tobacco)';
+    }
+    if (lower.contains('rubber') || lower.contains('hevea')) {
+      return lang == 'kn' ? 'ರಬ್ಬರ್ (Rubber)' : 'रबर (Rubber)';
+    }
+    if (lower.contains('coffee') || lower.contains('coffea')) {
+      return lang == 'kn' ? 'ಕಾಫಿ (Coffee)' : 'कॉफ़ी (Coffee)';
+    }
+    if (lower.contains('tea') || lower.contains('camellia')) {
+      return lang == 'kn' ? 'ಚಹಾ / ಟೀ (Tea)' : 'चाय (Tea)';
+    }
+    if (lower.contains('arecanut') || lower.contains('areca') || lower.contains('betel nut') || lower.contains('supari') || lower.contains('catechu')) {
+      return lang == 'kn' ? 'ಅಡಿಕೆ (Arecanut)' : 'सुपारी (Areca Nut)';
+    }
+    if (lower.contains('coconut') || lower.contains('cocos')) {
+      return lang == 'kn' ? 'ತೆಂಗಿನಕಾಯಿ / ತೆಂಗು (Coconut)' : 'नारियल (Coconut)';
+    }
+    if (lower.contains('cardamom') || lower.contains('elettaria')) {
+      return lang == 'kn' ? 'ಏಲಕ್ಕಿ (Cardamom)' : 'इलायची (Cardamom)';
+    }
+    if (lower.contains('black pepper') || lower.contains('pepper') && lower.contains('piper')) {
+      return lang == 'kn' ? 'ಕರಿಮೆಣಸು (Black Pepper)' : 'काली मिर्च (Black Pepper)';
+    }
+    if (lower.contains('betel leaf') || lower.contains('paan') || lower.contains('piper betle')) {
+      return lang == 'kn' ? 'ವೀಳ್ಯದೆಲೆ (Betel Leaf)' : 'पान का पत्ता (Betel Leaf)';
+    }
+    if (lower.contains('cashew') || lower.contains('anacardium')) {
+      return lang == 'kn' ? 'ಗೋಡಂಬಿ (Cashew)' : 'काजू (Cashew)';
+    }
+    if (lower.contains('mulberry') || lower.contains('morus')) {
+      return lang == 'kn' ? 'ಹಿಪ್ಪುನೇರಳೆ (Mulberry)' : 'शहतूत (Mulberry)';
+    }
+    if (lower.contains('jute') || lower.contains('corchorus')) {
+      return lang == 'kn' ? 'ಸೆಣಬು (Jute)' : 'जूट / पटसन (Jute)';
+    }
+
+    // ── 5. Oilseeds ──
+    if (lower.contains('sunflower') || lower.contains('helianthus')) {
+      return lang == 'kn' ? 'ಸೂರ್ಯಕಾಂತಿ (Sunflower)' : 'सूरजमुखी (Sunflower)';
+    }
+    if (lower.contains('mustard') || lower.contains('rapeseed') || lower.contains('canola') || lower.contains('brassica')) {
+      return lang == 'kn' ? 'ಸಾಸಿವೆ (Mustard)' : 'सरसों (Mustard)';
+    }
+    if (lower.contains('sesame') || lower.contains('til') || lower.contains('sesamum')) {
+      return lang == 'kn' ? 'ಎಳ್ಳು (Sesame)' : 'तिल (Sesame)';
+    }
+    if (lower.contains('castor') || lower.contains('ricinus')) {
+      return lang == 'kn' ? 'ಹರಳು (Castor)' : 'अरंडी (Castor)';
+    }
+    if (lower.contains('safflower') || lower.contains('kusube') || lower.contains('carthamus')) {
+      return lang == 'kn' ? 'ಕುಸುಬೆ (Safflower)' : 'कुसुम (Safflower)';
+    }
+    if (lower.contains('flax') || lower.contains('linseed') || lower.contains('usitatissimum')) {
+      return lang == 'kn' ? 'ಅಗಸೆ (Flaxseed/Linseed)' : 'अलसी (Flaxseed)';
+    }
+
+    // ── 6. Fruits ──
+    if (lower.contains('banana') || lower.contains('plantain') || lower.contains('musa')) {
+      return lang == 'kn' ? 'ಬಾಳೆ (Banana)' : 'केला (Banana)';
+    }
+    if (lower.contains('mango') || lower.contains('mangifera')) {
+      return lang == 'kn' ? 'ಮಾವು (Mango)' : 'आम (Mango)';
+    }
+    if (lower.contains('papaya') || lower.contains('carica')) {
+      return lang == 'kn' ? 'ಪಪ್ಪಾಯಿ (Papaya)' : 'पपीता (Papaya)';
+    }
+    if (lower.contains('pomegranate') || lower.contains('punica') || lower.contains('anar')) {
+      return lang == 'kn' ? 'ದಾಳಿಂಬೆ (Pomegranate)' : 'अनार (Pomegranate)';
+    }
+    if (lower.contains('guava') || lower.contains('psidium')) {
+      return lang == 'kn' ? 'ಸೀಬೆಹಣ್ಣು / ಪೇರಲ (Guava)' : 'अमरूद (Guava)';
+    }
+    if (lower.contains('lemon') || lower.contains('lime') || lower.contains('citrus')) {
+      return lang == 'kn' ? 'ನಿಂಬೆ (Lemon/Citrus)' : 'नींबू (Lemon)';
+    }
+    if (lower.contains('orange') || lower.contains('mosambi') || lower.contains('sweet lime')) {
+      return lang == 'kn' ? 'ಕಿತ್ತಳೆ / ಮೋಸಂಬಿ (Orange)' : 'संतरा / मौसमी (Orange)';
+    }
+    if (lower.contains('grape') || lower.contains('vitis')) {
+      return lang == 'kn' ? 'ದ್ರಾಕ್ಷಿ (Grapes)' : 'अंगूर (Grapes)';
+    }
+    if (lower.contains('watermelon') || lower.contains('lanatus')) {
+      return lang == 'kn' ? 'ಕಲ್ಲಂಗಡಿ (Watermelon)' : 'तरबूज (Watermelon)';
+    }
+    if (lower.contains('muskmelon') || lower.contains('cantaloupe')) {
+      return lang == 'kn' ? 'ಕರಬೂಜ (Muskmelon)' : 'खरबूजा (Muskmelon)';
+    }
+    if (lower.contains('apple') || lower.contains('malus')) {
+      return lang == 'kn' ? 'ಸೇಬು (Apple)' : 'सेब (Apple)';
+    }
+    if (lower.contains('sapota') || lower.contains('chiku')) {
+      return lang == 'kn' ? 'ಸಪೋಟ / ಚಿಕ್ಕು (Sapota)' : 'चीकू (Sapota)';
+    }
+    if (lower.contains('jackfruit') || lower.contains('heterophyllus')) {
+      return lang == 'kn' ? 'ಹಲಸು (Jackfruit)' : 'कटहल (Jackfruit)';
+    }
+    if (lower.contains('custard apple') || lower.contains('seetaphal')) {
+      return lang == 'kn' ? 'ಸೀತಾಫಲ (Custard Apple)' : 'सीताफल (Custard Apple)';
+    }
+    if (lower.contains('pineapple') || lower.contains('ananas')) {
+      return lang == 'kn' ? 'ಅನಾನಸ್ (Pineapple)' : 'अनानास (Pineapple)';
+    }
+
+    // ── 7. Generic Field Crop / Vegetation Fallbacks ──
+    if (lower.contains('field crop') || lower.contains('agricultural') || lower.contains('crop field') || lower.contains('cultivation') || lower.contains('crop') || lower.contains('plant') || lower.contains('vegetation')) {
       return lang == 'kn' ? 'ಕೃಷಿ ಹೊಲದ ಬೆಳೆ (Field Crop)' : 'कृषि खेत की फसल (Field Crop)';
+    }
+
+    // Smart fallback: clean up botanical annotations and prefix with native crop label
+    final cleanCrop = cropName.split('(').first.trim();
+    if (cleanCrop.isNotEmpty) {
+      return lang == 'kn' ? 'ಕೃಷಿ ಬೆಳೆ: $cleanCrop' : 'फसल: $cleanCrop';
     }
 
     return cropName;
@@ -344,44 +598,100 @@ class AppLocalizations {
     if (lang == 'en') return weedName;
 
     final lower = weedName.toLowerCase();
-    if (lower.contains('amaranthus') || lower.contains('pigweed') || lower.contains('chaulai') || lower.contains('amaranth')) {
+    if (lower.contains('amaranthus') || lower.contains('pigweed') || lower.contains('chaulai') || lower.contains('amaranth') || lower.contains('viridis')) {
       return lang == 'kn' ? 'ದಂಟು / ಕಳೆ ಹರಿವೆ (Amaranthus/Pigweed)' : 'चौलाई / अमरंथस (Amaranthus)';
     }
-    if (lower.contains('cyperus') || lower.contains('nutgrass') || lower.contains('sedge') || lower.contains('motha') || lower.contains('nutsedge')) {
+    if (lower.contains('cyperus') || lower.contains('nutgrass') || lower.contains('sedge') || lower.contains('motha') || lower.contains('nutsedge') || lower.contains('rotundus')) {
       return lang == 'kn' ? 'ಭದ್ರಮುಷ್ಟಿ / ಜೇಕು (Nutgrass/Cyperus)' : 'मोथा / साइपरस (Nutgrass)';
     }
-    if (lower.contains('parthenium') || lower.contains('congress') || lower.contains('carrot grass') || lower.contains('gajjar')) {
+    if (lower.contains('parthenium') || lower.contains('congress') || lower.contains('carrot grass') || lower.contains('gajjar') || lower.contains('hysterophorus')) {
       return lang == 'kn' ? 'ಕಾಂಗ್ರೆಸ್ ಹುಲ್ಲು / ಪಾರ್ಥೇನಿಯಂ (Parthenium)' : 'गाजर घास / पार्थेनियम (Parthenium)';
     }
-    if (lower.contains('echinochloa') || lower.contains('barnyard') || lower.contains('jungle rice') || lower.contains('shama')) {
+    if (lower.contains('echinochloa') || lower.contains('barnyard') || lower.contains('jungle rice') || lower.contains('shama') || lower.contains('crus-galli')) {
       return lang == 'kn' ? 'ಕಾಡು ಭತ್ತ / ಜಾವಡೆ ಹುಲ್ಲು (Barnyard Grass)' : 'सांवा घास (Barnyard Grass)';
     }
-    if (lower.contains('cynodon') || lower.contains('bermuda') || lower.contains('hariali') || lower.contains('dub') || lower.contains('doob')) {
+    if (lower.contains('cynodon') || lower.contains('bermuda') || lower.contains('hariali') || lower.contains('dub') || lower.contains('doob') || lower.contains('dactylon')) {
       return lang == 'kn' ? 'ಗರಿಕೆ ಹುಲ್ಲು (Bermuda Grass)' : 'दूब घास (Bermuda Grass)';
     }
-    if (lower.contains('digitaria') || lower.contains('crabgrass')) {
+    if (lower.contains('digitaria') || lower.contains('crabgrass') || lower.contains('sanguinalis')) {
       return lang == 'kn' ? 'ಏಡಿ ಹುಲ್ಲು (Crabgrass)' : 'केकड़ा घास / क्रेबग्रास (Crabgrass)';
     }
-    if (lower.contains('convolvulus') || lower.contains('bindweed') || lower.contains('hiran')) {
+    if (lower.contains('convolvulus') || lower.contains('bindweed') || lower.contains('hiran') || lower.contains('arvensis')) {
       return lang == 'kn' ? 'ಬಳ್ಳಿ ಕಳೆ (Field Bindweed)' : 'हिरनखुरी (Field Bindweed)';
     }
-    if (lower.contains('chenopodium') || lower.contains('bathua') || lower.contains('lambsquarters') || lower.contains('lambs')) {
+    if (lower.contains('chenopodium') || lower.contains('bathua') || lower.contains('lambsquarters') || lower.contains('lambs') || lower.contains('album')) {
       return lang == 'kn' ? 'ಬಾತುವಾ / ಕಾಡು ಪಾಲಕ್ (Bathua)' : 'बथुआ (Bathua/Lambsquarters)';
     }
-    if (lower.contains('solanum') || lower.contains('nightshade') || lower.contains('makoi')) {
+    if (lower.contains('solanum nigrum') || lower.contains('nightshade') || lower.contains('makoi')) {
       return lang == 'kn' ? 'ಕಾಡು ಕಾಗೆಹಣ್ಣು (Black Nightshade)' : 'मकोय (Black Nightshade)';
     }
-    if (lower.contains('eleusine') || lower.contains('goosegrass')) {
+    if (lower.contains('eleusine indica') || lower.contains('goosegrass')) {
       return lang == 'kn' ? 'ರಾಗಿ ಹುಲ್ಲು (Goosegrass)' : 'कोदो घास / गूजग्रास (Goosegrass)';
     }
-    if (lower.contains('portulaca') || lower.contains('purslane') || lower.contains('kulfa')) {
+    if (lower.contains('portulaca') || lower.contains('purslane') || lower.contains('kulfa') || lower.contains('oleracea')) {
       return lang == 'kn' ? 'ಗೋಳಿ ಸೊಪ್ಪು (Purslane)' : 'कुलफा / लोनी (Purslane)';
     }
-    if (lower.contains('oxalis') || lower.contains('woodsorrel') || lower.contains('wood sorrel')) {
-      return lang == 'kn' ? 'ಹುಳಿ ಸೊಪ್ಪು (Wood Sorrel)' : 'खट्टी मीठी बूಟಿ (Oxalis)';
+    if (lower.contains('oxalis') || lower.contains('woodsorrel') || lower.contains('wood sorrel') || lower.contains('corniculata')) {
+      return lang == 'kn' ? 'ಹುಳಿ ಸೊಪ್ಪು (Wood Sorrel)' : 'खट्टी मीठी बूटी (Oxalis)';
     }
-    if (lower.contains('lantana')) {
+    if (lower.contains('lantana') || lower.contains('camara')) {
       return lang == 'kn' ? 'ಲಂಟಾನ / ರೋಣದ ಗಿಡ (Lantana)' : 'रायमुनिया / लेंटाना (Lantana)';
+    }
+    if (lower.contains('commelina') || lower.contains('dayflower') || lower.contains('kankawa') || lower.contains('benghalensis')) {
+      return lang == 'kn' ? 'ಕನ್ನಡಿ ಸೊಪ್ಪು (Dayflower)' : 'कनवा / कनकौआ (Commelina)';
+    }
+    if (lower.contains('argemone') || lower.contains('prickly poppy') || lower.contains('mexicana') || lower.contains('satyanashi')) {
+      return lang == 'kn' ? 'ಸತ್ಯನಾಶಿ ಮುಳ್ಳು ಕಳೆ (Prickly Poppy)' : 'सत्यानाशी (Argemone)';
+    }
+    if (lower.contains('trianthema') || lower.contains('horse purslane') || lower.contains('itsit') || lower.contains('portulacastrum')) {
+      return lang == 'kn' ? 'ಕೊಮ್ಮೇ ಸೊಪ್ಪು (Horse Purslane)' : 'इटसिट / सांथी (Trianthema)';
+    }
+    if (lower.contains('eichhornia') || lower.contains('water hyacinth') || lower.contains('crassipes')) {
+      return lang == 'kn' ? 'ಜಲಕಳೆ (Water Hyacinth)' : 'जलकुंभी (Water Hyacinth)';
+    }
+    if (lower.contains('striga') || lower.contains('witchweed') || lower.contains('asiatica')) {
+      return lang == 'kn' ? 'ಬೆಂಕಿ ಹುಲ್ಲು (Witchweed)' : 'स्ट्रिगा / आगिया (Witchweed)';
+    }
+    if (lower.contains('orobanche') || lower.contains('broomrape')) {
+      return lang == 'kn' ? 'ತಂಬಾಕು ಮುಳ್ಳು ಕಳೆ (Broomrape)' : 'ओरोबैंकी (Broomrape)';
+    }
+    if (lower.contains('cuscuta') || lower.contains('dodder') || lower.contains('amarbel')) {
+      return lang == 'kn' ? 'ಬಂಗಾರದ ಬಳ್ಳಿ (Dodder)' : 'अमरबेल (Cuscuta)';
+    }
+    if (lower.contains('dactyloctenium') || lower.contains('crowfoot') || lower.contains('aegyptium')) {
+      return lang == 'kn' ? 'ಕಾಗೆಕಾಲು ಹುಲ್ಲು (Crowfoot Grass)' : 'मकर घास (Crowfoot Grass)';
+    }
+    if (lower.contains('phalaris') || lower.contains('canary grass') || lower.contains('gulli danda') || lower.contains('minor')) {
+      return lang == 'kn' ? 'ಗೋಧಿ ಕಳೆ ಹುಲ್ಲು (Canary Grass)' : 'गुल्ली डंडा (Phalaris)';
+    }
+    if (lower.contains('avena fatua') || lower.contains('wild oat') || lower.contains('jangli jai')) {
+      return lang == 'kn' ? 'ಕಾಡು ಜವಾರಿ (Wild Oat)' : 'जंगली जई (Wild Oat)';
+    }
+    if (lower.contains('ageratum') || lower.contains('billygoat') || lower.contains('conyzoides')) {
+      return lang == 'kn' ? 'ವಾಸನೆ ಕಳೆ (Billygoat Weed)' : 'जंगली पुदीना (Ageratum)';
+    }
+    if (lower.contains('mimosa') || lower.contains('pudica') || lower.contains('touch-me-not')) {
+      return lang == 'kn' ? 'ಮುಟ್ಟಿದರೆ ಮುನಿ (Touch-me-not)' : 'छुईमुई (Mimosa)';
+    }
+    if (lower.contains('euphorbia') || lower.contains('spurge') || lower.contains('hirta') || lower.contains('dudhi')) {
+      return lang == 'kn' ? 'ಹಾಲು ಕಳೆ (Spurge)' : 'दूधी घास (Euphorbia)';
+    }
+    if (lower.contains('setaria') || lower.contains('foxtail')) {
+      return lang == 'kn' ? 'ನರಿ ಬಾಲದ ಹುಲ್ಲು (Foxtail)' : 'लोमड़ घास (Foxtail)';
+    }
+    if (lower.contains('xanthium') || lower.contains('cocklebur') || lower.contains('strumarium')) {
+      return lang == 'kn' ? 'ಮುಳ್ಳು ಕಳೆ (Cocklebur)' : 'छोटा धतूरा / घाघरा (Xanthium)';
+    }
+    if (lower.contains('physalis') || lower.contains('groundcherry')) {
+      return lang == 'kn' ? 'ಕಾಡು ಬೋಡೆ ಹಣ್ಣು (Groundcherry)' : 'जंगली रसभरी (Physalis)';
+    }
+    if (lower.contains('weed') || lower.contains('invasive') || lower.contains('wild plant')) {
+      return lang == 'kn' ? 'ಅನಗತ್ಯ ಕಳೆ (Weed)' : 'अवांछित खरपतवार (Weed)';
+    }
+
+    final cleanWeed = weedName.split('(').first.trim();
+    if (cleanWeed.isNotEmpty) {
+      return lang == 'kn' ? 'ಕಳೆ: $cleanWeed' : 'खरपतवार: $cleanWeed';
     }
 
     return weedName;

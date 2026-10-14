@@ -1,13 +1,16 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../shared/models/detection_result_model.dart';
+import '../../../../core/l10n/app_localizations.dart';
 
 class DetectionOverlayPainter extends CustomPainter {
   final List<WeedDetection> detections;
-  DetectionOverlayPainter({required this.detections});
+  final AppLocalizations? l10n;
+  DetectionOverlayPainter({required this.detections, this.l10n});
 
   static const _cropKeywords = ['maize', 'rice', 'wheat', 'soybean', 'cotton', 'corn',
-    'sugarcane', 'barley', 'sorghum', 'sunflower', 'tomato', 'potato', 'crop'];
+    'sugarcane', 'barley', 'sorghum', 'sunflower', 'tomato', 'potato', 'crop', 'onion',
+    'chilli', 'chili', 'garlic', 'ginger', 'turmeric', 'brinjal', 'eggplant', 'okra', 'ragi'];
 
   bool _isCrop(WeedDetection d) {
     if (d.isCrop) return true;
@@ -54,7 +57,11 @@ class DetectionOverlayPainter extends CustomPainter {
       canvas.drawRRect(rrect, boxPaint);
 
       // 3. Pill badge at top-left
-      final label = '${d.label} ${(d.confidence * 100).toStringAsFixed(0)}%';
+      final translatedName = l10n != null
+          ? (isCrop ? l10n!.translateCrop(d.label) : l10n!.translateWeed(d.label))
+          : d.label;
+      final shortName = translatedName.split('(').first.trim();
+      final label = '$shortName ${(d.confidence * 100).toStringAsFixed(0)}%';
       final tp = TextPainter(
         text: TextSpan(text: label, style: textStyle),
         textDirection: TextDirection.ltr,
@@ -80,5 +87,5 @@ class DetectionOverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant DetectionOverlayPainter oldDelegate) =>
-      oldDelegate.detections != detections;
+      oldDelegate.detections != detections || oldDelegate.l10n != l10n;
 }

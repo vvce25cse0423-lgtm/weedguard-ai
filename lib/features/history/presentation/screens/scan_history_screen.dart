@@ -398,8 +398,8 @@ class ScanHistoryCard extends StatelessWidget {
                   if (scan.cropName != null && scan.cropName!.isNotEmpty) ...[
                     const Spacer(),
                     _Stat(
-                      value: scan.cropName!.split(' ').first,
-                      label: 'Crop',
+                      value: l10n.translateCrop(scan.cropName).split('(').first.trim(),
+                      label: l10n.get('crop_name'),
                       color: const Color(0xFF2E7D32),
                     ),
                   ] else if (scan.priorityZone != null) ...[

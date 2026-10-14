@@ -10,6 +10,7 @@ import '../../data/fields_repository.dart';
 import '../../../history/presentation/screens/scan_history_screen.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../../shared/widgets/scan_thumbnail_image.dart';
+import '../../../../core/l10n/app_localizations.dart';
 
 final fieldDetailProvider = FutureProvider.family<FieldModel, String>((ref, id) async {
   return FieldsRepository(Supabase.instance.client).getField(id);
@@ -336,7 +337,11 @@ class _FieldInfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _InfoRow(icon: Icons.grass_rounded, label: 'Crop', value: field.cropType),
+          _InfoRow(
+            icon: Icons.grass_rounded,
+            label: AppLocalizations.of(context).get('crop_name'),
+            value: AppLocalizations.of(context).translateCrop(field.cropType),
+          ),
           const Divider(height: 20, color: Color(0xFFF0F4F0)),
 
           // Area with Editable Acres Button
@@ -579,7 +584,7 @@ class _TotalPriorityZonesSheet extends StatelessWidget {
                         Text('Total Priority Zones',
                             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A))),
                         const SizedBox(height: 2),
-                        Text('${field.name} (${field.cropType}) • ${scans.length} Zones',
+                        Text('${field.name} (${AppLocalizations.of(context).translateCrop(field.cropType)}) • ${scans.length} Zones',
                             style: const TextStyle(fontSize: 12.5, color: Color(0xFF5C5C5C), fontWeight: FontWeight.w500)),
                       ],
                     ),

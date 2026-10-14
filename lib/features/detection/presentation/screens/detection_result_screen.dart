@@ -509,7 +509,10 @@ class _ScannedImageSection extends StatelessWidget {
         if (result.detections.any((d) => d.boundingBox != null))
           Positioned.fill(
             child: CustomPaint(
-              painter: DetectionOverlayPainter(detections: result.detections),
+              painter: DetectionOverlayPainter(
+                detections: result.detections,
+                l10n: AppLocalizations.of(context),
+              ),
             ),
           ),
 
