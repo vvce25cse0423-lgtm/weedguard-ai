@@ -7,7 +7,6 @@ import '../../../../core/utils/date_formatter.dart';
 import '../../../../shared/models/field_model.dart';
 import '../../../../shared/models/scan_model.dart';
 import '../../data/fields_repository.dart';
-import '../../../scanner/presentation/widgets/severity_chip.dart';
 import '../../../history/presentation/screens/scan_history_screen.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../../shared/widgets/scan_thumbnail_image.dart';
@@ -610,7 +609,7 @@ class _TotalPriorityZonesSheet extends StatelessWidget {
                       ),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: const Color(0xFFC8E6C9)),
-                    ],
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
