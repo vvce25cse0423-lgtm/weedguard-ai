@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers/app_providers.dart';
 import '../../../../core/l10n/app_localizations.dart';
+import '../../../../shared/widgets/app_usage_manual_dialog.dart';
+import '../../../../shared/widgets/rate_app_dialog.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -224,6 +225,24 @@ class SettingsScreen extends ConsumerWidget {
 
           // ── About ───────────────────────────────────────────────────
           _Section(title: l10n.about, icon: Icons.info_outline_rounded, items: [
+            _Tile(
+              icon: Icons.menu_book_rounded,
+              label: l10n.get('app_usage_manual'),
+              onTap: () => AppUsageManualDialog.show(context),
+            ),
+            _Tile(
+              icon: Icons.star_rate_rounded,
+              label: l10n.get('rate_our_app'),
+              trailing: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.star_rounded, color: Color(0xFFFFB300), size: 18),
+                  SizedBox(width: 2),
+                  Text('5.0', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFE65100))),
+                ],
+              ),
+              onTap: () => RateAppDialog.show(context),
+            ),
             _Tile(
               icon: Icons.privacy_tip_outlined,
               label: l10n.privacyPolicy,

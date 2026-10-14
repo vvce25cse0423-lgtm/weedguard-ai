@@ -193,6 +193,15 @@ class AppLocalizations {
     'efficacy_success_msg':  {'en': 'Excellent treatment efficacy. Weed population has been drastically reduced with healthy crop recovery.',
                               'kn': 'ಉತ್ತಮ ಕಳೆ ನಿಯಂತ್ರಣ ಫಲಿತಾಂಶ. ಕಳೆಗಳು ಗಣನೀಯವಾಗಿ ಕಡಿಮೆಯಾಗಿದ್ದು ಬೆಳೆ ಆರೋಗ್ಯಕರವಾಗಿ ಚೇತರಿಸಿಕೊಳ್ಳುತ್ತಿದೆ.',
                               'hi': 'उत्कृष्ट उपचार परिणाम। खरपतवारों की संख्या बहुत कम हो गई है और फसल स्वस्थ है।'},
+
+    // ── App Usage Manual & Rate App ──
+    'app_usage_manual':      {'en': 'App Usage Manual', 'kn': 'ಆ್ಯಪ್ ಬಳಕೆಯ ಕೈಪಿಡಿ', 'hi': 'ऐप उपयोग निर्देशिका'},
+    'app_manual_subtitle':   {'en': 'Complete step-by-step user guide for farmers', 'kn': 'ರೈತರಿಗೆ ಆ್ಯಪ್ ಬಳಸುವ ಹಂತ-ಹಂತದ ಸಂಪೂರ್ಣ ಮಾರ್ಗದರ್ಶಿ', 'hi': 'किसानों के लिए चरण-दर-चरण संपूर्ण गाइड'},
+    'rate_our_app':          {'en': 'Rate Our App (5 Stars)', 'kn': 'ನಮ್ಮ ಆ್ಯಪ್ ರೇಟ್ ಮಾಡಿ (೫ ಸ್ಟಾರ್)', 'hi': 'हमारे ऐप को 5 स्टार दें'},
+    'rate_app_subtitle':     {'en': 'Share your experience with WeedGuard AI', 'kn': 'ವೀಡ್‌ಗಾರ್ಡ್ AI ನೊಂದಿಗೆ ನಿಮ್ಮ ಅನುಭವವನ್ನು ಹಂಚಿಕೊಳ್ಳಿ', 'hi': 'वीडगार्ड AI के साथ अपना अनुभव साझा करें'},
+    'feedback_submitted':    {'en': 'Thank you for your rating & feedback!', 'kn': 'ನಿಮ್ಮ ಅಮೂಲ್ಯವಾದ ರೇಟಿಂಗ್ ಮತ್ತು ಪ್ರತಿಕ್ರಿಯೆಗೆ ಧನ್ಯವಾದಗಳು!', 'hi': 'आपकी रेटिंग और समीक्षा के लिए धन्यवाद!'},
+    'submit_rating':         {'en': 'Submit Rating', 'kn': 'ರೇಟಿಂಗ್ ಸಲ್ಲಿಸಿ', 'hi': 'रेटिंग सबमिट करें'},
+    'experience_question':   {'en': 'What did you like the most about our app?', 'kn': 'ನಮ್ಮ ಆ್ಯಪ್‌ನಲ್ಲಿ ನಿಮಗೆ ಹೆಚ್ಚು ಇಷ್ಟವಾದದ್ದು ಏನು?', 'hi': 'आपको हमारे ऐप में सबसे अच्छा क्या लगा?'},
   };
 
   String get(String key) {

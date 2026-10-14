@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/l10n/app_localizations.dart';
-import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -28,11 +27,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
     ));
-
-    // Prefetch user's real location weather immediately during splash launch
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(weatherProvider);
-    });
 
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
