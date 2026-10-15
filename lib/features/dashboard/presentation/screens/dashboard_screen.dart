@@ -21,7 +21,6 @@ import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../spray_window/presentation/widgets/spray_window_dialog.dart';
 import '../../../history/presentation/screens/scan_history_screen.dart';
 import '../../../../shared/widgets/scan_thumbnail_image.dart';
-import '../../../../shared/widgets/app_usage_manual_dialog.dart';
 
 final dashboardFieldsProvider = FutureProvider<List<FieldModel>>((ref) async {
   return FieldsRepository(Supabase.instance.client).getFields();
@@ -221,8 +220,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               onAddField: () => context.push('/fields/new'),
               onHistory: () => context.go('/history'),
             ),
-            const SizedBox(height: 20),
-            _AppUsageManualBanner(onTap: () => AppUsageManualDialog.show(context)),
             const SizedBox(height: 20),
             _TipOfTheDay(),
             const SizedBox(height: 24),
@@ -520,21 +517,6 @@ class _HeroSection extends StatelessWidget {
                               ),
                             );
                           },
-                        ),
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: () => AppUsageManualDialog.show(context),
-                          child: Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.18),
-                              border: Border.all(color: Colors.white54, width: 1.5),
-                            ),
-                            child: const Icon(Icons.menu_book_rounded,
-                                color: Colors.white, size: 17),
-                          ),
                         ),
                         const SizedBox(width: 6),
                         Builder(
@@ -1670,105 +1652,6 @@ class _ErrorCard extends StatelessWidget {
       ),
       child: const Text('Unable to load recent scans.',
           style: TextStyle(color: Color(0xFFC62828), fontSize: 13)),
-    );
-  }
-}
-
-class _AppUsageManualBanner extends StatelessWidget {
-  final VoidCallback onTap;
-  const _AppUsageManualBanner({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFE8F5E9), Color(0xFFDCEDC8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFA5D6A7), width: 1.2),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF1B5E20).withOpacity(0.08),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1B5E20),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.menu_book_rounded, color: Colors.white, size: 22),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.get('app_usage_manual'),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF1B4332),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.get('app_manual_subtitle'),
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: Color(0xFF2D6A4F),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1B5E20),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Guide',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 10),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
