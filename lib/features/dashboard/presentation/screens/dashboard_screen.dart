@@ -354,35 +354,44 @@ class _HeroSection extends StatelessWidget {
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(left: 10),
-                        child: RichText(
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          text: const TextSpan(children: [
-                            TextSpan(
-                              text: 'Weed',
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: -0.3),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            RichText(
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              text: const TextSpan(children: [
+                                TextSpan(
+                                  text: 'Weed',
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: -0.3),
+                                ),
+                                TextSpan(
+                                  text: 'Guard',
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF95D5B2),
+                                      letterSpacing: -0.3),
+                                ),
+                              ]),
                             ),
-                            TextSpan(
-                              text: 'Guard ',
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Healthier Crops • Higher Yields',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF95D5B2),
-                                  letterSpacing: -0.3),
-                            ),
-                            TextSpan(
-                              text: '• Healthier Crops • Higher Yields',
-                              style: TextStyle(
-                                  fontSize: 10.5,
+                                  fontSize: 10,
                                   color: Colors.white70,
-                                  fontWeight: FontWeight.w500,
-                                  letterSpacing: 0.1),
+                                  fontWeight: FontWeight.w400,
+                                  letterSpacing: 0.2),
                             ),
-                          ]),
+                          ],
                         ),
                       ),
                     ),
