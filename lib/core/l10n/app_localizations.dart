@@ -121,6 +121,7 @@ class AppLocalizations {
     'dark_mode':       {'en': 'Dark Mode',     'kn': 'ಡಾರ್ಕ್ ಮೋಡ್',   'hi': 'डार्क मोड'},
     'units':           {'en': 'Units',         'kn': 'ಘಟಕಗಳು',         'hi': 'इकाइयाँ'},
     'metric':          {'en': 'Metric',        'kn': 'ಮೆಟ್ರಿಕ್',       'hi': 'मेट्रिक'},
+    'imperial':        {'en': 'Imperial',      'kn': 'ಇಂಪೀರಿಯಲ್',     'hi': 'इंपीरियल'},
     'about':           {'en': 'About',         'kn': 'ನಮ್ಮ ಬಗ್ಗೆ',     'hi': 'के बारे में'},
     'privacy_policy':  {'en': 'Privacy Policy','kn': 'ಗೌಪ್ಯತಾ ನೀತಿ', 'hi': 'गोपनीयता नीति'},
     'app_version':     {'en': 'App Version',   'kn': 'ಆ್ಯಪ್ ಆವೃತ್ತಿ', 'hi': 'ऐप संस्करण'},
@@ -264,6 +265,7 @@ class AppLocalizations {
   String get darkMode => get('dark_mode');
   String get units => get('units');
   String get metric => get('metric');
+  String get imperial => get('imperial');
   String get about => get('about');
   String get privacyPolicy => get('privacy_policy');
   String get appVersion => get('app_version');

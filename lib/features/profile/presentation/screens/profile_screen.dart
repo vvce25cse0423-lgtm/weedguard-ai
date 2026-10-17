@@ -1,19 +1,21 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers/app_providers.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
@@ -53,6 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _photoPath = photo;
       });
+      ref.read(userAvatarProvider.notifier).setAvatar(photo);
     }
   }
 
@@ -119,6 +122,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ));
       } catch (_) {}
 
+      ref.read(userAvatarProvider.notifier).setAvatar(uploadedUrl ?? localFile.path);
       if (mounted) {
         setState(() {
           _photoPath = localFile.path;
@@ -151,6 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         data: {'avatar_url': ''},
       ));
     } catch (_) {}
+    ref.read(userAvatarProvider.notifier).setAvatar(null);
     if (mounted) {
       setState(() {
         _photoPath = null;

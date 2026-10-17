@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // ── Theme Provider ────────────────────────────────────────────────────────────
 final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
@@ -43,5 +45,78 @@ class LocaleNotifier extends StateNotifier<Locale> {
     state = locale;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_key, locale.languageCode);
+  }
+}
+
+// ── Units Provider ────────────────────────────────────────────────────────────
+final unitsProvider = StateNotifierProvider<UnitsNotifier, String>((ref) {
+  return UnitsNotifier();
+});
+
+class UnitsNotifier extends StateNotifier<String> {
+  static const _key = 'units_system';
+  UnitsNotifier() : super('metric') { _load(); }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = prefs.getString(_key) ?? 'metric';
+  }
+
+  Future<void> setUnits(String units) async {
+    state = units;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, units);
+  }
+}
+
+// ── User Avatar Provider ──────────────────────────────────────────────────────
+final userAvatarProvider = StateNotifierProvider<UserAvatarNotifier, String?>((ref) {
+  return UserAvatarNotifier();
+});
+
+class UserAvatarNotifier extends StateNotifier<String?> {
+  static const _keyPath = 'profile_photo_path';
+  static const _keyUrl = 'profile_photo_url';
+
+  UserAvatarNotifier() : super(null) { _load(); }
+
+  Future<void> _load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final localPath = prefs.getString(_keyPath);
+      if (localPath != null && localPath.isNotEmpty) {
+        final clean = localPath.replaceFirst(RegExp(r'^file://'), '');
+        if (File(clean).existsSync()) {
+          state = clean;
+          return;
+        }
+      }
+      final remoteUrl = prefs.getString(_keyUrl);
+      if (remoteUrl != null && remoteUrl.isNotEmpty) {
+        state = remoteUrl;
+        return;
+      }
+      final user = Supabase.instance.client.auth.currentUser;
+      final metaAvatar = user?.userMetadata?['avatar_url'] as String?;
+      if (metaAvatar != null && metaAvatar.isNotEmpty) {
+        state = metaAvatar;
+      }
+    } catch (_) {}
+  }
+
+  Future<void> setAvatar(String? pathOrUrl) async {
+    state = pathOrUrl;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (pathOrUrl == null || pathOrUrl.isEmpty) {
+        await prefs.remove(_keyPath);
+        await prefs.remove(_keyUrl);
+      } else if (pathOrUrl.startsWith('http')) {
+        await prefs.setString(_keyUrl, pathOrUrl);
+      } else {
+        final clean = pathOrUrl.replaceFirst(RegExp(r'^file://'), '');
+        await prefs.setString(_keyPath, clean);
+      }
+    } catch (_) {}
   }
 }

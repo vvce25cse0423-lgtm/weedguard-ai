@@ -96,27 +96,41 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _showUnitsDialog(BuildContext context) {
+  void _showUnitsDialog(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final currentUnits = ref.read(unitsProvider);
     showDialog(
       context: context,
       builder: (ctx) => SimpleDialog(
         title: Text(l10n.units),
         children: [
           SimpleDialogOption(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Row(children: [
-              Icon(Icons.check, color: Color(0xFF2E7D32), size: 18),
-              SizedBox(width: 8),
-              Text('Metric (kg, ha, km)'),
+            onPressed: () {
+              ref.read(unitsProvider.notifier).setUnits('metric');
+              Navigator.pop(ctx);
+            },
+            child: Row(children: [
+              if (currentUnits != 'imperial')
+                const Icon(Icons.check, color: Color(0xFF2E7D32), size: 18)
+              else
+                const SizedBox(width: 18),
+              const SizedBox(width: 8),
+              const Text('Metric (kg, ha, km)'),
             ]),
           ),
           SimpleDialogOption(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Padding(
-              padding: EdgeInsets.only(left: 26),
-              child: Text('Imperial (lb, acre, mi)'),
-            ),
+            onPressed: () {
+              ref.read(unitsProvider.notifier).setUnits('imperial');
+              Navigator.pop(ctx);
+            },
+            child: Row(children: [
+              if (currentUnits == 'imperial')
+                const Icon(Icons.check, color: Color(0xFF2E7D32), size: 18)
+              else
+                const SizedBox(width: 18),
+              const SizedBox(width: 8),
+              const Text('Imperial (lb, acre, mi)'),
+            ]),
           ),
         ],
       ),
@@ -150,6 +164,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final locale = ref.watch(localeProvider);
+    final units = ref.watch(unitsProvider);
     final topPad = MediaQuery.of(context).padding.top;
 
     final langLabel = locale.languageCode == 'kn'
@@ -157,6 +172,8 @@ class SettingsScreen extends ConsumerWidget {
         : locale.languageCode == 'hi'
             ? 'हिंदी'
             : 'English';
+
+    final unitsLabel = units == 'imperial' ? l10n.imperial : l10n.metric;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -217,9 +234,9 @@ class SettingsScreen extends ConsumerWidget {
             _Tile(
               icon: Icons.straighten_outlined,
               label: l10n.units,
-              trailing: Text(l10n.metric,
+              trailing: Text(unitsLabel,
                   style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
-              onTap: () => _showUnitsDialog(context),
+              onTap: () => _showUnitsDialog(context, ref),
             ),
           ]),
 

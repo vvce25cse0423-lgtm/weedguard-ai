@@ -2,6 +2,23 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
+String? normalizeLocalPath(String? raw) {
+  if (raw == null || raw.isEmpty) return null;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return null;
+  var p = raw.trim();
+  try {
+    final uri = Uri.tryParse(p);
+    if (uri != null && uri.scheme == 'file') {
+      p = uri.toFilePath();
+    }
+  } catch (_) {}
+  p = p.replaceFirst(RegExp(r'^file://'), '');
+  if (Platform.isWindows && p.startsWith('/') && p.length > 2 && p[2] == ':') {
+    p = p.substring(1);
+  }
+  return p;
+}
+
 class ScanThumbnailImage extends StatefulWidget {
   final String? imageUrl;
   final DateTime? createdAt;
@@ -35,13 +52,13 @@ class _ScanThumbnailImageState extends State<ScanThumbnailImage> {
   @override
   void initState() {
     super.initState();
-    final raw = widget.imageUrl;
-    if (raw != null && raw.isNotEmpty && !raw.startsWith('http')) {
-      final clean = raw.replaceFirst(RegExp(r'^file://'), '');
-      final direct = File(clean);
-      if (direct.existsSync()) {
-        _resolvedFile = direct;
-      }
+    _checkInitial();
+  }
+
+  void _checkInitial() {
+    final direct = _checkDirectFile(widget.imageUrl);
+    if (direct != null) {
+      _resolvedFile = direct;
     }
     _tryResolveImage();
   }
@@ -50,41 +67,39 @@ class _ScanThumbnailImageState extends State<ScanThumbnailImage> {
   void didUpdateWidget(ScanThumbnailImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.imageUrl != widget.imageUrl || oldWidget.createdAt != widget.createdAt) {
-      final raw = widget.imageUrl;
-      if (raw != null && raw.isNotEmpty && !raw.startsWith('http')) {
-        final clean = raw.replaceFirst(RegExp(r'^file://'), '');
-        final direct = File(clean);
-        if (direct.existsSync()) {
-          _resolvedFile = direct;
-        }
+      final direct = _checkDirectFile(widget.imageUrl);
+      if (direct != null) {
+        _resolvedFile = direct;
       }
       _tryResolveImage();
     }
   }
 
-  Future<void> _tryResolveImage() async {
-    final raw = widget.imageUrl;
+  File? _checkDirectFile(String? raw) {
+    final clean = normalizeLocalPath(raw);
+    if (clean != null && clean.isNotEmpty) {
+      try {
+        final f = File(clean);
+        if (f.existsSync()) return f;
+      } catch (_) {}
+    }
+    return null;
+  }
 
-    // Fast-path: Synchronous local file check
-    if (raw != null && raw.isNotEmpty && !raw.startsWith('http')) {
-      final clean = raw.replaceFirst(RegExp(r'^file://'), '');
-      final directFile = File(clean);
-      if (directFile.existsSync()) {
-        if (mounted) {
-          setState(() {
-            _resolvedFile = directFile;
-          });
-        }
-        return;
+  Future<void> _tryResolveImage() async {
+    final direct = _checkDirectFile(widget.imageUrl);
+    if (direct != null) {
+      if (mounted && _resolvedFile?.path != direct.path) {
+        setState(() => _resolvedFile = direct);
       }
+      return;
     }
 
-    // Async-path: Search scans folder or match by createdAt
     if (_isCheckingDisk) return;
     _isCheckingDisk = true;
 
     try {
-      final found = await resolveScanFile(raw, widget.createdAt);
+      final found = await resolveScanFile(widget.imageUrl, widget.createdAt);
       if (mounted && found != null) {
         setState(() {
           _resolvedFile = found;
@@ -112,17 +127,16 @@ class _ScanThumbnailImageState extends State<ScanThumbnailImage> {
 
   @override
   Widget build(BuildContext context) {
-    Widget content;
+    final direct = _checkDirectFile(widget.imageUrl);
+    final activeFile = direct ?? _resolvedFile;
 
-    if (_resolvedFile != null && _resolvedFile!.existsSync()) {
+    Widget content;
+    if (activeFile != null && activeFile.existsSync()) {
       content = Image.file(
-        _resolvedFile!,
+        activeFile,
         width: widget.width,
         height: widget.height,
         fit: widget.fit,
-        cacheWidth: (widget.width != null && widget.width!.isFinite)
-            ? (widget.width! * 2.5).round()
-            : null,
         errorBuilder: (_, __, ___) => _buildPlaceholder(),
       );
     } else if (widget.imageUrl != null &&
@@ -133,20 +147,14 @@ class _ScanThumbnailImageState extends State<ScanThumbnailImage> {
         width: widget.width,
         height: widget.height,
         fit: widget.fit,
-        cacheWidth: (widget.width != null && widget.width!.isFinite)
-            ? (widget.width! * 2.5).round()
-            : null,
         errorBuilder: (_, __, ___) {
-          // If network 404s (e.g. Supabase bucket missing), display resolved file or placeholder
           if (_resolvedFile != null && _resolvedFile!.existsSync()) {
             return Image.file(
               _resolvedFile!,
               width: widget.width,
               height: widget.height,
               fit: widget.fit,
-              cacheWidth: (widget.width != null && widget.width!.isFinite)
-                  ? (widget.width! * 2.5).round()
-                  : null,
+              errorBuilder: (_, __, ___) => _buildPlaceholder(),
             );
           }
           return _buildPlaceholder();
@@ -181,33 +189,50 @@ class _ScanThumbnailImageState extends State<ScanThumbnailImage> {
 Future<File?> resolveScanFile(String? rawPath, DateTime? createdAt) async {
   try {
     // 1. Direct path check
-    if (rawPath != null && rawPath.isNotEmpty && !rawPath.startsWith('http')) {
-      final clean = rawPath.replaceFirst(RegExp(r'^file://'), '');
-      final f = File(clean);
+    final direct = normalizeLocalPath(rawPath);
+    if (direct != null && direct.isNotEmpty) {
+      final f = File(direct);
       if (f.existsSync()) return f;
+    }
 
-      // Extract filename and check standard app directories
-      final parts = clean.split(RegExp(r'[/\\]'));
-      final filename = parts.isNotEmpty ? parts.last : '';
-      if (filename.isNotEmpty) {
-        final appDir = await getApplicationDocumentsDirectory();
-        final inScans = File('${appDir.path}/scans/$filename');
-        if (inScans.existsSync()) return inScans;
-
-        final inRoot = File('${appDir.path}/$filename');
-        if (inRoot.existsSync()) return inRoot;
-
-        final tempDir = await getTemporaryDirectory();
-        final inTemp = File('${tempDir.path}/$filename');
-        if (inTemp.existsSync()) return inTemp;
+    // Extract filename if available
+    String? targetFilename;
+    if (rawPath != null && rawPath.isNotEmpty) {
+      if (rawPath.startsWith('http')) {
+        try {
+          final uri = Uri.tryParse(rawPath);
+          if (uri != null && uri.pathSegments.isNotEmpty) {
+            targetFilename = uri.pathSegments.last;
+          }
+        } catch (_) {}
+      } else {
+        final clean = normalizeLocalPath(rawPath) ?? rawPath;
+        final parts = clean.split(RegExp(r'[/\\]'));
+        if (parts.isNotEmpty) targetFilename = parts.last;
       }
     }
 
-    // 2. Scan documents directory scans folder + temporary directory
     final appDir = await getApplicationDocumentsDirectory();
     final tempDir = await getTemporaryDirectory();
+
+    if (targetFilename != null && targetFilename.isNotEmpty) {
+      final inScans = File('${appDir.path}/scans/$targetFilename');
+      if (inScans.existsSync()) return inScans;
+
+      final inRoot = File('${appDir.path}/$targetFilename');
+      if (inRoot.existsSync()) return inRoot;
+
+      final inTempScans = File('${tempDir.path}/scans/$targetFilename');
+      if (inTempScans.existsSync()) return inTempScans;
+
+      final inTemp = File('${tempDir.path}/$targetFilename');
+      if (inTemp.existsSync()) return inTemp;
+    }
+
+    // 2. Scan candidate directories
     final candidateDirs = [
       Directory('${appDir.path}/scans'),
+      Directory('${tempDir.path}/scans'),
       appDir,
       tempDir,
     ];
@@ -231,6 +256,17 @@ Future<File?> resolveScanFile(String? rawPath, DateTime? createdAt) async {
 
     if (files.isEmpty) return null;
 
+    // Check if any file matches targetFilename
+    if (targetFilename != null && targetFilename.isNotEmpty) {
+      final cleanTarget = targetFilename.toLowerCase();
+      for (final f in files) {
+        final fname = f.path.split(RegExp(r'[/\\]')).last.toLowerCase();
+        if (fname == cleanTarget || fname.contains(cleanTarget)) {
+          return f;
+        }
+      }
+    }
+
     if (createdAt != null) {
       final targetMs = createdAt.millisecondsSinceEpoch;
       File? bestMatch;
@@ -238,7 +274,6 @@ Future<File?> resolveScanFile(String? rawPath, DateTime? createdAt) async {
 
       for (final f in files) {
         final name = f.path.split(RegExp(r'[/\\]')).last;
-        // Check if filename contains timestamp: scan_1728848800000.jpg
         final match = RegExp(r'scan_(\d+)').firstMatch(name);
         int fileMs = 0;
         if (match != null) {

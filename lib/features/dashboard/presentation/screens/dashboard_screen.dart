@@ -16,8 +16,6 @@ import '../../../scanner/presentation/widgets/severity_chip.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/providers/app_providers.dart';
-import '../../../../core/services/notification_service.dart';
-import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../spray_window/presentation/widgets/spray_window_dialog.dart';
 import '../../../history/presentation/screens/scan_history_screen.dart';
 import '../../../../shared/widgets/scan_thumbnail_image.dart';
@@ -354,40 +352,38 @@ class _HeroSection extends StatelessWidget {
                       ),
                     ),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          RichText(
-                            text: const TextSpan(children: [
-                              TextSpan(
-                                text: 'Weed',
-                                style: TextStyle(
-                                    fontSize: 21,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                    letterSpacing: -0.3),
-                              ),
-                              TextSpan(
-                                text: 'Guard',
-                                style: TextStyle(
-                                    fontSize: 21,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF95D5B2),
-                                    letterSpacing: -0.3),
-                              ),
-                            ]),
-                          ),
-                          const Text(
-                            'Healthier Crops • Higher Yields',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 9.5,
-                                color: Colors.white70,
-                                fontWeight: FontWeight.w400,
-                                letterSpacing: 0.2),
-                          ),
-                        ],
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 10),
+                        child: RichText(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          text: const TextSpan(children: [
+                            TextSpan(
+                              text: 'Weed',
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: -0.3),
+                            ),
+                            TextSpan(
+                              text: 'Guard ',
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF95D5B2),
+                                  letterSpacing: -0.3),
+                            ),
+                            TextSpan(
+                              text: '• Healthier Crops • Higher Yields',
+                              style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.1),
+                            ),
+                          ]),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -469,60 +465,9 @@ class _HeroSection extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        ValueListenableBuilder<int>(
-                          valueListenable: NotificationService.unreadCountNotifier,
-                          builder: (context, unreadCount, _) {
-                            return GestureDetector(
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => const NotificationsScreen()),
-                              ),
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  Container(
-                                    width: 34,
-                                    height: 34,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white.withOpacity(0.18),
-                                      border: Border.all(
-                                          color: Colors.white54, width: 1.5),
-                                    ),
-                                    child: const Icon(Icons.notifications_outlined,
-                                        color: Colors.white, size: 18),
-                                  ),
-                                  if (unreadCount > 0)
-                                    Positioned(
-                                      right: -2,
-                                      top: -2,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(3),
-                                        decoration: const BoxDecoration(
-                                          color: Colors.redAccent,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Text(
-                                          '$unreadCount',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 6),
-                        Builder(
-                          builder: (context) {
-                            final user = Supabase.instance.client.auth.currentUser;
-                            final avatar = user?.userMetadata?['avatar_url'] as String?;
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final avatar = ref.watch(userAvatarProvider);
                             Widget avatarWidget = const Icon(Icons.person_outline_rounded,
                                 color: Colors.white, size: 18);
                             if (avatar != null && avatar.isNotEmpty) {
@@ -540,7 +485,8 @@ class _HeroSection extends StatelessWidget {
                                   ),
                                 );
                               } else {
-                                final f = File(avatar);
+                                final clean = normalizeLocalPath(avatar) ?? avatar;
+                                final f = File(clean);
                                 if (f.existsSync()) {
                                   avatarWidget = ClipOval(
                                     child: Image.file(

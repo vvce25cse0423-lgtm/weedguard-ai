@@ -80,7 +80,7 @@ class ScanRepository {
         effectiveImageUrl.isNotEmpty &&
         !effectiveImageUrl.startsWith('http')) {
       try {
-        final clean = effectiveImageUrl.replaceFirst(RegExp(r'^file://'), '');
+        final clean = normalizeLocalPath(effectiveImageUrl) ?? effectiveImageUrl;
         final src = File(clean);
         if (src.existsSync()) {
           final appDir = await getApplicationDocumentsDirectory();
@@ -89,8 +89,10 @@ class ScanRepository {
           final ext = clean.contains('.') ? clean.split('.').last : 'jpg';
           final dest = File('${scansDir.path}/scan_${now.millisecondsSinceEpoch}.$ext');
           if (src.path != dest.path) {
-            await src.copy(dest.path);
+            await dest.writeAsBytes(await src.readAsBytes());
             effectiveImageUrl = dest.path;
+          } else {
+            effectiveImageUrl = src.path;
           }
         }
       } catch (_) {}
@@ -196,10 +198,9 @@ class ScanRepository {
         for (final item in list) {
           var s = ScanModel.fromJson(item as Map<String, dynamic>);
           // If image path is missing or points to stale path, attempt to heal from disk
-          if (s.imageUrl == null ||
-              s.imageUrl!.isEmpty ||
-              (!s.imageUrl!.startsWith('http') &&
-                  !File(s.imageUrl!.replaceFirst(RegExp(r'^file://'), '')).existsSync())) {
+          final cleanLocal = normalizeLocalPath(s.imageUrl);
+          final bool hasValidFile = cleanLocal != null && File(cleanLocal).existsSync();
+          if (!hasValidFile) {
             try {
               final healed = await resolveScanFile(s.imageUrl, s.createdAt);
               if (healed != null && healed.existsSync()) {
@@ -228,10 +229,8 @@ class ScanRepository {
             final existing = scanMap[s.id];
             if (existing != null) {
               // Never destroy a valid on-device image path with a null or broken remote URL
-              final bool existingValid = existing.imageUrl != null &&
-                  existing.imageUrl!.isNotEmpty &&
-                  (!existing.imageUrl!.startsWith('http') &&
-                      File(existing.imageUrl!.replaceFirst(RegExp(r'^file://'), '')).existsSync());
+              final cleanEx = normalizeLocalPath(existing.imageUrl);
+              final bool existingValid = cleanEx != null && File(cleanEx).existsSync();
 
               final String? mergedImage = existingValid
                   ? existing.imageUrl
@@ -242,9 +241,11 @@ class ScanRepository {
                 cropName: s.cropName ?? existing.cropName,
               );
             } else {
-              if (s.imageUrl == null || s.imageUrl!.isEmpty) {
+              final cleanRemote = normalizeLocalPath(s.imageUrl);
+              final bool remoteValid = cleanRemote != null && File(cleanRemote).existsSync();
+              if (!remoteValid) {
                 try {
-                  final healed = await resolveScanFile(null, s.createdAt);
+                  final healed = await resolveScanFile(s.imageUrl, s.createdAt);
                   if (healed != null && healed.existsSync()) {
                     s = s.copyWith(imageUrl: healed.path);
                   }

@@ -66,7 +66,9 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
       final scansDir = Directory('${appDir.path}/scans');
       if (!scansDir.existsSync()) scansDir.createSync(recursive: true);
       final filename = 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final permanentFile = await File(picked.path).copy('${scansDir.path}/$filename');
+      final permanentFile = File('${scansDir.path}/$filename');
+      final bytes = await picked.readAsBytes();
+      await permanentFile.writeAsBytes(bytes);
 
       final size = await permanentFile.length();
       if (size > AppConstants.maxImageSizeBytes) {
