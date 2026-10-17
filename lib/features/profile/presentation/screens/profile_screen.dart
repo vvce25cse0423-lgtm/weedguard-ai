@@ -122,7 +122,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ));
       } catch (_) {}
 
-      ref.read(userAvatarProvider.notifier).setAvatar(uploadedUrl ?? localFile.path);
+      ref.read(userAvatarProvider.notifier).setAvatar(localFile.path);
       if (mounted) {
         setState(() {
           _photoPath = localFile.path;
@@ -296,6 +296,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       };
       if (_photoPath != null) {
         updateData['avatar_url'] = _photoPath!;
+        ref.read(userAvatarProvider.notifier).setAvatar(_photoPath!);
       }
       await Supabase.instance.client.auth.updateUser(UserAttributes(
         data: updateData,

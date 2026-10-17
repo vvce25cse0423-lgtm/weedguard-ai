@@ -16,6 +16,8 @@ import '../../../scanner/presentation/widgets/severity_chip.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/providers/app_providers.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../spray_window/presentation/widgets/spray_window_dialog.dart';
 import '../../../history/presentation/screens/scan_history_screen.dart';
 import '../../../../shared/widgets/scan_thumbnail_image.dart';
@@ -477,55 +479,7 @@ class _HeroSection extends StatelessWidget {
                         Consumer(
                           builder: (context, ref, _) {
                             final avatar = ref.watch(userAvatarProvider);
-                            Widget avatarWidget = const Icon(Icons.person_outline_rounded,
-                                color: Colors.white, size: 18);
-                            if (avatar != null && avatar.isNotEmpty) {
-                              if (avatar.startsWith('http')) {
-                                avatarWidget = ClipOval(
-                                  child: Image.network(
-                                    avatar,
-                                    width: 34,
-                                    height: 34,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Icon(
-                                        Icons.person_outline_rounded,
-                                        color: Colors.white,
-                                        size: 18),
-                                  ),
-                                );
-                              } else {
-                                final clean = normalizeLocalPath(avatar) ?? avatar;
-                                final f = File(clean);
-                                if (f.existsSync()) {
-                                  avatarWidget = ClipOval(
-                                    child: Image.file(
-                                      f,
-                                      width: 34,
-                                      height: 34,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Icon(
-                                          Icons.person_outline_rounded,
-                                          color: Colors.white,
-                                          size: 18),
-                                    ),
-                                  );
-                                }
-                              }
-                            }
-                            return GestureDetector(
-                              onTap: () => context.push('/profile'),
-                              child: Container(
-                                width: 34,
-                                height: 34,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white.withOpacity(0.18),
-                                  border:
-                                      Border.all(color: Colors.white54, width: 1.5),
-                                ),
-                                child: avatarWidget,
-                              ),
-                            );
+                            return _DashboardAvatarButton(avatar: avatar);
                           },
                         ),
                       ],
@@ -600,6 +554,105 @@ class _HeroWavePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_) => false;
+}
+
+Future<File?> _resolveProfileAvatarFile() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final localPath = prefs.getString('profile_photo_path');
+    if (localPath != null && localPath.isNotEmpty) {
+      final clean = normalizeLocalPath(localPath) ?? localPath;
+      final f = File(clean);
+      if (f.existsSync()) return f;
+    }
+
+    final appDir = await getApplicationDocumentsDirectory();
+    final files = appDir
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.contains('profile_avatar_'))
+        .toList();
+    if (files.isNotEmpty) {
+      files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+      return files.first;
+    }
+  } catch (_) {}
+  return null;
+}
+
+class _DashboardAvatarButton extends StatelessWidget {
+  final String? avatar;
+  const _DashboardAvatarButton({required this.avatar});
+
+  Widget _buildPlaceholder() {
+    return const Center(
+      child: Icon(Icons.person_outline_rounded, color: Colors.white, size: 18),
+    );
+  }
+
+  Widget _buildFutureFallback() {
+    return FutureBuilder<File?>(
+      future: _resolveProfileAvatarFile(),
+      builder: (context, snapshot) {
+        final f = snapshot.data;
+        if (f != null && f.existsSync()) {
+          return Image.file(
+            f,
+            width: 34,
+            height: 34,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildPlaceholder(),
+          );
+        }
+        return _buildPlaceholder();
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget content;
+    final clean = normalizeLocalPath(avatar);
+
+    if (clean != null && clean.isNotEmpty) {
+      final f = File(clean);
+      if (f.existsSync()) {
+        content = Image.file(
+          f,
+          width: 34,
+          height: 34,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildFutureFallback(),
+        );
+      } else {
+        content = _buildFutureFallback();
+      }
+    } else if (avatar != null && avatar!.isNotEmpty && avatar!.startsWith('http')) {
+      content = Image.network(
+        avatar!,
+        width: 34,
+        height: 34,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildFutureFallback(),
+      );
+    } else {
+      content = _buildFutureFallback();
+    }
+
+    return GestureDetector(
+      onTap: () => context.push('/profile'),
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withOpacity(0.18),
+          border: Border.all(color: Colors.white54, width: 1.5),
+        ),
+        child: ClipOval(child: content),
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────

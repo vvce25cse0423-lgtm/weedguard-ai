@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -78,7 +79,9 @@ class UserAvatarNotifier extends StateNotifier<String?> {
   static const _keyPath = 'profile_photo_path';
   static const _keyUrl = 'profile_photo_url';
 
-  UserAvatarNotifier() : super(null) { _load(); }
+  UserAvatarNotifier() : super(null) {
+    _load();
+  }
 
   Future<void> _load() async {
     try {
@@ -91,11 +94,27 @@ class UserAvatarNotifier extends StateNotifier<String?> {
           return;
         }
       }
+
+      // Check app directory for saved profile avatar files
+      final appDir = await getApplicationDocumentsDirectory();
+      final files = appDir
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.contains('profile_avatar_'))
+          .toList();
+      if (files.isNotEmpty) {
+        files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+        state = files.first.path;
+        await prefs.setString(_keyPath, files.first.path);
+        return;
+      }
+
       final remoteUrl = prefs.getString(_keyUrl);
       if (remoteUrl != null && remoteUrl.isNotEmpty) {
         state = remoteUrl;
         return;
       }
+
       final user = Supabase.instance.client.auth.currentUser;
       final metaAvatar = user?.userMetadata?['avatar_url'] as String?;
       if (metaAvatar != null && metaAvatar.isNotEmpty) {
