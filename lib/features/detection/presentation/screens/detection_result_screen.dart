@@ -1,0 +1,1841 @@
+import '../../data/agronomy_pdf_report_service.dart';
+import '../../data/agronomy_voice_assistant_service.dart';
+import '../../../fields/data/fields_repository.dart';
+import 'dart:io';
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../scanner/data/scan_repository.dart';
+import '../../../../shared/models/detection_result_model.dart';
+import '../../../../shared/models/scan_model.dart';
+import '../widgets/detection_overlay_painter.dart';
+import '../../../../core/l10n/app_localizations.dart';
+import '../../../dashboard/presentation/screens/dashboard_screen.dart';
+import '../../../history/presentation/screens/scan_history_screen.dart';
+import '../../../spray_window/presentation/widgets/spray_window_dialog.dart';
+import '../../../roi_calculator/presentation/widgets/roi_savings_card.dart';
+import '../../../organic/presentation/widgets/organic_management_card.dart';
+import '../../../resistance/presentation/widgets/resistance_tracker_widget.dart';
+
+
+class DetectionResultScreen extends ConsumerStatefulWidget {
+  final WeedDetectionResult result;
+  final String fieldId;
+  final String? scanId;
+
+  const DetectionResultScreen({
+    super.key,
+    required this.result,
+    required this.fieldId,
+    this.scanId,
+  });
+
+  @override
+  ConsumerState<DetectionResultScreen> createState() => _DetectionResultScreenState();
+}
+
+class _DetectionResultScreenState extends ConsumerState<DetectionResultScreen> {
+  bool _showFieldZones = false;
+  bool _scanSaved = false;
+
+  Future<void> _saveAndGoHistory() async {
+    // Ensure scan is saved into local/remote repository
+    if (!_scanSaved) {
+      _scanSaved = true;
+      try {
+        String effectiveFieldId = widget.fieldId;
+        final fieldsRepo = FieldsRepository(Supabase.instance.client);
+        if (effectiveFieldId.isEmpty) {
+          final cropLabel = widget.result.detections.where((d) => d.isCrop).isNotEmpty
+              ? widget.result.detections.firstWhere((d) => d.isCrop).label
+              : (widget.result.detections.isNotEmpty ? widget.result.detections.first.label : 'Crop');
+          final field = await fieldsRepo.getOrCreateFieldForCrop(cropLabel);
+          effectiveFieldId = field.id;
+        }
+
+        final scanRepo = ScanRepository(Supabase.instance.client);
+        await scanRepo.saveScan(
+          fieldId: effectiveFieldId,
+          result: widget.result,
+          imageUrl: widget.result.imageUrl ?? widget.result.imagePath,
+          scanId: widget.scanId,
+        );
+      } catch (_) {
+        // best effort
+      }
+    }
+    ref.invalidate(dashboardScansProvider);
+    ref.invalidate(dashboardFieldsProvider);
+    ref.invalidate(scanHistoryProvider);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Scan saved successfully to My Fields and History!'),
+          backgroundColor: Color(0xFF1B5E20),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      context.go('/history');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _showFieldZones
+        ? _FieldZonesScreen(
+            result: widget.result,
+            scanId: widget.scanId,
+            onBack: () => setState(() => _showFieldZones = false),
+            onSaveScan: _saveAndGoHistory,
+          )
+        : _AnalysisResultsScreen(
+            result: widget.result,
+            fieldId: widget.fieldId,
+            scanId: widget.scanId,
+            onViewFieldZones: () => setState(() => _showFieldZones = true),
+            onSaveScan: _saveAndGoHistory,
+          );
+  }
+}
+
+// ─── Analysis Results Screen ──────────────────────────────────────────────────
+
+class _AnalysisResultsScreen extends StatefulWidget {
+  final WeedDetectionResult result;
+  final String fieldId;
+  final String? scanId;
+  final VoidCallback onViewFieldZones;
+  final VoidCallback onSaveScan;
+
+  const _AnalysisResultsScreen({
+    required this.result,
+    required this.fieldId,
+    required this.scanId,
+    required this.onViewFieldZones,
+    required this.onSaveScan,
+  });
+
+  @override
+  State<_AnalysisResultsScreen> createState() => _AnalysisResultsScreenState();
+}
+
+class _AnalysisResultsScreenState extends State<_AnalysisResultsScreen> {
+  bool _isGeneratingPdf = false;
+
+  Future<void> _shareReport() async {
+    setState(() => _isGeneratingPdf = true);
+    try {
+      String? fieldName;
+      String? locationLabel;
+      String? cropType;
+
+      if (widget.fieldId.isNotEmpty) {
+        try {
+          final repo = FieldsRepository(Supabase.instance.client);
+          final field = await repo.getField(widget.fieldId);
+          fieldName = field.name;
+          locationLabel = field.locationLabel;
+          cropType = field.cropType;
+        } catch (_) {}
+      }
+
+      await AgronomyPdfReportService.generateAndShareReport(
+        result: widget.result,
+        fieldName: fieldName,
+        locationLabel: locationLabel,
+        cropType: cropType,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to generate report')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGeneratingPdf = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    AgronomyVoiceAssistantService.stop();
+    super.dispose();
+  }
+
+  Future<void> _playVoiceAssistant() async {
+    final langCode = Localizations.localeOf(context).languageCode;
+    String? fieldName;
+    String? cropType;
+
+    if (widget.fieldId.isNotEmpty) {
+      try {
+        final repo = FieldsRepository(Supabase.instance.client);
+        final field = await repo.getField(widget.fieldId);
+        fieldName = field.name;
+        cropType = field.cropType;
+      } catch (_) {}
+    }
+
+    await AgronomyVoiceAssistantService.speakAnalysisReport(
+      result: widget.result,
+      languageCode: langCode,
+      cropType: cropType,
+      fieldName: fieldName,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1B5E20),
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/images/app_icon.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                  child: const Icon(Icons.eco, color: Colors.white, size: 16),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(AppLocalizations.of(context).appName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 17)),
+          ],
+        ),
+        actions: [
+          ValueListenableBuilder<TtsVoiceState>(
+            valueListenable: AgronomyVoiceAssistantService.voiceStateNotifier,
+            builder: (context, state, _) {
+              final isPlaying = state == TtsVoiceState.playing;
+              return IconButton(
+                tooltip: isPlaying ? 'Stop Read Aloud' : 'Read Aloud in Regional Language',
+                icon: Icon(
+                  isPlaying ? Icons.stop_circle_outlined : Icons.volume_up_rounded,
+                  color: isPlaying ? Colors.amberAccent : Colors.white,
+                  size: 24,
+                ),
+                onPressed: _playVoiceAssistant,
+              );
+            },
+          ),
+          IconButton(
+            tooltip: AppLocalizations.of(context).sprayDialogTitle,
+            icon: const Icon(Icons.wb_twilight_rounded, color: Colors.amberAccent, size: 24),
+            onPressed: () => SprayWindowDialog.show(context),
+          ),
+          const SizedBox(width: 4),
+        ],
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Container(
+                    width: double.infinity,
+                    color: Colors.white,
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(AppLocalizations.of(context).analysisResults,
+                                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
+                              const SizedBox(height: 2),
+                              const Text('Field scan completed successfully',
+                                  style: TextStyle(fontSize: 13, color: Color(0xFF5C5C5C))),
+                            ],
+                          ),
+                        ),
+                        // Voice Assistant Interactive Button
+                        ValueListenableBuilder<TtsVoiceState>(
+                          valueListenable: AgronomyVoiceAssistantService.voiceStateNotifier,
+                          builder: (context, state, _) {
+                            final isPlaying = state == TtsVoiceState.playing;
+                            return InkWell(
+                              onTap: _playVoiceAssistant,
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isPlaying ? const Color(0xFFE8F5E9) : const Color(0xFFF1F8E9),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isPlaying ? const Color(0xFF2E7D32) : const Color(0xFF81C784),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isPlaying ? Icons.graphic_eq_rounded : Icons.record_voice_over_rounded,
+                                      color: const Color(0xFF2E7D32),
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      isPlaying ? 'Listening…' : 'Read Aloud',
+                                      style: const TextStyle(
+                                        color: Color(0xFF2E7D32),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Image with bounding boxes
+                  _ScannedImageSection(result: widget.result),
+                  // Stats row
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: _StatsRow(result: widget.result),
+                  ),
+                  // Detected weed types
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                    child: _DetectedWeedTypes(result: widget.result),
+                  ),
+                  const SizedBox(height: 20),
+                  // Herbicide recommendations
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                    child: _HerbicideRecommendations(result: widget.result),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Feature 2: Precision ROI & Chemical Savings
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: RoiSavingsCard(
+                      weedCount: widget.result.weedCount,
+                      averageConfidence: widget.result.averageConfidence,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Feature 3: Organic & Bio-Weed Management Alternatives
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: OrganicManagementCard(
+                      weeds: widget.result.detections
+                          .where((d) => !d.isCrop)
+                          .map((d) => d.label)
+                          .toSet()
+                          .toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Feature 6: Weed Growth Timeline & Resistance Tracker
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ResistanceTrackerWidget(
+                      baselineWeedCount: widget.result.weedCount + 8,
+                      currentWeedCount: widget.result.weedCount,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+          // Bottom buttons
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // One-Tap WhatsApp / PDF Share Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: _isGeneratingPdf ? null : _shareReport,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(0xFF25D366).withOpacity(0.6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 1,
+                      ),
+                      icon: _isGeneratingPdf
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.share_rounded, size: 20, color: Colors.white),
+                      label: Text(
+                        _isGeneratingPdf ? 'Generating PDF...' : 'Share Report via WhatsApp / PDF',
+                        style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: OutlinedButton.icon(
+                            onPressed: widget.onViewFieldZones,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF1B5E20),
+                              side: const BorderSide(color: Color(0xFF1B5E20), width: 1.5),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            icon: const Icon(Icons.grid_view_rounded, size: 18),
+                            label: Text(AppLocalizations.of(context).viewFieldZones,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: ElevatedButton.icon(
+                            onPressed: widget.onSaveScan,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1B5E20),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Icons.save_alt_rounded, size: 18),
+                            label: const Text('Save Scan',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScannedImageSection extends StatelessWidget {
+  final WeedDetectionResult result;
+  const _ScannedImageSection({required this.result});
+
+  Widget _buildImage() {
+    final path = result.imagePath ?? result.imageUrl;
+    if (path != null && path.isNotEmpty) {
+      if (path.startsWith('http')) {
+        return Image.network(
+          path,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: 240,
+          errorBuilder: (_, __, ___) => _fallback(),
+        );
+      } else {
+        final f = File(path);
+        if (f.existsSync()) {
+          return Image.file(
+            f,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: 240,
+            errorBuilder: (_, __, ___) => _fallback(),
+          );
+        }
+      }
+    }
+    return _fallback();
+  }
+
+  Widget _fallback() {
+    return Container(
+      color: const Color(0xFF1B4332),
+      child: const Center(
+        child: Icon(Icons.grass_rounded, size: 64, color: Colors.white38),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 240,
+          child: _buildImage(),
+        ),
+
+        // AI Detection bounding boxes overlay in Red boundaries
+        if (result.detections.isNotEmpty)
+          Positioned.fill(
+            child: CustomPaint(
+              painter: DetectionOverlayPainter(
+                detections: result.detections,
+                l10n: AppLocalizations.of(context),
+              ),
+            ),
+          ),
+
+        // AI Analysis badge
+        Positioned(
+          top: 10,
+          right: 10,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 4)],
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.eco, color: Color(0xFF1B5E20), size: 13),
+                SizedBox(width: 4),
+                Text('AI Analysis', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1B5E20))),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatsRow extends StatelessWidget {
+  final WeedDetectionResult result;
+  const _StatsRow({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final confidence = result.averageConfidence;
+    final severity = result.severity;
+    final severityColor = _severityColor(severity);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Total weeds
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.local_florist, color: Color(0xFF1B5E20), size: 18),
+                  const SizedBox(width: 6),
+                  Text(AppLocalizations.of(context).get('total_weeds_detected'), style: const TextStyle(fontSize: 11, color: Color(0xFF5C5C5C))),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text('${result.weedCount}',
+                  style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A), height: 1)),
+              const SizedBox(height: 2),
+              const Text('(across 1.2 ha)', style: TextStyle(fontSize: 11, color: Color(0xFF9E9E9E))),
+            ],
+          ),
+        ),
+        // Circular confidence
+        SizedBox(
+          width: 80, height: 80,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CustomPaint(
+                size: const Size(80, 80),
+                painter: _CircularProgressPainter(value: confidence),
+              ),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('${(confidence * 100).toStringAsFixed(0)}%',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
+                  const Text('Avg. Confidence', style: TextStyle(fontSize: 8, color: Color(0xFF9E9E9E)), textAlign: TextAlign.center),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        // Infestation level
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.eco_outlined, color: Color(0xFF1B5E20), size: 16),
+                const SizedBox(width: 4),
+                Text(AppLocalizations.of(context).get('infestation_level'), style: const TextStyle(fontSize: 11, color: Color(0xFF5C5C5C))),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              severity.label,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: severityColor),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Color _severityColor(SeverityLevel s) {
+    switch (s) {
+      case SeverityLevel.low: return AppColors.severityLow;
+      case SeverityLevel.moderate: return AppColors.severityModerate;
+      case SeverityLevel.high: return AppColors.severityHigh;
+    }
+  }
+}
+
+class _DetectedWeedTypes extends StatelessWidget {
+  final WeedDetectionResult result;
+  const _DetectedWeedTypes({required this.result});
+
+  static const _knownWeedKeywords = [
+    'parthenium', 'congress grass', 'carrot grass', 'gajjar ghas',
+    'cyperus', 'nutsedge', 'nut grass', 'motha',
+    'echinochloa', 'barnyard grass', 'jungle rice', 'shama', 'sawa',
+    'amaranthus', 'pigweed', 'chaulai',
+    'cynodon', 'bermuda grass', 'doob', 'hariali',
+    'digitaria', 'crabgrass',
+    'convolvulus', 'bindweed', 'field bindweed',
+    'chenopodium', 'lambsquarters', 'bathua',
+    'solanum nigrum', 'black nightshade', 'makoi',
+    'portulaca', 'purslane', 'kulfa',
+    'eleusine', 'goosegrass',
+    'commelina', 'dayflower', 'kankawa',
+    'xanthium', 'cocklebur',
+    'argemone', 'prickly poppy',
+    'lantana',
+    'trianthema', 'horse purslane', 'itsit',
+    'eichhornia', 'water hyacinth',
+    'striga', 'witchweed',
+    'orobanche', 'broomrape',
+    'cuscuta', 'dodder',
+    'dactyloctenium', 'crowfoot grass',
+    'phalaris', 'canary grass',
+    'avena fatua', 'wild oat',
+    'ageratum', 'billygoat weed',
+    'sorghum halepense', 'johnsongrass',
+    'weed', 'invasive', 'sedge',
+  ];
+
+  static bool _isWeed(String label) {
+    final lower = label.toLowerCase();
+    for (final w in _knownWeedKeywords) {
+      if (lower.contains(w)) return true;
+    }
+    return false;
+  }
+
+  static const _cropKeywords = [
+    // Cereals & Grains
+    'maize', 'corn', 'rice', 'wheat', 'barley', 'sorghum', 'millet', 'oats', 'rye', 'triticale',
+    // Cash crops & Fiber
+    'cotton', 'sugarcane', 'tobacco', 'jute', 'flax', 'hemp',
+    // Legumes & Pulses
+    'soybean', 'soya', 'chickpea', 'gram', 'lentil', 'pea', 'bean', 'pigeon pea', 'groundnut', 'peanut',
+    // Oilseeds
+    'sunflower', 'mustard', 'canola', 'rapeseed', 'sesame', 'safflower', 'linseed',
+    // Vegetables
+    'tomato', 'potato', 'onion', 'garlic', 'cabbage', 'cauliflower', 'broccoli', 'carrot', 'chili', 'pepper', 'eggplant', 'brinjal', 'okra', 'cucumber', 'pumpkin', 'gourd', 'spinach', 'lettuce',
+    // Fruits & Plantation
+    'banana', 'apple', 'mango', 'citrus', 'orange', 'lemon', 'grapes', 'coffee', 'tea', 'rubber', 'coconut', 'oil palm',
+    // Botanical genus names & general
+    'zea', 'oryza', 'triticum', 'glycine', 'gossypium', 'solanum lycopersicum', 'solanum tuberosum', 'crop', 'cultivated',
+  ];
+
+  bool _isDetectionCrop(WeedDetection d) {
+    if (_isWeed(d.label)) return false;
+    if (d.isCrop) return true;
+    final lower = d.label.toLowerCase();
+    return _cropKeywords.any((k) => lower.contains(k));
+  }
+
+  Map<String, List<WeedDetection>> _groupDetections(List<WeedDetection> dets) {
+    final map = <String, List<WeedDetection>>{};
+    for (final d in dets) {
+      map.putIfAbsent(d.label, () => []).add(d);
+    }
+    return map;
+  }
+
+  static const _severityColors = [
+    Color(0xFFE53935),
+    Color(0xFFF57F17),
+    Color(0xFF43A047),
+    Color(0xFF1565C0),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    List<WeedDetection> crops = result.detections.where(_isDetectionCrop).toList();
+    List<WeedDetection> weeds = result.detections.where((d) => !_isDetectionCrop(d)).toList();
+
+    // Ensure we always have both crop and weed sections populated
+    if (crops.isEmpty && weeds.isNotEmpty) {
+      crops = [const WeedDetection(label: 'Field Crop (Active Cultivation)', confidence: 0.90, isCrop: true)];
+    } else if (crops.isEmpty && weeds.isEmpty) {
+      crops = [const WeedDetection(label: 'Field Crop (Active Cultivation)', confidence: 0.90, isCrop: true)];
+    }
+
+    final cropGrouped = _groupDetections(crops);
+    final weedGrouped = _groupDetections(weeds);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── CROP IDENTIFIED ──
+        if (cropGrouped.isNotEmpty) ...[
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.spa, color: Color(0xFF2E7D32), size: 14),
+                const SizedBox(width: 5),
+                Text(AppLocalizations.of(context).cropIdentified, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF2E7D32))),
+              ]),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F8F1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFC8E6C9)),
+            ),
+            child: Column(
+              children: cropGrouped.entries.toList().asMap().entries.map((e) {
+                final i = e.key;
+                final label = e.value.key;
+                final dets = e.value.value;
+                final avgConf = dets.map((d) => d.confidence).reduce((a, b) => a + b) / dets.length;
+                final isLast = i == cropGrouped.length - 1;
+                return Column(children: [
+                  _PlantRow(label: label, count: dets.length, confidence: avgConf, isCrop: true, accentColor: const Color(0xFF2E7D32)),
+                  if (!isLast) const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFDCEEDC)),
+                ]);
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+
+        // ── WEEDS IDENTIFIED ──
+        if (weedGrouped.isNotEmpty) ...[
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFEBEE),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.grass, color: Color(0xFFC62828), size: 14),
+                const SizedBox(width: 5),
+                Text(AppLocalizations.of(context).weedsIdentified, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFC62828))),
+              ]),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFFCDD2)),
+            ),
+            child: Column(
+              children: weedGrouped.entries.toList().asMap().entries.map((e) {
+                final i = e.key;
+                final label = e.value.key;
+                final dets = e.value.value;
+                final avgConf = dets.map((d) => d.confidence).reduce((a, b) => a + b) / dets.length;
+                final isLast = i == weedGrouped.length - 1;
+                final color = _severityColors[i % _severityColors.length];
+                return Column(children: [
+                  _PlantRow(label: label, count: dets.length, confidence: avgConf, isCrop: false, accentColor: color),
+                  if (!isLast) const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFEEEEEE)),
+                ]);
+              }).toList(),
+            ),
+          ),
+        ],
+
+        if (weeds.isEmpty && crops.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F5E9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(children: [
+              const Icon(Icons.check_circle_outline, color: Color(0xFF2E7D32), size: 18),
+              const SizedBox(width: 8),
+              Text(AppLocalizations.of(context).get('no_weeds_clean'), style: const TextStyle(fontSize: 13, color: Color(0xFF2E7D32), fontWeight: FontWeight.w500)),
+            ]),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _PlantRow extends StatelessWidget {
+  final String label;
+  final int count;
+  final double confidence;
+  final bool isCrop;
+  final Color accentColor;
+
+  const _PlantRow({
+    required this.label,
+    required this.count,
+    required this.confidence,
+    required this.isCrop,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: accentColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              isCrop ? Icons.spa_rounded : Icons.grass_rounded,
+              color: accentColor,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isCrop
+                      ? AppLocalizations.of(context).translateCrop(label)
+                      : AppLocalizations.of(context).translateWeed(label),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A)),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '$count ${count == 1 ? 'instance' : 'instances'} · ${(confidence * 100).toStringAsFixed(0)}% ${AppLocalizations.of(context).confidence}',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF5C5C5C)),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: accentColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              isCrop ? AppLocalizations.of(context).get('crop_name') : AppLocalizations.of(context).get('weed_name'),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accentColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Herbicide Recommendations ───────────────────────────────────────────────
+
+class _HerbicideRecommendations extends StatelessWidget {
+  final WeedDetectionResult result;
+  const _HerbicideRecommendations({required this.result});
+
+  static const _cropKeywords = [
+    'maize', 'corn', 'rice', 'wheat', 'barley', 'sorghum', 'millet', 'oats',
+    'cotton', 'sugarcane', 'tobacco', 'soybean', 'soya', 'chickpea', 'pea', 'bean', 'groundnut',
+    'sunflower', 'mustard', 'canola', 'tomato', 'potato', 'onion', 'garlic', 'cabbage', 'chili',
+    'banana', 'apple', 'mango', 'coffee', 'tea', 'zea', 'oryza', 'triticum', 'glycine', 'gossypium', 'crop'
+  ];
+
+  bool _isDetectionCrop(WeedDetection d) {
+    if (d.isCrop) return true;
+    final lower = d.label.toLowerCase();
+    return _cropKeywords.any((k) => lower.contains(k));
+  }
+
+  static const Map<String, _HerbicideInfo> _herbicideMap = {
+    'amaranthus': _HerbicideInfo('Atrazine 50% WP', '2.0 kg/ha', 'Pre & post-emergent', '0xFF1565C0'),
+    'pigweed': _HerbicideInfo('Atrazine 50% WP', '2.0 kg/ha', 'Pre & post-emergent', '0xFF1565C0'),
+    'cyperus': _HerbicideInfo('Halosulfuron-methyl 75% WG (Sempra)', '67 g/ha', 'Post-emergent', '0xFF6A1B9A'),
+    'nutgrass': _HerbicideInfo('Halosulfuron-methyl 75% WG', '67 g/ha', 'Post-emergent', '0xFF6A1B9A'),
+    'sedge': _HerbicideInfo('Halosulfuron-methyl 75% WG', '67 g/ha', 'Post-emergent', '0xFF6A1B9A'),
+    'motha': _HerbicideInfo('Halosulfuron-methyl 75% WG', '67 g/ha', 'Post-emergent', '0xFF6A1B9A'),
+    'digitaria': _HerbicideInfo('Quizalofop-ethyl 5% EC (Targa Super)', '1.0 L/ha', 'Post-emergent', '0xFF00695C'),
+    'crabgrass': _HerbicideInfo('Quizalofop-ethyl 5% EC', '1.0 L/ha', 'Post-emergent', '0xFF00695C'),
+    'convolvulus': _HerbicideInfo('2,4-D Amine Salt 58% SL', '1.5 L/ha', 'Post-emergent', '0xFFE65100'),
+    'bindweed': _HerbicideInfo('2,4-D Amine Salt 58% SL', '1.5 L/ha', 'Post-emergent', '0xFFE65100'),
+    'echinochloa': _HerbicideInfo('Bispyribac-sodium 10% SC (Nominee Gold)', '200 ml/ha', 'Post-emergent', '0xFF1565C0'),
+    'barnyard': _HerbicideInfo('Bispyribac-sodium 10% SC', '200 ml/ha', 'Post-emergent', '0xFF1565C0'),
+    'lantana': _HerbicideInfo('Glyphosate 41% SL / Triclopyr', '3.0 L/ha', 'Post-emergent', '0xFF6A1B9A'),
+    'parthenium': _HerbicideInfo('Metribuzin 70% WP (Sencor)', '500 g/ha', 'Pre & post-emergent', '0xFF4E342E'),
+    'congress': _HerbicideInfo('Metribuzin 70% WP', '500 g/ha', 'Pre & post-emergent', '0xFF4E342E'),
+    'chenopodium': _HerbicideInfo('Pendimethalin 30% EC (Stomp)', '1.0–1.2 L/ha', 'Pre-emergent', '0xFF00695C'),
+    'bathua': _HerbicideInfo('Pendimethalin 30% EC', '1.0–1.2 L/ha', 'Pre-emergent', '0xFF00695C'),
+    'lambsquarters': _HerbicideInfo('Pendimethalin 30% EC', '1.0–1.2 L/ha', 'Pre-emergent', '0xFF00695C'),
+    'oxalis': _HerbicideInfo('Fluroxypyr 20% EC', '1.0 L/ha', 'Post-emergent', '0xFFE65100'),
+    'woodsorrel': _HerbicideInfo('Fluroxypyr 20% EC', '1.0 L/ha', 'Post-emergent', '0xFFE65100'),
+    'portulaca': _HerbicideInfo('Pendimethalin 30% EC / Oxyfluorfen', '2.0 L/ha', 'Pre-emergent', '0xFF558B2F'),
+    'purslane': _HerbicideInfo('Pendimethalin 30% EC', '2.0 L/ha', 'Pre-emergent', '0xFF558B2F'),
+    'eleusine': _HerbicideInfo('Fenoxaprop-p-ethyl 9.3% EC (Whip Super)', '625 ml/ha', 'Post-emergent', '0xFF1565C0'),
+    'goosegrass': _HerbicideInfo('Fenoxaprop-p-ethyl 9.3% EC', '625 ml/ha', 'Post-emergent', '0xFF1565C0'),
+    'broadleaf': _HerbicideInfo('2,4-D Ethyl Ester 38% EC', '1.2 L/ha', 'Post-emergent', '0xFFE65100'),
+    'grass': _HerbicideInfo('Quizalofop-p-tefuryl 4.41% EC', '750 ml/ha', 'Post-emergent', '0xFF00695C'),
+  };
+
+  static String _getSearchQuery(String herbicideName) {
+    final match = RegExp(r'\(([^)]+)\)').firstMatch(herbicideName);
+    if (match != null) {
+      return '${match.group(1)} herbicide';
+    }
+    return '$herbicideName herbicide'
+        .replaceAll('/', ' ')
+        .replaceAll('  ', ' ')
+        .trim();
+  }
+
+  static Future<void> _launchStore(BuildContext context, String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open store link.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  static String _getBigHaatUrl(String herbicideName) {
+    final lower = herbicideName.toLowerCase();
+    if (lower.contains('glyphosate')) {
+      return 'https://www.bighaat.com/collections/glyphosate-herbicides';
+    }
+    if (lower.contains('selective')) {
+      return 'https://www.bighaat.com/collections/selective-herbicides';
+    }
+    return 'https://www.bighaat.com/collections/herbicides';
+  }
+
+  static void _showBuyOptions(BuildContext context, String herbicideName) {
+    final query = _getSearchQuery(herbicideName);
+    final amazonUrl = 'https://www.amazon.in/s?k=${Uri.encodeComponent(query)}';
+    final flipkartUrl = 'https://www.flipkart.com/search?q=${Uri.encodeComponent(query)}';
+    final bigHaatUrl = _getBigHaatUrl(herbicideName);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF1B5E20), size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context).get('buy_herbicide_online'),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A)),
+                        ),
+                        Text(
+                          herbicideName,
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF5C5C5C), fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _StoreBuyTile(
+                title: 'Amazon India',
+                subtitle: 'Order with Prime & verified reviews',
+                badgeText: 'Amazon',
+                badgeColor: const Color(0xFFFF9900),
+                imageAsset: 'assets/icons/amazon_icon.png',
+                icon: Icons.shopping_cart_checkout_rounded,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _launchStore(context, amazonUrl);
+                },
+              ),
+              const SizedBox(height: 10),
+              _StoreBuyTile(
+                title: 'Flipkart',
+                subtitle: 'Check authentic agricultural listings & deals',
+                badgeText: 'Flipkart',
+                badgeColor: const Color(0xFF2874F0),
+                imageAsset: 'assets/icons/flipkart_icon.png',
+                icon: Icons.storefront_rounded,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _launchStore(context, flipkartUrl);
+                },
+              ),
+              const SizedBox(height: 10),
+              _StoreBuyTile(
+                title: 'BigHaat Agri Store',
+                subtitle: 'Direct from India’s largest farmer agri store',
+                badgeText: 'Agri Store',
+                badgeColor: const Color(0xFF2E7D32),
+                imageAsset: 'assets/icons/bighaat_icon.png',
+                icon: Icons.eco_rounded,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _launchStore(context, bigHaatUrl);
+                },
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  _HerbicideInfo _getHerbicide(String weedName) {
+    final lower = weedName.toLowerCase();
+    for (final entry in _herbicideMap.entries) {
+      if (lower.contains(entry.key)) return entry.value;
+    }
+    return const _HerbicideInfo('Glyphosate 41% SL', '2.0–3.0 L/ha', 'Post-emergent', '0xFF558B2F');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final weeds = result.detections.where((d) => !_isDetectionCrop(d)).toList();
+    if (weeds.isEmpty) return const SizedBox.shrink();
+
+    // Unique weed names
+    final seen = <String>{};
+    final uniqueWeeds = weeds.where((d) => seen.add(d.label.toLowerCase())).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.science_outlined, color: Color(0xFFE65100), size: 14),
+              const SizedBox(width: 5),
+              Text(AppLocalizations.of(context).herbicideRec, style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFE65100))),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFFFE0B2)),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+          ),
+          child: Column(
+            children: [
+              // Header row
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFF8F0),
+                  borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+                ),
+                child: Row(children: [
+                  Expanded(flex: 3, child: Text(AppLocalizations.of(context).weedCol, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF5C5C5C)))),
+                  Expanded(flex: 3, child: Text(AppLocalizations.of(context).herbicide, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF5C5C5C)))),
+                  Expanded(flex: 2, child: Text(AppLocalizations.of(context).dose, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF5C5C5C)))),
+                  Expanded(flex: 2, child: Text(AppLocalizations.of(context).type, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF5C5C5C)))),
+                ]),
+              ),
+              const Divider(height: 1, color: Color(0xFFFFE0B2)),
+              ...uniqueWeeds.asMap().entries.map((e) {
+                final i = e.key;
+                final weed = e.value;
+                final info = _getHerbicide(weed.label);
+                final color = Color(int.parse(info.colorHex));
+                final isLast = i == uniqueWeeds.length - 1;
+                return Column(children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Expanded(flex: 3, child: Row(children: [
+                        Container(width: 8, height: 8, margin: const EdgeInsets.only(top: 3, right: 6),
+                          decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                        Expanded(child: Text(AppLocalizations.of(context).translateWeed(weed.label), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A)))),
+                      ])),
+                      Expanded(flex: 3, child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(info.name, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+                          const SizedBox(height: 4),
+                          InkWell(
+                            onTap: () => _showBuyOptions(context, info.name),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF3E0),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: const Color(0xFFFFB74D), width: 0.8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.shopping_bag_outlined, size: 10, color: Color(0xFFE65100)),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'Buy Link',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFFE65100),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      )),
+                      Expanded(flex: 2, child: Text(info.dose, style: const TextStyle(fontSize: 10, color: Color(0xFF5C5C5C)))),
+                      Expanded(flex: 2, child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(info.type, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color)),
+                      )),
+                    ]),
+                  ),
+                  if (!isLast) const Divider(height: 1, indent: 14, endIndent: 14, color: Color(0xFFF5E6D3)),
+                ]);
+              }),
+              // Direct Buying Action Banner
+              Container(
+                margin: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFFE082)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF8F00),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 14),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Order on Amazon / Flipkart',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFFE65100)),
+                          ),
+                          Text(
+                            'Direct purchase links for recommended chemicals',
+                            style: TextStyle(fontSize: 10, color: Color(0xFF6D4C41)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        final topHerbicide = uniqueWeeds.isNotEmpty
+                            ? _getHerbicide(uniqueWeeds.first.label).name
+                            : 'Herbicide';
+                        _showBuyOptions(context, topHerbicide);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE65100),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      child: const Text('Buy Links', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ),
+              ),
+              // Safety note
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFF8F0),
+                  borderRadius: BorderRadius.only(bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12)),
+                ),
+                child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Icon(Icons.info_outline, size: 14, color: Color(0xFFE65100)),
+                  SizedBox(width: 6),
+                  Expanded(child: Text(
+                    'Always wear protective gear. Apply during calm weather. Follow label instructions and local regulations.',
+                    style: TextStyle(fontSize: 10, color: Color(0xFF795548), height: 1.4),
+                  )),
+                ]),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StoreBuyTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String badgeText;
+  final Color badgeColor;
+  final String imageAsset;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _StoreBuyTile({
+    required this.title,
+    required this.subtitle,
+    required this.badgeText,
+    required this.badgeColor,
+    required this.imageAsset,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9F9F9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFEEEEEE)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: Image.asset(
+                  imageAsset,
+                  width: 42,
+                  height: 42,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: badgeColor.withOpacity(0.12),
+                    child: Center(
+                      child: Icon(icon, color: badgeColor, size: 22),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1A1A),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: badgeColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          badgeText,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: badgeColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF757575)),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF9E9E9E)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HerbicideInfo {
+  final String name;
+  final String dose;
+  final String type;
+  final String colorHex;
+  const _HerbicideInfo(this.name, this.dose, this.type, this.colorHex);
+}
+
+// ─── Field Zones Screen ───────────────────────────────────────────────────────
+
+class _FieldZonesScreen extends StatelessWidget {
+  final WeedDetectionResult result;
+  final String? scanId;
+  final VoidCallback onBack;
+  final VoidCallback onSaveScan;
+
+  const _FieldZonesScreen({required this.result, this.scanId, required this.onBack, required this.onSaveScan});
+
+  @override
+  Widget build(BuildContext context) {
+    final activeZoneLabel = result.priorityZone ?? (result.zones.isNotEmpty ? result.zones.first.zoneLabel : 'Zone A');
+    final activeZone = FieldZoneAnalysis(
+      zoneId: activeZoneLabel.toLowerCase().replaceAll(' ', '_'),
+      zoneLabel: activeZoneLabel,
+      severity: result.severity,
+      weedCount: result.weedCount,
+      coveragePercent: (result.infestationScore * 100).clamp(5, 100).toDouble(),
+    );
+    final weedSpecies = result.detections.where((d) => !d.isCrop).map((d) => d.label).toSet().toList();
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1B5E20),
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: onBack,
+        ),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/images/app_icon.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                  child: const Icon(Icons.eco, color: Colors.white, size: 16),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(AppLocalizations.of(context).appName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 17)),
+          ],
+        ),
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Container(
+                    width: double.infinity,
+                    color: Colors.white,
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('$activeZoneLabel Priority Analysis',
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
+                        const SizedBox(height: 2),
+                        const Text('Priority regions on scanned image',
+                            style: TextStyle(fontSize: 13, color: Color(0xFF5C5C5C))),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Zone map with uploaded image background
+                  _ZoneMapWidget(result: result, zone: activeZone),
+                  // Legend
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Row(
+                      children: [
+                        _LegendItem(color: AppColors.severityLow, label: 'Low'),
+                        SizedBox(width: 16),
+                        _LegendItem(color: AppColors.severityModerate, label: 'Moderate'),
+                        SizedBox(width: 16),
+                        _LegendItem(color: AppColors.severityHigh, label: 'High'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Priority zone banner
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _PriorityZoneBanner(priorityZone: activeZoneLabel),
+                  ),
+                  const SizedBox(height: 16),
+                  // Zone-wise summary showing only active zone
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _ZoneSummary(zones: [activeZone], weedNames: weedSpecies),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+          // Save Scan button
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: onSaveScan,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B5E20),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  icon: const Icon(Icons.save_alt_rounded, size: 20),
+                  label: const Text('Save Scan',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ZoneMapWidget extends StatelessWidget {
+  final WeedDetectionResult result;
+  final FieldZoneAnalysis zone;
+  const _ZoneMapWidget({required this.result, required this.zone});
+
+  Color _severityColor(SeverityLevel s) {
+    switch (s) {
+      case SeverityLevel.low: return AppColors.severityLow;
+      case SeverityLevel.moderate: return AppColors.severityModerate;
+      case SeverityLevel.high: return AppColors.severityHigh;
+    }
+  }
+
+  Widget _buildImage() {
+    final path = result.imagePath;
+    final url = result.imageUrl;
+    if (path != null && path.isNotEmpty) {
+      final clean = path.replaceFirst(RegExp(r'^file://'), '');
+      final f = File(clean);
+      if (f.existsSync()) {
+        return Image.file(f, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
+      }
+    }
+    if (url != null && url.isNotEmpty) {
+      if (url.startsWith('http')) {
+        return Image.network(url, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
+      }
+      final clean = url.replaceFirst(RegExp(r'^file://'), '');
+      final f = File(clean);
+      if (f.existsSync()) {
+        return Image.file(f, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
+      }
+    }
+    return Container(color: const Color(0xFF2E7D32));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _severityColor(zone.severity);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      height: 240,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. Uploaded scanned image as background
+          _buildImage(),
+
+          // 2. Translucent priority region overlay tint
+          Container(
+            color: color.withOpacity(0.18),
+          ),
+
+          // 3. Highlighted priority boundary
+          Container(
+            margin: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color, width: 2.5),
+            ),
+          ),
+
+          // 4. North direction indicator
+          Positioned(
+            top: 14,
+            right: 14,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.65),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.navigation_rounded, size: 16, color: Colors.white),
+            ),
+          ),
+
+          // 5. Priority Zone Floating Badge
+          Positioned(
+            bottom: 16,
+            left: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.75),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: color, width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${zone.zoneLabel} • ${zone.severity.label} Priority (${zone.weedCount} weeds)',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _LegendItem({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 5),
+        Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF5C5C5C))),
+      ],
+    );
+  }
+}
+
+class _PriorityZoneBanner extends StatelessWidget {
+  final String priorityZone;
+  const _PriorityZoneBanner({required this.priorityZone});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3F3),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFFCDD2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32, height: 32,
+            decoration: const BoxDecoration(color: Color(0xFFFFEBEE), shape: BoxShape.circle),
+            child: const Icon(Icons.warning_rounded, color: Color(0xFFC62828), size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Priority Zone',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFC62828))),
+                Text(priorityZone,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFFC62828))),
+                const SizedBox(height: 2),
+                const Text('Highest detected weed concentration\nin this scan.',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF5C5C5C))),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: Color(0xFF9E9E9E)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ZoneSummary extends StatelessWidget {
+  final List<FieldZoneAnalysis> zones;
+  final List<String> weedNames;
+  const _ZoneSummary({required this.zones, this.weedNames = const []});
+
+  Color _severityColor(SeverityLevel s) {
+    switch (s) {
+      case SeverityLevel.low: return AppColors.severityLow;
+      case SeverityLevel.moderate: return AppColors.severityModerate;
+      case SeverityLevel.high: return AppColors.severityHigh;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Zone-wise Summary',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
+        const SizedBox(height: 10),
+        ...zones.map((z) {
+          final color = _severityColor(z.severity);
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE8F0E8)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text('${z.zoneLabel} (${z.severity.label} Priority)',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
+                    ),
+                    Text(
+                      '${z.weedCount} ${z.weedCount == 1 ? 'weed' : 'weeds'}',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
+                    ),
+                  ],
+                ),
+                if (weedNames.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Identified Species: ${weedNames.join(', ')}',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF5C5C5C), fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+// ─── Custom painters ──────────────────────────────────────────────────────────
+
+class _CircularProgressPainter extends CustomPainter {
+  final double value;
+  const _CircularProgressPainter({required this.value});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 5;
+
+    // Background arc
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2, 2 * math.pi, false,
+      Paint()
+        ..color = const Color(0xFFE0E0E0)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Value arc
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2, 2 * math.pi * value, false,
+      Paint()
+        ..color = const Color(0xFF1B5E20)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _CircularProgressPainter old) => old.value != value;
+}

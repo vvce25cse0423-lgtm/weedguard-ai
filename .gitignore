@@ -1,0 +1,26 @@
+# Environment / secrets
+.env
+*.env
+
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+
+# Android
+.gradle/
+**/android/.gradle/
+**/android/**/.gradle/
+**/android/**/build/
+**/android/local.properties
+**/android/app/local.properties
+
+# Web
+web/build/
