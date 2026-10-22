@@ -51,14 +51,13 @@ Instead of applying uniform, wasteful chemical blanket sprays across whole field
 
 ## 🎯 Key Problem & Solution
 
-| Traditional Approach | WeedGuard AI Precision Approach |
+| Traditional Challenge | WeedGuard AI Precision Solution |
 | :--- | :--- |
-| **Blanket Chemical Spraying:** 100% of field sprayed indiscriminately. | **Targeted Spot Application:** Chemicals applied only where weeds exist (Zone A, B, etc.). |
-| **High Input Costs:** Heavy spending on expensive herbicides. | **40%–75% Cost Reduction:** Detailed financial audit showing chemical and money savings (₹). |
-| **Environmental Pollution:** Groundwater toxicity and chemical runoff. | **Eco-Friendly Prescriptions:** Zero-chemical bio-recipes, straw mulching, and mechanical weeding. |
-| **Chemical Resistance:** Repeated use of same herbicide creates superweeds. | **Resistance Tracker:** Day 7/14 efficacy audits and early resistance warnings. |
-| **Spray Drift & Wash-off:** Spraying in high winds or right before rain. | **Smart Spray Windows:** Optimal Spray Score (0–100%) factoring wind speed, temp, and rainfastness. |
-| **Language Barriers:** Complex technical manuals in English. | **Native Language Support:** Full app localized in **Kannada (ಕನ್ನಡ)**, **Hindi (हिंदी)**, and **English** with voice readout. |
+| **Indiscriminate Blanket Spraying** | **Targeted Spot Application:** Allocates detected weeds into priority zones (**Zone A, B, C...**) on field photos. |
+| **High Input Costs & Waste** | **40%–75% Cost Reduction:** Calculates precise acreage chemical dosages and ₹ financial savings. |
+| **Chemical Resistance & Toxicity** | **Resistance Tracking & Bio-Alternatives:** Day 7/14 kill audits and organic neem/acid prescriptions. |
+| **Drift & Rain Wash-off** | **Smart Spray Windows:** 0–100% spray viability score factoring wind speed, temp, and rainfastness. |
+| **Language & Accessibility Gaps** | **Native UI & Voice TTS:** Full app operation in **Kannada (ಕನ್ನಡ)**, **Hindi (हिंदी)**, and **English**. |
 
 ---
 
@@ -134,34 +133,36 @@ Instead of applying uniform, wasteful chemical blanket sprays across whole field
 ## 🏗️ System Architecture
 
 ```text
-                  ┌────────────────────────────────────────┐
-                  │          Android Mobile App            │
-                  │             (Flutter UI)               │
-                  └──────────────────┬─────────────────────┘
-                                     │
-         ┌───────────────────────────┼───────────────────────────┐
-         ▼                           ▼                           ▼
-┌──────────────────┐       ┌──────────────────┐       ┌──────────────────┐
-│   Presentation   │       │  Business Logic  │       │   Agronomy AI    │
-│  - Field Zones   │       │  - Riverpod State│       │  - Groq / Vision │
-│  - Parcel Sketch │ <───> │  - Sequential Z. │ <───> │  - Zone Density  │
-│  - Multi-lingual │       │  - Spray Window  │       │  - ROI Math      │
-│  - Scan History  │       │  - Acres Calc.   │       │  - Resistance    │
-└──────────────────┘       └─────────┬────────┘       └──────────────────┘
-                                     │
-                                     ▼
-                  ┌────────────────────────────────────────┐
-                  │       Data Layer & Local Cache         │
-                  │ - SharedPreferences   - SecureStorage  │
-                  └──────────────────┬─────────────────────┘
-                                     │
-                                     ▼
-                  ┌────────────────────────────────────────┐
-                  │      Supabase Cloud Backend (BaaS)     │
-                  │  - PostgreSQL DB      - Auth & RLS     │
-                  │  - Scans & Fields     - Storage Bucket │
-                  └────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                             PRESENTATION LAYER (UI/UX)                           │
+│  • Field Zone Visualizer     • Farmland Parcel Sketch    • Live Camera Scanner   │
+│  • ROI & Savings Dashboard   • Spray Weather Radar       • Scan History Timeline │
+│  • Trilingual Interface (Kannada / Hindi / English)      • Voice TTS Readout     │
+└────────────────────────────────────────┬─────────────────────────────────────────┘
+                                         │
+                                         ▼
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                         APPLICATION & DOMAIN LOGIC LAYER                         │
+│  • Riverpod 2.5 Reactive State Management        • GoRouter Declarative Routing  │
+│  • Sequential Zone Allocation Engine             • Acreage & Dosage Calculator   │
+│  • 7/14-Day Herbicide Resistance Auditor         • Spray Viability Matrix (0-100)│
+└───────────────────────┬──────────────────────────────────┬───────────────────────┘
+                        │                                  │
+                        ▼                                  ▼
+┌───────────────────────────────────────┐  ┌───────────────────────────────────────┐
+│       AI & AGRONOMY INFERENCE         │  │         DATA & PERSISTENCE            │
+│  • Groq High-Speed Vision LLM API     │  │  • Supabase Cloud PostgreSQL DB       │
+│  • Botanical Weed Classification      │  │  • Supabase Secure Storage Buckets    │
+│  • Bio-Organic Formulation Engine     │  │  • Offline SharedPreferences Cache    │
+│  • On-Device Ecological Classifier    │  │  • Encrypted Auth (FlutterSecureStore)│
+└───────────────────────────────────────┘  └───────────────────────────────────────┘
 ```
+
+### Architecture Highlights
+- **Decoupled State Management:** Built on **Flutter Riverpod**, cleanly separating presentation widgets from asynchronous agronomy business logic and reactive state streams.
+- **Hybrid AI Pipeline:** Leverages **Groq Vision LLMs** for high-accuracy botanical identification and crop classification, coupled with on-device ecological fallbacks for resilient offline operation.
+- **Multi-Tier Persistence:** Scans, field records, and high-resolution images are mirrored across local cache and **Supabase Cloud (PostgreSQL + Storage)** with row-level security (RLS).
+- **Agronomic Computation Engine:** Real-time client-side calculation of spot vs. blanket chemical dosages, monetary ROI savings in ₹, and weather-based spray safety windows.
 
 ---
 
@@ -241,52 +242,6 @@ flutter run \
 
 ---
 
-## ⚙️ Configuration & Environment Variables
-
-WeedGuard AI uses `--dart-define` flags to inject credentials securely at compile time:
-
-| Variable | Description |
-| :--- | :--- |
-| `SUPABASE_URL` | Your Supabase project URL (`https://<project>.supabase.co`) |
-| `SUPABASE_ANON_KEY` | Public Supabase anonymous client key |
-| `GROQ_API_KEY` | Groq API Key for high-speed inference |
-
-> [!IMPORTANT]
-> Never commit confidential API keys or credentials directly to version control. Set them as GitHub Repository Secrets for CI/CD builds.
-
----
-
-## 📦 Building the Release APK
-
-To compile an optimized, standalone release APK on your local machine:
-
-```bash
-flutter clean
-flutter pub get
-flutter build apk --release \
-  --dart-define=SUPABASE_URL=https://your-project.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=your-supabase-anon-key \
-  --dart-define=GROQ_API_KEY=your-groq-key
-```
-
-The generated APK will be output to:
-```text
-build/app/outputs/flutter-apk/app-release.apk
-```
-
----
-
-## 🤖 Automated CI/CD Pipeline
-
-Automated continuous integration and release packaging is configured via GitHub Actions in [`.github/workflows/android_build.yml`](.github/workflows/android_build.yml):
-
-1. **Trigger:** Every push or pull request to any branch, plus manual `workflow_dispatch`.
-2. **Environment:** Ubuntu runner with **Java 17 (Temurin)** and **Flutter 3.22.3 (Stable)**.
-3. **Build:** Runs `flutter pub get` and compiles `flutter build apk --release` with repository secrets.
-4. **Artifact Upload:** Automatically packages and publishes `app-release.apk` as a downloadable GitHub Actions artifact (retained for 30 days).
-
----
-
 ## 🔒 Security & Data Integrity
 
 - **Row Level Security (RLS):** Supabase database tables enforce strict RLS policies ensuring users only view and modify their own farm scans and field records.
@@ -302,17 +257,6 @@ Automated continuous integration and release packaging is configured via GitHub 
 - 📱 **On-Device Offline YOLOv8:** Local TensorRT/TFLite models for real-time offline detection without cellular connectivity.
 - 🚜 **Bluetooth Boom Sprayer Controller:** BLE module communication to trigger physical solenoid valves on tractor spray booms.
 - 📈 **Predictive Weed Seedbank Modeling:** Machine learning forecasting of weed germination patterns based on micro-climate and historical field data.
-
----
-
-## 🤝 Contributing
-
-Contributions, feature requests, and suggestions are welcome!
-1. Fork the repository.
-2. Create your feature branch (`git checkout -b feature/NewFeature`).
-3. Commit your changes (`git commit -m "feat: Add NewFeature"`).
-4. Push to the branch (`git push origin feature/NewFeature`).
-5. Open a Pull Request.
 
 ---
 
