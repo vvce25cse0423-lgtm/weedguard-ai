@@ -15,7 +15,7 @@ abstract class WeedDetectionService {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  OpenRouter — production service (google/gemma-4-26b-a4b-it:free)
+//  Groq — production service
 // ─────────────────────────────────────────────────────────────────────────────
 class GeminiWeedDetectionService implements WeedDetectionService {
   static String get _groqApiKey => String.fromCharCodes(
@@ -28,10 +28,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
   );
   static const _groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
   static const _groqModel = 'qwen/qwen3.8-27b';
-  static const _openRouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
-  static const _openRouterModel = 'meta-llama/llama-3.2-11b-vision-instruct:free';
 
-  static const String _envOpenRouterKey = String.fromEnvironment('OPENROUTER_API_KEY');
   static const String _envGroqKey = String.fromEnvironment('GROQ_API_KEY');
 
   @override
@@ -122,15 +119,10 @@ class GeminiWeedDetectionService implements WeedDetectionService {
     final base64Image = base64Encode(compressedBytes);
 
     // ── 2. Determine API keys ────────────────────────────────────────────────
-    String? openRouterKey = _envOpenRouterKey.trim().isNotEmpty ? _envOpenRouterKey.trim() : null;
     String? groqKey = _envGroqKey.trim().isNotEmpty ? _envGroqKey.trim() : null;
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userOpenRouter = prefs.getString('openrouter_api_key');
-      if (userOpenRouter != null && userOpenRouter.trim().isNotEmpty) {
-        openRouterKey = userOpenRouter.trim();
-      }
       final userGroq = prefs.getString('groq_api_key');
       if (userGroq != null && userGroq.trim().isNotEmpty) {
         groqKey = userGroq.trim();
@@ -142,20 +134,7 @@ class GeminiWeedDetectionService implements WeedDetectionService {
       if (groqKey != null && groqKey != _groqApiKey) groqKey,
     ];
 
-    // ── 3. Attempt OpenRouter Vision if key present ──────────────────────────
-    if (openRouterKey != null && openRouterKey.isNotEmpty) {
-      try {
-        final result = await _callOpenRouterVision(
-          apiKey: openRouterKey,
-          base64Image: base64Image,
-          imagePath: imageFile.path,
-          cropHint: cropHint,
-        );
-        if (result != null) return result;
-      } catch (_) {}
-    }
-
-    // ── 4. Attempt Groq Vision ───────────────────────────────────────────────
+    // ── 3. Attempt Groq Vision ───────────────────────────────────────────────
     for (final key in groqKeysToTry) {
       try {
         final result = await _callGroqVision(
@@ -171,63 +150,8 @@ class GeminiWeedDetectionService implements WeedDetectionService {
       } catch (_) {}
     }
 
-    // ── 5. Ecological on-device vision analysis ──────────────────────────────
+    // ── 4. Ecological on-device vision analysis ──────────────────────────────
     return _analyzeImageLocally(imageFile.path, decoded, cropHint: cropHint);
-  }
-
-  Future<WeedDetectionResult?> _callOpenRouterVision({
-    required String apiKey,
-    required String base64Image,
-    required String imagePath,
-    String? cropHint,
-  }) async {
-    final models = [
-      _openRouterModel,
-      'google/gemini-2.0-flash-exp:free',
-      'qwen/qwen-2.5-vl-72b-instruct:free',
-      'meta-llama/llama-3.2-11b-vision-instruct',
-    ];
-
-    for (final model in models) {
-      try {
-        final body = jsonEncode({
-          'model': model,
-          'messages': [
-            {
-              'role': 'user',
-              'content': [
-                {'type': 'text', 'text': _buildVisionPrompt(cropHint)},
-                {
-                  'type': 'image_url',
-                  'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
-                },
-              ],
-            },
-          ],
-          'max_tokens': 1500,
-          'temperature': 0.1,
-        });
-
-        final response = await http
-            .post(
-              Uri.parse(_openRouterUrl),
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer $apiKey',
-                'HTTP-Referer': 'https://weedguard.app',
-                'X-Title': 'WeedGuard Agricultural AI',
-              },
-              body: utf8.encode(body),
-            )
-            .timeout(const Duration(seconds: 20));
-
-        if (response.statusCode == 200) {
-          final res = _parseJsonResponse(response.body, imagePath, cropHint: cropHint);
-          if (res != null) return res;
-        }
-      } catch (_) {}
-    }
-    return null;
   }
 
   Future<WeedDetectionResult?> _callGroqVision({

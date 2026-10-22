@@ -123,7 +123,7 @@ Instead of applying uniform, wasteful chemical blanket sprays across whole field
 | **State Management** | [Flutter Riverpod](https://riverpod.dev/) | 2.5+ Reactive State Management |
 | **Routing** | [GoRouter](https://pub.dev/packages/go_router) | Declarative URL-based routing |
 | **Backend & Cloud DB** | [Supabase](https://supabase.com/) | PostgreSQL, Storage Buckets, Row-Level Security (RLS) |
-| **AI Inference** | OpenRouter & Groq APIs | Vision LLM & Agronomy classification |
+| **AI Inference** | Groq APIs | Vision LLM & Agronomy classification |
 | **Local Persistence** | SharedPreferences & SecureStorage | Offline caching & encrypted auth sessions |
 | **Text-to-Speech (TTS)** | FlutterTts | Regional Kannada, Hindi, and English TTS engines |
 | **PDF Generation** | PDF & Printing | Dynamic agronomy report generation |
@@ -236,7 +236,6 @@ flutter pub get
 flutter run \
   --dart-define=SUPABASE_URL=https://your-project.supabase.co \
   --dart-define=SUPABASE_ANON_KEY=your-supabase-anon-key \
-  --dart-define=OPENROUTER_API_KEY=your-openrouter-key \
   --dart-define=GROQ_API_KEY=your-groq-key
 ```
 
@@ -250,7 +249,6 @@ WeedGuard AI uses `--dart-define` flags to inject credentials securely at compil
 | :--- | :--- |
 | `SUPABASE_URL` | Your Supabase project URL (`https://<project>.supabase.co`) |
 | `SUPABASE_ANON_KEY` | Public Supabase anonymous client key |
-| `OPENROUTER_API_KEY` | OpenRouter API Key for Vision LLM inference |
 | `GROQ_API_KEY` | Groq API Key for high-speed inference |
 
 > [!IMPORTANT]
@@ -268,7 +266,6 @@ flutter pub get
 flutter build apk --release \
   --dart-define=SUPABASE_URL=https://your-project.supabase.co \
   --dart-define=SUPABASE_ANON_KEY=your-supabase-anon-key \
-  --dart-define=OPENROUTER_API_KEY=your-openrouter-key \
   --dart-define=GROQ_API_KEY=your-groq-key
 ```
 
