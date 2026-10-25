@@ -146,6 +146,31 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  bool _isRefreshing = false;
+
+  Future<void> _refreshDashboard() async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    HapticFeedback.lightImpact();
+
+    ref.invalidate(dashboardScansProvider);
+    ref.invalidate(dashboardFieldsProvider);
+    ref.invalidate(weatherProvider);
+    ref.invalidate(userAvatarProvider);
+
+    try {
+      await Future.wait([
+        ref.refresh(dashboardScansProvider.future),
+        ref.refresh(dashboardFieldsProvider.future),
+        ref.refresh(weatherProvider.future),
+      ]);
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() => _isRefreshing = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -203,37 +228,72 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         s.severity == SeverityLevel.moderate ||
         s.weedCount > 0).length;
 
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _HeroSection(greeting: '${_greeting(context)}, $firstName'),
-            const SizedBox(height: 16),
-            _StatsCards(
-              fieldsCount: fields.length,
-              scansCount: scans.length,
-              highCount: highCount,
+      backgroundColor: const Color(0xFF1B4332),
+      body: Stack(
+        children: [
+          Positioned(
+            top: 270 + topPadding - 48,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
             ),
-            const SizedBox(height: 24),
-            _QuickActions(
-              onScan: () => context.push('/scanner'),
-              onAddField: () => context.push('/fields/new'),
-              onHistory: () => context.go('/history'),
+          ),
+          RefreshIndicator(
+            color: const Color(0xFF2D6A4F),
+            backgroundColor: Colors.white,
+            edgeOffset: topPadding,
+            onRefresh: _refreshDashboard,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _HeroSection(
+                    greeting: '${_greeting(context)}, $firstName',
+                    onRefresh: _refreshDashboard,
+                    isRefreshing: _isRefreshing,
+                  ),
+                  Container(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        _StatsCards(
+                          fieldsCount: fields.length,
+                          scansCount: scans.length,
+                          highCount: highCount,
+                        ),
+                        const SizedBox(height: 24),
+                        _QuickActions(
+                          onScan: () => context.push('/scanner'),
+                          onAddField: () => context.push('/fields/new'),
+                          onHistory: () => context.go('/history'),
+                        ),
+                        const SizedBox(height: 20),
+                        _TipOfTheDay(),
+                        const SizedBox(height: 24),
+                        _RecentScans(
+                          scansAsync: scansAsync,
+                          onViewAll: () => context.go('/history'),
+                          onScan: () => context.push('/scanner'),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 20),
-            _TipOfTheDay(),
-            const SizedBox(height: 24),
-            _RecentScans(
-              scansAsync: scansAsync,
-              onViewAll: () => context.go('/history'),
-              onScan: () => context.push('/scanner'),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -244,7 +304,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 // ─────────────────────────────────────────────
 class _HeroSection extends StatelessWidget {
   final String greeting;
-  const _HeroSection({required this.greeting});
+  final VoidCallback? onRefresh;
+  final bool isRefreshing;
+
+  const _HeroSection({
+    required this.greeting,
+    this.onRefresh,
+    this.isRefreshing = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -467,6 +534,29 @@ class _HeroSection extends StatelessWidget {
                             ),
                             child: const Icon(Icons.wb_twilight_rounded,
                                 color: Colors.amberAccent, size: 18),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: isRefreshing ? null : onRefresh,
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.18),
+                              border: Border.all(color: Colors.white54, width: 1.5),
+                            ),
+                            child: isRefreshing
+                                ? const Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : const Icon(Icons.refresh_rounded,
+                                    color: Colors.white, size: 18),
                           ),
                         ),
                         const SizedBox(width: 6),
