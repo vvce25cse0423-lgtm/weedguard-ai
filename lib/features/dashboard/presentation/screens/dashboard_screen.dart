@@ -257,8 +257,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 children: [
                   _HeroSection(
                     greeting: '${_greeting(context)}, $firstName',
-                    onRefresh: _refreshDashboard,
-                    isRefreshing: _isRefreshing,
                   ),
                   Container(
                     color: Theme.of(context).scaffoldBackgroundColor,
@@ -304,13 +302,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 // ─────────────────────────────────────────────
 class _HeroSection extends StatelessWidget {
   final String greeting;
-  final VoidCallback? onRefresh;
-  final bool isRefreshing;
 
   const _HeroSection({
     required this.greeting,
-    this.onRefresh,
-    this.isRefreshing = false,
   });
 
   @override
@@ -534,29 +528,6 @@ class _HeroSection extends StatelessWidget {
                             ),
                             child: const Icon(Icons.wb_twilight_rounded,
                                 color: Colors.amberAccent, size: 18),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: isRefreshing ? null : onRefresh,
-                          child: Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.18),
-                              border: Border.all(color: Colors.white54, width: 1.5),
-                            ),
-                            child: isRefreshing
-                                ? const Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    ),
-                                  )
-                                : const Icon(Icons.refresh_rounded,
-                                    color: Colors.white, size: 18),
                           ),
                         ),
                         const SizedBox(width: 6),
