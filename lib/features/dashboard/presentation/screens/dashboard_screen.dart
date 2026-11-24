@@ -364,34 +364,6 @@ class _HeroSection extends StatelessWidget {
               child: const SizedBox(height: 48),
             ),
           ),
-          Positioned(
-            left: -8,
-            bottom: 14,
-            child: Transform.rotate(
-              angle: 0.3,
-              child: Opacity(
-                opacity: 0.22,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset('assets/images/app_icon.png', width: 52, height: 52, fit: BoxFit.cover),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 22,
-            bottom: 0,
-            child: Transform.rotate(
-              angle: -0.2,
-              child: Opacity(
-                opacity: 0.15,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.asset('assets/images/app_icon.png', width: 36, height: 36, fit: BoxFit.cover),
-                ),
-              ),
-            ),
-          ),
           Padding(
             padding: EdgeInsets.fromLTRB(20, top + 16, 20, 20),
             child: Column(
@@ -1061,53 +1033,27 @@ class _ActionCard extends StatelessWidget {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -6,
-                  bottom: -6,
-                  child: Opacity(
-                    opacity: 0.18,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.asset('assets/images/app_icon.png', width: 40, height: 40, fit: BoxFit.cover),
-                    ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: const BoxDecoration(
+                        color: Color(0xFF2D6A4F), shape: BoxShape.circle),
+                    child: Icon(icon, color: Colors.white, size: 22),
                   ),
-                ),
-                Positioned(
-                  right: 8,
-                  bottom: 2,
-                  child: Opacity(
-                    opacity: 0.12,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Image.asset('assets/images/app_icon.png', width: 22, height: 22, fit: BoxFit.cover),
-                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1B4332)),
                   ),
-                ),
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: const BoxDecoration(
-                            color: Color(0xFF2D6A4F), shape: BoxShape.circle),
-                        child: Icon(icon, color: Colors.white, size: 22),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        label,
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1B4332)),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
