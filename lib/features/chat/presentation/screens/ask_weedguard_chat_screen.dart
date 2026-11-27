@@ -1922,32 +1922,54 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
           ),
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Messages chat area
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                itemCount: _messages.length + (_isLoading ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == _messages.length && _isLoading) {
-                    return _buildLoadingBubble(isDark);
-                  }
-                  final msg = _messages[index];
-                  return _buildMessageItem(msg, isDark);
-                },
-              ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Botanical wallpaper background
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/chat_bg.jpg',
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
             ),
+          ),
+          // Subtle tint overlay ensuring optimal contrast and readability
+          Positioned.fill(
+            child: Container(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.82)
+                  : Colors.white.withValues(alpha: 0.35),
+            ),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                // Messages chat area
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    itemCount: _messages.length + (_isLoading ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == _messages.length && _isLoading) {
+                        return _buildLoadingBubble(isDark);
+                      }
+                      final msg = _messages[index];
+                      return _buildMessageItem(msg, isDark);
+                    },
+                  ),
+                ),
 
-            // Quick suggestions horizontal slider placed directly above the search / input bar
-            _buildSuggestionsBar(isDark),
+                // Quick suggestions horizontal slider placed directly above the search / input bar
+                _buildSuggestionsBar(isDark),
 
-            // Bottom message input field / search bar
-            _buildInputBar(isDark),
-          ],
-        ),
+                // Bottom message input field / search bar
+                _buildInputBar(isDark),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1957,7 +1979,9 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
       height: 48,
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        color: isDark
+            ? const Color(0xFF1E1E1E).withValues(alpha: 0.92)
+            : Colors.white.withValues(alpha: 0.92),
         border: Border(
           top: BorderSide(
             color: isDark ? Colors.white12 : const Color(0xFFE5E5E5),
@@ -2273,44 +2297,49 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
             fontSize: (baseStyle.fontSize ?? 14.0) + 1.5,
           ),
         ));
-      } else if (match.group(3) != null) {
+      } else if (match.group(2) != null) {
         // **bold**
+        final boldContent = match.group(3) ?? match.group(2)!.replaceAll('**', '');
         spans.add(TextSpan(
-          text: match.group(3)!,
+          text: boldContent,
           style: baseStyle.copyWith(
             fontWeight: FontWeight.w800,
             color: boldColor,
           ),
         ));
-      } else if (match.group(5) != null) {
+      } else if (match.group(4) != null) {
         // __bold__
+        final boldContent = match.group(5) ?? match.group(4)!.replaceAll('__', '');
         spans.add(TextSpan(
-          text: match.group(5)!,
+          text: boldContent,
           style: baseStyle.copyWith(
             fontWeight: FontWeight.w800,
             color: boldColor,
           ),
         ));
-      } else if (match.group(7) != null) {
+      } else if (match.group(6) != null) {
         // *italic*
+        final italicContent = match.group(7) ?? match.group(6)!.replaceAll('*', '');
         spans.add(TextSpan(
-          text: match.group(7)!,
+          text: italicContent,
           style: baseStyle.copyWith(
             fontStyle: FontStyle.italic,
           ),
         ));
-      } else if (match.group(9) != null) {
+      } else if (match.group(8) != null) {
         // _italic_
+        final italicContent = match.group(9) ?? match.group(8)!.replaceAll('_', '');
         spans.add(TextSpan(
-          text: match.group(9)!,
+          text: italicContent,
           style: baseStyle.copyWith(
             fontStyle: FontStyle.italic,
           ),
         ));
-      } else if (match.group(11) != null) {
+      } else if (match.group(10) != null) {
         // `code`
+        final codeContent = match.group(11) ?? match.group(10)!.replaceAll('`', '');
         spans.add(TextSpan(
-          text: match.group(11)!,
+          text: codeContent,
           style: baseStyle.copyWith(
             fontFamily: 'monospace',
             backgroundColor: codeBg,
@@ -2387,7 +2416,9 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        color: isDark
+            ? const Color(0xFF1E1E1E).withValues(alpha: 0.95)
+            : Colors.white.withValues(alpha: 0.95),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
