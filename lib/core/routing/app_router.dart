@@ -18,6 +18,7 @@ import '../../features/comparison/presentation/screens/scan_comparison_screen.da
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/dashboard/presentation/screens/weather_screen.dart';
+import '../../features/chat/presentation/screens/ask_weedguard_chat_screen.dart';
 import '../../shared/models/detection_result_model.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -79,6 +80,12 @@ final routerProvider = Provider<GoRouter>((ref) {
               initialData: state.extra as Map<String, dynamic>?,
             ),
           ),
+          GoRoute(
+            path: '/chat',
+            builder: (_, state) => AskWeedGuardChatScreen(
+              initialQuery: state.extra as String?,
+            ),
+          ),
         ],
       ),
     ],
@@ -109,7 +116,8 @@ class _MainShellState extends State<MainShell> {
         location.endsWith('/edit') ||
         location.startsWith('/scanner') ||
         location.startsWith('/detection-result') ||
-        location.startsWith('/comparison');
+        location.startsWith('/comparison') ||
+        location.startsWith('/chat');
 
     final bottom = MediaQuery.of(context).padding.bottom;
 
