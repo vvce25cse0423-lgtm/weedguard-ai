@@ -107,13 +107,9 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
     await _tts.speak(cleanText);
   }
 
-  /// Sanitizes text to strictly purge any `***` dividers or raw markdown artifacts
+  /// Sanitizes text to strictly enforce pure bullet points, remove greetings/fluff, and purge `***` artifacts
   String _cleanDisplayText(String raw) {
-    if (raw.isEmpty) return raw;
-    var s = raw.replaceAll(RegExp(r'^\s*(\*{3,}|-{3,}|_{3,})\s*$', multiLine: true), '');
-    s = s.replaceAllMapped(RegExp(r'\*{3,}(.*?)\*{3,}'), (m) => '**${m[1]?.trim()}**');
-    s = s.replaceAll(RegExp(r'\*{3,}'), '');
-    return s.replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
+    return WeedGuardChatService.cleanAiResponse(raw);
   }
 
   Future<void> _handleSubmitted(String text) async {

@@ -71,35 +71,50 @@ class WeedGuardChatService {
   }
 
   static String _buildSystemPrompt(String languageCode) {
-    String languageInstruction = 'Respond in simple, clear, conversational English like a helpful ChatGPT assistant.';
+    String languageInstruction = 'Respond in clear, simple English for farmers.';
     if (languageCode == 'kn') {
-      languageInstruction = 'Respond in fluent, warm, and natural Kannada (ಕನ್ನಡ) language for Karnataka farmers.';
+      languageInstruction = 'Respond purely in clear, natural Kannada (ಕನ್ನಡ) for Karnataka farmers.';
     } else if (languageCode == 'hi') {
-      languageInstruction = 'Respond in fluent, friendly Hindi (हिंदी) language for Indian farmers.';
+      languageInstruction = 'Respond purely in clear, natural Hindi (हिंदी) for Indian farmers.';
     }
 
     return '''
-You are WeedGuard AI, an intelligent, conversational ChatGPT-like agronomy assistant designed specifically for farmers.
-You are warm, knowledgeable, practical, and highly encouraging.
+You are WeedGuard AI, a high-precision agronomy engine.
+$languageInstruction
 
-Your agricultural superpowers:
-1. Weed Identification & Diagnosis: Explain leaf anatomy, broadleaf vs. grassy vs. sedges, vegetative signs, and growth stages.
-2. Precision Herbicide Recommendations: Pre-emergent vs post-emergent options, active chemical ingredients (Pendimethalin, Atrazine, 2,4-D, Glyphosate, Glufosinate, Bispyribac sodium, Quizalofop).
-3. Exact Dosage Math: Dilution ratios per 15L knapsack tank or per acre, water volume, and proper nozzle calibration.
-4. Organic & Eco-Friendly Farming: Vinegar + neem oil bio-sprays, straw mulching (4-6 inches), cover crops (cowpea), and mechanical wheel hoes.
-5. Meteorological Spray Windows: Wind drift (<10 km/h), rainfastness (3-4 hrs), humidity (60-80%), and temperature.
-6. Safety First: Always mandate rubber PPE gloves, chemical masks, and clean water.
+CRITICAL MANDATORY INSTRUCTIONS:
+1. STRICT BULLET POINTS ONLY (•):
+   - Every single answer MUST be structured entirely in bullet points starting with "•".
+   - Each bullet point must begin with a bold topic label in **bold**, for example:
+     • **Seed Bank Prevention:** Mow or cut weeds before they flower and set seed to deplete the soil seed bank.
+     • **Pre-Emergent Herbicides:** Apply Pendimethalin 30% EC (1.0–1.2 L/acre) or Atrazine (for maize/sorghum) on moist soil within 48 hours of sowing.
+     • **Organic Mulching:** Spread 4–6 inches of dry straw or organic biomass between rows to block sunlight and conserve moisture.
+     • **Crop Rotation & Cover Crops:** Rotate with fast-canopy legumes (cowpea, black gram) to naturally smother weeds.
+     • **Mechanical Cultivation:** Use wheel hoes or inter-row cultivators 15–25 days after sowing to sever weed roots.
+     • **Spray Window:** Spray only when wind speed is <10 km/h, temperature is moderate, and no rain is forecast for 3–4 hours.
+     • **Safety PPE:** Wear chemical-resistant rubber gloves, an N95 respirator mask, and eye protection.
 
-Response Style:
-- $languageInstruction
-- Friendly greeting and structured breakdown with bullet points and bold highlights.
-- Formatting Rule: NEVER output triple asterisks like `***` or divider lines. Use clean bold `**term**` and bullet points `•`.
-- Keep recommendations actionable, practical, and easy for farmers to apply immediately.
+2. ZERO GREETINGS OR CHIT-CHAT:
+   - NEVER start with greetings ("Hello", "Hi, I am WeedGuard AI", "Greetings", "Welcome").
+   - NEVER include conversational preambles ("It's a great question", "Prevention is key", "Here is a guide").
+   - Start IMMEDIATELY with the very first bullet point.
+   - NEVER end with conversational questions or offers ("Would you like help calculating dosage?", "Tell me your crop", "Let me know").
+   - Terminate immediately after the last bullet point.
+
+3. 100% ACCURACY & AGRICULTURAL PRECISION:
+   - Provide scientifically validated chemical names (Pendimethalin, Atrazine, 2,4-D, Glyphosate, Halosulfuron, Bispyribac sodium).
+   - Give exact dilution dosages, tank ratios (per 15L knapsack or per acre), and application timings.
+   - For organic methods, provide concrete measurements (inches, ratios, days).
+
+4. CLEAN FORMATTING ONLY:
+   - NEVER output triple asterisks like `***` or divider lines (`---`, `___`).
+   - Use ONLY bold `**term**` and bullet points `•`.
 ''';
   }
 
-  /// Cleans AI text: removes reasoning tags and ensures NO `***` appears in the output
-  static String _cleanAiResponse(String raw) {
+  /// Cleans AI text: removes reasoning tags, strips conversational greeting/closing filler,
+  /// converts headers/numbered lists into clean bullet points, and ensures NO `***` appears.
+  static String cleanAiResponse(String raw) {
     if (raw.isEmpty) return raw;
 
     // 1. Strip reasoning chain-of-thought tags (<think>...</think>)
@@ -114,10 +129,78 @@ Response Style:
     // 4. Eliminate any remaining triple or multiple asterisks anywhere in the text
     text = text.replaceAll(RegExp(r'\*{3,}'), '');
 
-    // 5. Clean up redundant empty lines created by removing divider lines
-    text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    // 5. Convert markdown headers (### 1. Title or ### Title) to bullet points (• **Title:**)
+    text = text.replaceAllMapped(
+      RegExp(r'^\s*#{1,6}\s*(?:\d+[\.\)]\s*)?(.*?)\s*$', multiLine: true),
+      (m) {
+        final title = m[1]?.trim() ?? '';
+        if (title.isEmpty) return '';
+        final cleanTitle = title.replaceAll(RegExp(r'[:：]+$'), '');
+        return '• **$cleanTitle:**';
+      },
+    );
 
-    return text.trim();
+    // 6. Convert standard asterisks or hyphen bullets (* or -) to clean dot bullets (•)
+    text = text.replaceAll(RegExp(r'^\s*[\*\-]\s+', multiLine: true), '• ');
+
+    // 7. Convert numbered lists (1. , 2. ) to bullet points (• )
+    text = text.replaceAll(RegExp(r'^\s*\d+[\.\)]\s+', multiLine: true), '• ');
+
+    // 8. Strip conversational greeting / preamble lines at start
+    final lines = text.split('\n');
+    final cleanedLines = <String>[];
+    var hasStartedBullets = false;
+
+    final fluffStartRegex = RegExp(
+      r'^(hello|hi|hey|greetings|namaskara|namaste)|'
+      r'(weedguard\s+ai)|'
+      r'(great\s+question|good\s+question)|'
+      r'(here\s+(is|are)|below\s+(is|are)|follow\s+these|broken\s+down)|'
+      r'(prevention\s+saves|step-by-step)',
+      caseSensitive: false,
+    );
+
+    for (final line in lines) {
+      final stripped = line.trim();
+      if (stripped.isEmpty) {
+        if (hasStartedBullets) {
+          cleanedLines.add('');
+        }
+        continue;
+      }
+
+      if (!hasStartedBullets) {
+        if (!stripped.startsWith('•') && fluffStartRegex.hasMatch(stripped)) {
+          continue;
+        }
+        hasStartedBullets = true;
+      }
+
+      cleanedLines.add(line);
+    }
+
+    // 9. Strip trailing conversational sign-offs / questions from the end
+    final fluffEndRegex = RegExp(
+      r'(would\s+you\s+like|feel\s+free|let\s+me\s+know|just\s+tell\s+me|hope\s+this\s+helps|reach\s+out|happy\s+farming)',
+      caseSensitive: false,
+    );
+
+    while (cleanedLines.isNotEmpty) {
+      final last = cleanedLines.last.trim();
+      if (last.isEmpty) {
+        cleanedLines.removeLast();
+        continue;
+      }
+      if (fluffEndRegex.hasMatch(last)) {
+        cleanedLines.removeLast();
+      } else {
+        break;
+      }
+    }
+
+    var result = cleanedLines.join('\n');
+    result = result.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    return result.trim();
   }
 
   static Future<String> sendMessage({
@@ -161,7 +244,7 @@ Response Style:
           final body = jsonEncode({
             'model': model,
             'messages': messages,
-            'temperature': 0.7,
+            'temperature': 0.2,
             'max_tokens': 1200,
           });
 
@@ -182,7 +265,7 @@ Response Style:
             if (choices != null && choices.isNotEmpty) {
               final content = choices[0]['message']?['content'] as String?;
               if (content != null && content.trim().isNotEmpty) {
-                final cleaned = _cleanAiResponse(content);
+                final cleaned = cleanAiResponse(content);
                 if (cleaned.isNotEmpty) return cleaned;
               }
             }
@@ -200,7 +283,7 @@ Response Style:
           final body = jsonEncode({
             'model': model,
             'messages': messages,
-            'temperature': 0.7,
+            'temperature': 0.2,
             'max_tokens': 1024,
           });
 
@@ -222,7 +305,7 @@ Response Style:
             if (choices != null && choices.isNotEmpty) {
               final content = choices[0]['message']?['content'] as String?;
               if (content != null && content.trim().isNotEmpty) {
-                final cleaned = _cleanAiResponse(content);
+                final cleaned = cleanAiResponse(content);
                 if (cleaned.isNotEmpty) return cleaned;
               }
             }
@@ -261,16 +344,16 @@ Response Style:
     if (q.contains('removal') || q.contains('remove') || q.contains('ತೆಗೆಯುವ') || q.contains('ಕಳೆ ತೆಗೆಯುವ') || q.contains('हटाने')) {
       if (languageCode == 'kn') {
         return '''🛠️ **ಕಳೆ ತೆಗೆಯುವ ಪರಿಣಾಮಕಾರಿ ವಿಧಾನಗಳು:**
-1. **ಯಾಂತ್ರಿಕ ವಿಧಾನ:** ಬೀಜ ಕಟ್ಟುವುಕ್ಕಿಂತ ಮುನ್ನ ಕೊಳೆತ ಎಡೆಕುಂಟೆ (Wheel Hoe) ಅಥವಾ ಕೈಯಿಂದ ಕಳೆ ಕೀಳುವುದು.
-2. **ಸಾವಯವ ಮಲ್ಚಿಂಗ್:** ಸಾಲುಗಳ ನಡುವೆ ಒಣ ಹುಲ್ಲಿನ ಹೊದಿಕೆ ಹಾಕಿ ಸೂರ್ಯನ ಬೆಳಕು ತಡೆದು ಕಳೆ ಹತ್ತಿಕ್ಕುವುದು.
-3. **ಅಂತರ್ ಬೆಳೆ ಪದ್ಧತಿ:** ದ್ವಿದಳ ಧಾನ್ಯ ಬೆಳೆಸಿ ಮಣ್ಣನ್ನು ಆವರಿಸಿ ಕಳೆ ಮೊಳಕೆಯೊಡೆಯದಂತೆ ತಡೆಯುವುದು.
-4. **ಸಮಗ್ರ ನಿರ್ವಹಣೆ (IWM):** ಕನಿಷ್ಠ ರಾಸಾಯನಿಕ ಮತ್ತು ಗರಿಷ್ಠ ನೈಸರ್ಗಿಕ ತಡೆ ವಿಧಾನಗಳ ಮಿಶ್ರಣ.''';
+• **ಯಾಂತ್ರಿಕ ವಿಧಾನ:** ಬೀಜ ಕಟ್ಟುವುಕ್ಕಿಂತ ಮುನ್ನ ಕೊಳೆತ ಎಡೆಕುಂಟೆ (Wheel Hoe) ಅಥವಾ ಕೈಯಿಂದ ಕಳೆ ಕೀಳುವುದು.
+• **ಸಾವಯವ ಮಲ್ಚಿಂಗ್:** ಸಾಲುಗಳ ನಡುವೆ ಒಣ ಹುಲ್ಲಿನ ಹೊದಿಕೆ ಹಾಕಿ ಸೂರ್ಯನ ಬೆಳಕು ತಡೆದು ಕಳೆ ಹತ್ತಿಕ್ಕುವುದು.
+• **ಅಂತರ್ ಬೆಳೆ ಪದ್ಧತಿ:** ದ್ವಿದಳ ಧಾನ್ಯ ಬೆಳೆಸಿ ಮಣ್ಣನ್ನು ಆವರಿಸಿ ಕಳೆ ಮೊಳಕೆಯೊಡೆಯದಂತೆ ತಡೆಯುವುದು.
+• **ಸಮಗ್ರ ನಿರ್ವಹಣೆ (IWM):** ಕನಿಷ್ಠ ರಾಸಾಯನಿಕ ಮತ್ತು ಗರಿಷ್ಠ ನೈಸರ್ಗಿಕ ತಡೆ ವಿಧಾನಗಳ ಮಿಶ್ರಣ.''';
       }
       return '''🛠️ **Integrated Weed Removal Methods:**
-1. **Mechanical Hoeing:** Manual wheel hoes or rotary weeders during early vegetative stages (15–25 days after sowing).
-2. **Solarization & Mulching:** Organic straw mulching (3–4 inches) to block sunlight from weed seedbeds.
-3. **Biological & Smother Crops:** Intercrop fast-canopy legumes (cowpea, black gram) to starve weeds of light.
-4. **Targeted Spot Spraying:** Treat stubborn patches with precision nozzles instead of blanket field spraying.''';
+• **Mechanical Hoeing:** Manual wheel hoes or rotary weeders during early vegetative stages (15–25 days after sowing).
+• **Solarization & Mulching:** Organic straw mulching (3–4 inches) to block sunlight from weed seedbeds.
+• **Biological & Smother Crops:** Intercrop fast-canopy legumes (cowpea, black gram) to starve weeds of light.
+• **Targeted Spot Spraying:** Treat stubborn patches with precision nozzles instead of blanket field spraying.''';
     }
 
     // 3. Template Card: Safe Herbicides
@@ -291,16 +374,16 @@ Response Style:
     if (q.contains('farming tip') || q.contains('farming tips') || q.contains('tips') || q.contains('ಕೃಷಿ ಸಲಹೆ') || q.contains('खेती')) {
       if (languageCode == 'kn') {
         return '''🌱 **ಉತ್ತಮ ಕೃಷಿ ಹಾಗೂ ಕಳೆ ನಿಯಂತ್ರಣ ಸಲಹೆಗಳು:**
-1. **ಶುದ್ಧ ಬೀಜ ಬಳಕೆ:** ಪ್ರಮಾಣೀಕೃತ, ಕಳೆಬೀಜ ರಹಿತ ಶುದ್ಧ ಬಿತ್ತನೆ ಬೀಜಗಳನ್ನು ಮಾತ್ರ ಬಳಸಿ.
-2. **ಮೊದಲ 30 ದಿನಗಳ ನಿರ್ಣಾಯಕ ಹಂತ:** ಬೆಳೆಯ ಆರಂಭಿಕ 3-4 ವಾರಗಳು ಅತ್ಯಂತ ಮುಖ್ಯ, ಈ ಸಮಯದಲ್ಲಿ ಕಳೆ ಮುಕ್ತವಾಗಿರಿಸಿದರೆ 80% ಇಳುವರಿ ಸುಧಾರಿಸುತ್ತದೆ.
-3. **ಉಳುಮೆ ಯಂತ್ರಗಳ ಸ್ವಚ್ಛತೆ:** ಒಂದು ಹೊಲದಿಂದ ಇನ್ನೊಂದು ಹೊಲಕ್ಕೆ ಟ್ರ್ಯಾಕ್ಟರ್ ಅಥವಾ ಉಪಕರಣಗಳನ್ನು ಬಳಸುವ ಮುನ್ನ ಸ್ವಚ್ಛಗೊಳಿಸಿ.
-4. **ಬೆಳೆ ಪರಿವರ್ತನೆ (Crop Rotation):** ಒಂದೇ ಬೆಳೆ ಬದಲಿಗೆ ಕಾಲಕಾಲಕ್ಕೆ ಬೆಳೆ ಬದಲಾಯಿಸುವುದರಿಂದ ಕಳೆಯ ಚಕ್ರ ಮುರಿಯುತ್ತದೆ.''';
+• **ಶುದ್ಧ ಬೀಜ ಬಳಕೆ:** ಪ್ರಮಾಣೀಕೃತ, ಕಳೆಬೀಜ ರಹಿತ ಶುದ್ಧ ಬಿತ್ತನೆ ಬೀಜಗಳನ್ನು ಮಾತ್ರ ಬಳಸಿ.
+• **ನಿರ್ಣಾಯಕ ಹಂತ (ಮೊದಲ 30 ದಿನಗಳು):** ಬೆಳೆಯ ಆರಂಭಿಕ 3-4 ವಾರಗಳು ಅತ್ಯಂತ ಮುಖ್ಯ, ಈ ಸಮಯದಲ್ಲಿ ಕಳೆ ಮುಕ್ತವಾಗಿರಿಸಿದರೆ 80% ಇಳುವರಿ ಸುಧಾರಿಸುತ್ತದೆ.
+• **ಉಳುಮೆ ಯಂತ್ರಗಳ ಸ್ವಚ್ಛತೆ:** ಒಂದು ಹೊಲದಿಂದ ಇನ್ನೊಂದು ಹೊಲಕ್ಕೆ ಟ್ರ್ಯಾಕ್ಟರ್ ಅಥವಾ ಉಪಕರಣಗಳನ್ನು ಬಳಸುವ ಮುನ್ನ ಸ್ವಚ್ಛಗೊಳಿಸಿ.
+• **ಬೆಳೆ ಪರಿವರ್ತನೆ (Crop Rotation):** ಒಂದೇ ಬೆಳೆ ಬದಲಿಗೆ ಕಾಲಕಾಲಕ್ಕೆ ಬೆಳೆ ಬದಲಾಯಿಸುವುದರಿಂದ ಕಳೆಯ ಚಕ್ರ ಮುರಿಯುತ್ತದೆ.''';
       }
       return '''🌱 **Top Farming & Weed Prevention Tips:**
-1. **Critical Period of Weed Competition (CPWC):** Keep fields 100% weed-free during the first 25–40 days after emergence; this guarantees up to 80% higher crop yield.
-2. **Certified Clean Seeds:** Prevent introducing invasive weed seeds by planting certified, cleaned seed stock.
-3. **Equipment Sanitation:** Pressure-wash cultivators and harvesters before moving between different farm plots to stop root/seed transfer.
-4. **Smart Crop Rotation:** Alternate tap-root crops with fibrous-root crops to disrupt persistent weed cycles.''';
+• **Critical Period of Weed Competition (CPWC):** Keep fields 100% weed-free during the first 25–40 days after emergence; this guarantees up to 80% higher crop yield.
+• **Certified Clean Seeds:** Prevent introducing invasive weed seeds by planting certified, cleaned seed stock.
+• **Equipment Sanitation:** Pressure-wash cultivators and harvesters before moving between different farm plots to stop root/seed transfer.
+• **Smart Crop Rotation:** Alternate tap-root crops with fibrous-root crops to disrupt persistent weed cycles.''';
     }
 
     // 5. Parthenium
@@ -349,14 +432,14 @@ Response Style:
     if (q.contains('organic') || q.contains('bio') || q.contains('neem') || q.contains('ಸಾವಯವ')) {
       if (languageCode == 'kn') {
         return '''🍃 **ಸಾವಯವ ಜೈವಿಕ ಕಳೆ ನಿರ್ವಹಣೆ ರೆಸಿಪಿ:**
-1. **ವಿನೆಗರ್ + ಬೇವಿನ ಎಣ್ಣೆ:** 10% ಅಸಿಟಿಕ್ ಆಮ್ಲ (ವಿನೆಗರ್) + 50 ಮಿಲಿ ಬೇವಿನ ಎಣ್ಣೆ + 5 ಮಿಲಿ ಸಾಬೂನಿನ ದ್ರಾವಣ (ಸ್ಪ್ರೆಡರ್).
-2. **ಹುಲ್ಲು ಮಲ್ಚಿಂಗ್:** 4-6 ಇಂಚು ಒಣ ಹುಲ್ಲಿನ ಹೊದಿಕೆಯಿಂದ ಕಳೆ ಬೀಜಗಳು ಬೆಳಕಿಲ್ಲದೆ ಸಾಯುತ್ತವೆ.
-3. **ಅಂತರ್ ಬೆಳೆ:** ಅಲಸಂದೆ ಅಥವಾ ಹೆಸರು ಬೆಳೆ ಬೆಳೆದು ಭೂಮಿಯನ್ನು ಆವರಿಸುವುದು.''';
+• **ವಿನೆಗರ್ + ಬೇವಿನ ಎಣ್ಣೆ:** 10% ಅಸಿಟಿಕ್ ಆಮ್ಲ (ವಿನೆಗರ್) + 50 ಮಿಲಿ ಬೇವಿನ ಎಣ್ಣೆ + 5 ಮಿಲಿ ಸಾಬೂನಿನ ದ್ರಾವಣ (ಸ್ಪ್ರೆಡರ್).
+• **ಹುಲ್ಲು ಮಲ್ಚಿಂಗ್:** 4-6 ಇಂಚು ಒಣ ಹುಲ್ಲಿನ ಹೊದಿಕೆಯಿಂದ ಕಳೆ ಬೀಜಗಳು ಬೆಳಕಿಲ್ಲದೆ ಸಾಯುತ್ತವೆ.
+• **ಅಂತರ್ ಬೆಳೆ:** ಅಲಸಂದೆ ಅಥವಾ ಹೆಸರು ಬೆಳೆ ಬೆಳೆದು ಭೂಮಿಯನ್ನು ಆವರಿಸುವುದು.''';
       }
       return '''🍃 **Zero-Chemical Organic Herbicide Recipe:**
-1. **Bio-Herbicide Spray:** 10% Household Acetic Acid (Vinegar) + 50 ml Pure Neem Oil + 5 ml mild liquid soap per 10 L water. Apply on hot sunny mornings.
-2. **Organic Straw Mulch:** Apply a 4–6 inch layer of dry paddy straw between crop rows to block sunlight.
-3. **Living Mulch:** Intercrop with cowpea or clover to smother emerging weed shoots naturally.''';
+• **Bio-Herbicide Spray:** 10% Household Acetic Acid (Vinegar) + 50 ml Pure Neem Oil + 5 ml mild liquid soap per 10 L water. Apply on hot sunny mornings.
+• **Organic Straw Mulch:** Apply a 4–6 inch layer of dry paddy straw between crop rows to block sunlight.
+• **Living Mulch:** Intercrop with cowpea or clover to smother emerging weed shoots naturally.''';
     }
 
     // 9. Spray Windows / Weather
@@ -373,16 +456,14 @@ Response Style:
 • **Rainfastness:** Ensure at least 3–4 hours of clear weather post-spraying for systemic herbicide uptake.''';
     }
 
-    // 10. General ChatGPT-style Response
+    // 10. General Bulleted Response
     if (languageCode == 'kn') {
-      return '''🌱 **ವೀಡ್‌ಗಾರ್ಡ್ ಕೃಷಿ AI ಸಹಾಯಕ:**
-ನಮಸ್ಕಾರ! ನಾನು ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಕೃಷಿ AI ಸಹಾಯಕ:
+      return '''🌱 **ವೀಡ್‌ಗಾರ್ಡ್ ಕೃಷಿ ಮಾರ್ಗದರ್ಶಿ:**
 • **ಕಳೆನಾಶಕ ಬಳಕೆ:** ಯಾವಾಗಲೂ ಶಿಫಾರಸು ಮಾಡಿದ ಪ್ರಮಾಣದಲ್ಲಿ ಸ್ವಚ್ಛ ನೀರಿನೊಂದಿಗೆ (pH 6.0) ಬಳಸಿ.
 • **ಸಮಗ್ರ ಕಳೆ ನಿರ್ವಹಣೆ (IWM):** ಕಳೆ ಹತೋಟಿಗೆ ಯಾಂತ್ರಿಕ, ಸಾವಯವ ಮತ್ತು ರಾಸಾಯನಿಕ ವಿಧಾನಗಳನ್ನು ಸಂಯೋಜಿಸಿ.
 • **ಕ್ಯಾಮೆರಾ ಸ್ಕ್ಯಾನರ್:** ನಿಮ್ಮ ಹೊಲದ ಕಳೆಯ ಚಿತ್ರವನ್ನು ಸ್ಕ್ಯಾನರ್ ಮೂಲಕ ಕಳುಹಿಸಿ ನೇರ ಸಲಹೆ ಪಡೆಯಿರಿ.''';
     }
-    return '''🌱 **WeedGuard Agricultural Advisor:**
-Hello! Here are key agronomy recommendations for your query:
+    return '''🌱 **WeedGuard Agricultural Recommendations:**
 • **Targeted Application:** Always apply selective post-emergent herbicides when weeds are small (2–4 leaf stage) for highest efficacy.
 • **Integrated Weed Management (IWM):** Combine mechanical cultivation with bio-mulching to reduce chemical dependency by 40%–60%.
 • **Precision Spraying:** Use calibrated flat-fan nozzles and avoid spraying during high noon heat or wind speeds above 10 km/h.
