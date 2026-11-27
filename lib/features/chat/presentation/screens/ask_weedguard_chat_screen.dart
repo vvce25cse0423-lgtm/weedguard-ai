@@ -1899,9 +1899,6 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // Quick suggestions horizontal slider
-            _buildSuggestionsBar(isDark),
-
             // Messages chat area
             Expanded(
               child: ListView.builder(
@@ -1918,7 +1915,10 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
               ),
             ),
 
-            // Bottom message input field
+            // Quick suggestions horizontal slider placed directly above the search / input bar
+            _buildSuggestionsBar(isDark),
+
+            // Bottom message input field / search bar
             _buildInputBar(isDark),
           ],
         ),
@@ -1928,12 +1928,12 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
 
   Widget _buildSuggestionsBar(bool isDark) {
     return Container(
-      height: 46,
+      height: 48,
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         border: Border(
-          bottom: BorderSide(
+          top: BorderSide(
             color: isDark ? Colors.white12 : const Color(0xFFE8F0EA),
             width: 1,
           ),
