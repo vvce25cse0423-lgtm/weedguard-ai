@@ -4,6 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/chat_message_model.dart';
 
 class WeedGuardChatService {
+  // Mistral AI Configuration
+  static const _mistralUrl = 'https://api.mistral.ai/v1/chat/completions';
+  static const _defaultMistralKey = 'mstrl_U3grSBWY5Vl4TrNbftjG1gHSzJNAwNdc_06Dpzb';
+
+  // Groq Fallback Configuration
   static const _groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
   static const _envGroqKey = String.fromEnvironment('GROQ_API_KEY');
 
@@ -16,7 +21,17 @@ class WeedGuardChatService {
     ].map((b) => b ^ 42),
   );
 
-  static const List<String> _modelsToTry = [
+  // Top Mistral Models for ChatGPT-like conversational interaction
+  static const List<String> _mistralModels = [
+    'mistral-small-latest',
+    'codestral-latest',
+    'ministral-8b-latest',
+    'open-mistral-nemo',
+    'open-mistral-7b',
+  ];
+
+  // Groq Fallback Models
+  static const List<String> _groqModels = [
     'llama-3.3-70b-versatile',
     'llama-3.1-8b-instant',
     'qwen/qwen3.8-27b',
@@ -25,55 +40,55 @@ class WeedGuardChatService {
 
   static Future<void> saveUserApiKey(String key) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('groq_api_key', key.trim());
+    await prefs.setString('ai_chat_api_key', key.trim());
   }
 
   static Future<String?> getUserApiKey() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('groq_api_key');
+      return prefs.getString('ai_chat_api_key') ?? prefs.getString('groq_api_key');
     } catch (_) {
       return null;
     }
   }
 
   static Future<String> getEffectiveApiKey() async {
-    if (_envGroqKey.trim().isNotEmpty) {
-      return _envGroqKey.trim();
-    }
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userKey = prefs.getString('groq_api_key');
+      final userKey = prefs.getString('ai_chat_api_key') ?? prefs.getString('groq_api_key');
       if (userKey != null && userKey.trim().isNotEmpty) {
         return userKey.trim();
       }
     } catch (_) {}
-    return _defaultGroqKey;
+
+    // Default to user's provided Mistral key
+    return _defaultMistralKey;
   }
 
   static String _buildSystemPrompt(String languageCode) {
-    String languageInstruction = 'Respond in simple, clear English.';
+    String languageInstruction = 'Respond in simple, clear, conversational English like a helpful ChatGPT assistant.';
     if (languageCode == 'kn') {
-      languageInstruction = 'Respond in fluent Kannada (ಕನ್ನಡ) language for Karnataka farmers.';
+      languageInstruction = 'Respond in fluent, warm, and natural Kannada (ಕನ್ನಡ) language for Karnataka farmers.';
     } else if (languageCode == 'hi') {
-      languageInstruction = 'Respond in fluent Hindi (हिंदी) language for Indian farmers.';
+      languageInstruction = 'Respond in fluent, friendly Hindi (हिंदी) language for Indian farmers.';
     }
 
     return '''
-You are WeedGuard AI, an expert agricultural scientist and precision agronomy chatbot designed for farmers.
-Your primary role is to answer questions about:
-1. Weed Identification & Biology: Parthenium, Purple Nutsedge (Cyperus), Amaranthus (Pigweed), Barnyard Grass (Echinochloa), Bermuda Grass (Cynodon), Field Bindweed, Lambsquarters (Chenopodium), etc.
-2. Herbicide Recommendations: Pre-emergent vs. post-emergent options, commercial active ingredients in India (Atrazine, Pendimethalin, Glyphosate, Glufosinate, 2,4-D, Bispyribac sodium, Quizalofop), selective vs non-selective.
-3. Dosage & Application Math: Tank mixing, dilution rates per acre or per 15L knapsack sprayer, water volume.
-4. Organic & Cultural Solutions: Acetic acid + neem oil recipes, straw bio-mulching, cover cropping, mechanical weeding (wheel hoe).
-5. Meteorological Spray Windows: Wind drift (<10 km/h), rainfastness, optimal humidity (60-80%), and temperature.
-6. Herbicide Resistance: Mode of Action (MOA/HRAC) annual rotation, 7-day and 14-day efficacy audits.
+You are WeedGuard AI, an intelligent, conversational ChatGPT-like agronomy assistant designed specifically for farmers.
+You are warm, knowledgeable, practical, and highly encouraging.
 
-Guidelines:
+Your agricultural superpowers:
+1. Weed Identification & Diagnosis: Explain leaf anatomy, broadleaf vs. grassy vs. sedges, vegetative signs, and growth stages.
+2. Precision Herbicide Recommendations: Pre-emergent vs post-emergent options, active chemical ingredients (Pendimethalin, Atrazine, 2,4-D, Glyphosate, Glufosinate, Bispyribac sodium, Quizalofop).
+3. Exact Dosage Math: Dilution ratios per 15L knapsack tank or per acre, water volume, and proper nozzle calibration.
+4. Organic & Eco-Friendly Farming: Vinegar + neem oil bio-sprays, straw mulching (4-6 inches), cover crops (cowpea), and mechanical wheel hoes.
+5. Meteorological Spray Windows: Wind drift (<10 km/h), rainfastness (3-4 hrs), humidity (60-80%), and temperature.
+6. Safety First: Always mandate rubber PPE gloves, chemical masks, and clean water.
+
+Response Style:
 - $languageInstruction
-- Format with clean bullet points, bold key terms, and concise actionable steps.
-- Always include safety cautions when recommending synthetic chemicals (gloves, mask, clean water, PPE).
-- Keep answers practical, encouraging, and farmer-friendly.
+- Friendly greeting and structured breakdown with bullet points and bold highlights.
+- Keep recommendations actionable, practical, and easy for farmers to apply immediately.
 ''';
   }
 
@@ -82,7 +97,7 @@ Guidelines:
     required String userMessage,
     String languageCode = 'en',
   }) async {
-    final apiKey = await getEffectiveApiKey();
+    final activeKey = await getEffectiveApiKey();
 
     final messages = <Map<String, String>>[
       {
@@ -91,8 +106,8 @@ Guidelines:
       },
     ];
 
-    // Add recent history (up to last 6 messages)
-    final recentHistory = history.length > 6 ? history.sublist(history.length - 6) : history;
+    // Maintain recent conversation history (last 8 messages) for ChatGPT-like multi-turn memory
+    final recentHistory = history.length > 8 ? history.sublist(history.length - 8) : history;
     for (final msg in recentHistory) {
       messages.add({
         'role': msg.sender == MessageSender.user ? 'user' : 'assistant',
@@ -100,18 +115,62 @@ Guidelines:
       });
     }
 
-    // Add current user prompt
+    // Add current query
     messages.add({
       'role': 'user',
       'content': userMessage,
     });
 
-    for (final model in _modelsToTry) {
+    // ── Tier 1: Try Mistral AI if key starts with mstrl_ or standard key ──
+    if (activeKey.startsWith('mstrl_') || activeKey == _defaultMistralKey) {
+      for (final model in _mistralModels) {
+        try {
+          final body = jsonEncode({
+            'model': model,
+            'messages': messages,
+            'temperature': 0.7,
+            'max_tokens': 1024,
+          });
+
+          final response = await http
+              .post(
+                Uri.parse(_mistralUrl),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                  'Authorization': 'Bearer $activeKey',
+                },
+                body: utf8.encode(body),
+              )
+              .timeout(const Duration(seconds: 15));
+
+          if (response.statusCode == 200) {
+            final decoded = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+            final choices = decoded['choices'] as List?;
+            if (choices != null && choices.isNotEmpty) {
+              final content = choices[0]['message']?['content'] as String?;
+              if (content != null && content.trim().isNotEmpty) {
+                return content.trim();
+              }
+            }
+          } else if (response.statusCode == 402) {
+            // Mistral billing budget not configured yet; break to fallback tier
+            break;
+          }
+        } catch (_) {
+          // Try next model if timeout or network hiccup
+        }
+      }
+    }
+
+    // ── Tier 2: Try Groq Cloud AI ──
+    final groqKey = _envGroqKey.isNotEmpty ? _envGroqKey : _defaultGroqKey;
+    for (final model in _groqModels) {
       try {
         final body = jsonEncode({
           'model': model,
           'messages': messages,
-          'temperature': 0.3,
+          'temperature': 0.7,
           'max_tokens': 1000,
         });
 
@@ -120,11 +179,11 @@ Guidelines:
               Uri.parse(_groqUrl),
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer $apiKey',
+                'Authorization': 'Bearer $groqKey',
               },
               body: utf8.encode(body),
             )
-            .timeout(const Duration(seconds: 20));
+            .timeout(const Duration(seconds: 15));
 
         if (response.statusCode == 200) {
           final decoded = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
@@ -137,11 +196,11 @@ Guidelines:
           }
         }
       } catch (_) {
-        // Try next model if any timeout or rate limit
+        // Continue to next model
       }
     }
 
-    // Fallback: Offline Agronomy Knowledge Engine
+    // ── Tier 3: ChatGPT-style Offline Agronomy Knowledge Engine ──
     return _getOfflineFallbackResponse(userMessage, languageCode);
   }
 
@@ -208,6 +267,7 @@ Guidelines:
 4. **Smart Crop Rotation:** Alternate tap-root crops with fibrous-root crops to disrupt persistent weed cycles.''';
     }
 
+    // 5. Parthenium
     if (q.contains('parthenium') || q.contains('carrot grass') || q.contains('ಕಾಂಗ್ರೆಸ್ ಕಳೆ')) {
       if (languageCode == 'kn') {
         return '''🌿 **ಪಾರ್ಥೇನಿಯಂ (ಕಾಂಗ್ರೆಸ್ ಕಳೆ) ನಿರ್ವಹಣೆ:**
@@ -221,6 +281,7 @@ Guidelines:
 • **Caution:** Wear rubber gloves and a face mask; pollen causes severe dermatitis and respiratory allergies.''';
     }
 
+    // 6. Nutsedge / Cyperus
     if (q.contains('nutsedge') || q.contains('cyperus') || q.contains('ಮೋಥಾ') || q.contains('ಭದ್ರಮುಷ್ಟಿ')) {
       if (languageCode == 'kn') {
         return '''🌾 **ಭದ್ರಮುಷ್ಟಿ (Cyperus Rotundus) ನಿರ್ವಹಣೆ:**
@@ -234,6 +295,7 @@ Guidelines:
 • **Important:** Avoid casual hoeing as it breaks apical dominance and multiplies subterranean nutlets.''';
     }
 
+    // 7. Pre-emergent
     if (q.contains('pre-emergent') || q.contains('ಪ್ರಿ-ಎಮರ್ಜೆಂಟ್') || q.contains('pre emergent')) {
       if (languageCode == 'kn') {
         return '''💧 **ಪ್ರಿ-ಎಮರ್ಜೆಂಟ್ ಸಸ್ಯನಾಶಕ ಬಳಕೆ ನಿಯಮ:**
@@ -247,6 +309,7 @@ Guidelines:
 • **Key Products:** Pendimethalin 30% EC (1.0–1.2 L/acre), Atrazine 50% WP for maize/sugarcane.''';
     }
 
+    // 8. Organic Recipes
     if (q.contains('organic') || q.contains('bio') || q.contains('neem') || q.contains('ಸಾವಯವ')) {
       if (languageCode == 'kn') {
         return '''🍃 **ಸಾವಯವ ಜೈವಿಕ ಕಳೆ ನಿರ್ವಹಣೆ ರೆಸಿಪಿ:**
@@ -260,6 +323,7 @@ Guidelines:
 3. **Living Mulch:** Intercrop with cowpea or clover to smother emerging weed shoots naturally.''';
     }
 
+    // 9. Spray Windows / Weather
     if (q.contains('spray') || q.contains('weather') || q.contains('ವಿಂಡೋ') || q.contains('ಸಿಂಪರಣೆ')) {
       if (languageCode == 'kn') {
         return '''🌦️ **ಸೂಕ್ತ ಕಳೆನಾಶಕ ಸಿಂಪರಣಾ ನಿಯಮಗಳು:**
@@ -273,18 +337,19 @@ Guidelines:
 • **Rainfastness:** Ensure at least 3–4 hours of clear weather post-spraying for systemic herbicide uptake.''';
     }
 
-    // General fallback
+    // 10. General ChatGPT-style Response
     if (languageCode == 'kn') {
       return '''🌱 **ವೀಡ್‌ಗಾರ್ಡ್ ಕೃಷಿ AI ಸಹಾಯಕ:**
-ನಮಸ್ಕಾರ! ನಿಮ್ಮ ಪ್ರಶ್ನೆಗೆ ಸಂಬಂಧಿಸಿದಂತೆ:
-• ಕಳೆನಾಶಕಗಳನ್ನು ಯಾವಾಗಲೂ ಸರಿಯಾದ ಪ್ರಮಾಣದಲ್ಲಿ, ಸ್ವಚ್ಛ ನೀರಿನೊಂದಿಗೆ (pH 6.0) ಬಳಸಿ.
-• ಸಮಗ್ರ ಕಳೆ ನಿರ್ವಹಣೆಗಾಗಿ (IWM) ರಾಸಾಯನಿಕ ಮತ್ತು ಸಾವಯವ ಕಳೆ ಕೀಳುವ ವಿಧಾನಗಳನ್ನು ಒಟ್ಟಿಗೆ ಬಳಸಿ.
-• ಯಾವುದೇ ನಿರ್ದಿಷ್ಟ ಕಳೆ ಅಥವಾ ಬೆಳೆಗೆ ಸೂಕ್ತ ಶಿಫಾರಸು ತಿಳಿಯಲು ಕಳೆಯ ಹೆಸರು ಅಥವಾ ಫೋಟೋ ಸ್ಕ್ಯಾನ್ ಬಳಸಿ.''';
+ನಮಸ್ಕಾರ! ನಾನು ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಕೃಷಿ AI ಸಹಾಯಕ:
+• **ಕಳೆನಾಶಕ ಬಳಕೆ:** ಯಾವಾಗಲೂ ಶಿಫಾರಸು ಮಾಡಿದ ಪ್ರಮಾಣದಲ್ಲಿ ಸ್ವಚ್ಛ ನೀರಿನೊಂದಿಗೆ (pH 6.0) ಬಳಸಿ.
+• **ಸಮಗ್ರ ಕಳೆ ನಿರ್ವಹಣೆ (IWM):** ಕಳೆ ಹತೋಟಿಗೆ ಯಾಂತ್ರಿಕ, ಸಾವಯವ ಮತ್ತು ರಾಸಾಯನಿಕ ವಿಧಾನಗಳನ್ನು ಸಂಯೋಜಿಸಿ.
+• **ಕ್ಯಾಮೆರಾ ಸ್ಕ್ಯಾನರ್:** ನಿಮ್ಮ ಹೊಲದ ಕಳೆಯ ಚಿತ್ರವನ್ನು ಸ್ಕ್ಯಾನರ್ ಮೂಲಕ ಕಳುಹಿಸಿ ನೇರ ಸಲಹೆ ಪಡೆಯಿರಿ.''';
     }
-    return '''🌱 **WeedGuard Agronomy Advisory:**
-Hello! Here are key agronomic recommendations:
-• **Spray Precision:** Always maintain calibrated flat-fan nozzles and ensure water pH is between 5.5 and 6.5.
-• **Integrated Weed Management (IWM):** Combine mechanical weeding with targeted spot spraying to reduce chemical dependency by 40%–75%.
-• **Crop Safety:** Ensure crop leaves are dry before applying selective post-emergent herbicides to avoid phytotoxicity.''';
+    return '''🌱 **WeedGuard Agricultural Advisor:**
+Hello! Here are key agronomy recommendations for your query:
+• **Targeted Application:** Always apply selective post-emergent herbicides when weeds are small (2–4 leaf stage) for highest efficacy.
+• **Integrated Weed Management (IWM):** Combine mechanical cultivation with bio-mulching to reduce chemical dependency by 40%–60%.
+• **Precision Spraying:** Use calibrated flat-fan nozzles and avoid spraying during high noon heat or wind speeds above 10 km/h.
+• **Visual Scan:** Feel free to snap a photo with our Weed Scanner anytime for instant species identification and tailored chemical dosages.''';
   }
 }
