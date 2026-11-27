@@ -1730,7 +1730,7 @@ class _TipOfTheDay extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             // "Ask WeedGuard AI" badge button with robot avatar
             Align(
               alignment: Alignment.centerRight,
@@ -1739,81 +1739,91 @@ class _TipOfTheDay extends StatelessWidget {
                   HapticFeedback.lightImpact();
                   context.push('/chat', extra: tipText);
                 },
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.centerRight,
-                  children: [
-                    // Capsule Pill Button
-                    Container(
-                      margin: const EdgeInsets.only(right: 20),
-                      padding: const EdgeInsets.only(
-                        left: 15,
-                        right: 28,
+                child: SizedBox(
+                  height: 52,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.centerRight,
+                    children: [
+                      // Capsule Pill Button
+                      Positioned(
+                        right: 22,
                         top: 6,
                         bottom: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF11471F),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white, width: 1.8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.18),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
+                        child: Container(
+                          padding: const EdgeInsets.only(
+                            left: 18,
+                            right: 32,
+                            top: 6,
+                            bottom: 6,
                           ),
-                        ],
-                      ),
-                      child: const Text(
-                        'Ask WeedGuard AI',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ),
-                    // Circular Robot Avatar Badge with Sparkle
-                    Positioned(
-                      right: 0,
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFF1B6B34),
-                          border: Border.all(color: Colors.white, width: 2.2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.22),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Stack(
                           alignment: Alignment.center,
-                          children: [
-                            Icon(
-                              Icons.smart_toy_rounded,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                            Positioned(
-                              top: 5,
-                              right: 5,
-                              child: Icon(
-                                Icons.auto_awesome,
-                                color: Colors.white,
-                                size: 10,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF11481F),
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(color: Colors.white, width: 2.0),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.18),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
                               ),
+                            ],
+                          ),
+                          child: const Text(
+                            'Ask WeedGuard AI',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      // Circular Robot Avatar Badge with Sparkle
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF1B6B34),
+                            border: Border.all(color: Colors.white, width: 2.4),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.25),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: const Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Icon(
+                                Icons.smart_toy_rounded,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                              Positioned(
+                                top: 7,
+                                right: 7,
+                                child: Icon(
+                                  Icons.auto_awesome,
+                                  color: Colors.white,
+                                  size: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
