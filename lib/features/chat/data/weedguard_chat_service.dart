@@ -30,11 +30,11 @@ class WeedGuardChatService {
     'open-mistral-7b',
   ];
 
-  // Groq Fallback Models
+  // Groq Models prioritized for agricultural precision & multilingual fluency
   static const List<String> _groqModels = [
+    'qwen/qwen3.8-27b',
     'llama-3.3-70b-versatile',
     'llama-3.1-8b-instant',
-    'qwen/qwen3.8-27b',
     'mixtral-8x7b-32768',
   ];
 
@@ -122,7 +122,7 @@ Response Style:
     });
 
     // ── Tier 1: Try Mistral AI if key starts with mstrl_ or standard key ──
-    if (activeKey.startsWith('mstrl_') || activeKey == _defaultMistralKey) {
+    if ((activeKey.startsWith('mstrl_') || activeKey == _defaultMistralKey) && !activeKey.startsWith('gsk_')) {
       for (final model in _mistralModels) {
         try {
           final body = jsonEncode({
@@ -164,7 +164,11 @@ Response Style:
     }
 
     // ── Tier 2: Try Groq Cloud AI ──
-    final groqKey = _envGroqKey.isNotEmpty ? _envGroqKey : _defaultGroqKey;
+    String groqKey = _envGroqKey.isNotEmpty ? _envGroqKey : _defaultGroqKey;
+    if (activeKey.startsWith('gsk_')) {
+      groqKey = activeKey;
+    }
+
     for (final model in _groqModels) {
       try {
         final body = jsonEncode({
@@ -191,7 +195,9 @@ Response Style:
           if (choices != null && choices.isNotEmpty) {
             final content = choices[0]['message']?['content'] as String?;
             if (content != null && content.trim().isNotEmpty) {
-              return content.trim();
+              // Strip reasoning chain-of-thought tags (<think>...</think>) for clean chat output
+              final cleaned = content.replaceAll(RegExp(r'<think>[\s\S]*?<\/think>', caseSensitive: false), '').trim();
+              return cleaned.isNotEmpty ? cleaned : content.trim();
             }
           }
         }
