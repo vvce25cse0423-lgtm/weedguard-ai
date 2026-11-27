@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/providers/app_providers.dart';
-import '../models/chat_message_model.dart';
-import '../data/weedguard_chat_service.dart';
+import '../../models/chat_message_model.dart';
+import '../../data/weedguard_chat_service.dart';
 
 class AskWeedGuardChatScreen extends ConsumerStatefulWidget {
   final String? initialQuery;
@@ -40,7 +40,6 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
     _initTts();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final l10n = AppLocalizations.of(context);
       final lang = ref.read(localeProvider).languageCode;
 
       String welcomeText = 'Hello farmer! 👋 I am your WeedGuard AI Agronomy Assistant. Ask me anything about weeds, crops, herbicide dosages, organic recipes, or spray windows.';
