@@ -47,9 +47,16 @@ jobs:
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
             --dart-define=GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
 
-      - name: Upload APK artifact
+      - name: Upload arm64-v8a APK (Modern phones - ~26MB)
         uses: actions/upload-artifact@v4
         with:
-          name: weedguard-release-apks
+          name: weedguard-arm64-v8a-release-apk
+          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          retention-days: 30
+
+      - name: Upload all split APKs bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: weedguard-all-split-apks
           path: build/app/outputs/flutter-apk/*.apk
           retention-days: 30
