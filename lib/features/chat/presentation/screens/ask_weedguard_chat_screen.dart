@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/providers/app_providers.dart';
 import '../../models/chat_message_model.dart';
 import '../../data/weedguard_chat_service.dart';
@@ -150,6 +152,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
           _isLoading = false;
         });
         _scrollToBottom();
+        _saveCurrentSessionToHistory();
       }
     } catch (e) {
       if (mounted) {
@@ -169,6 +172,96 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
     }
   }
 
+  Future<void> _saveCurrentSessionToHistory() async {
+    if (_messages.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('weedguard_chat_history_v1');
+      List<dynamic> historyList = [];
+      if (raw != null) {
+        historyList = jsonDecode(raw) as List<dynamic>;
+      }
+
+      final firstUserMsg = _messages.firstWhere(
+        (m) => m.sender == MessageSender.user,
+        orElse: () => _messages.first,
+      );
+      final title = firstUserMsg.text.length > 50
+          ? '${firstUserMsg.text.substring(0, 48)}...'
+          : firstUserMsg.text;
+
+      final session = {
+        'id': 'sess_${DateTime.now().millisecondsSinceEpoch}',
+        'title': title,
+        'timestamp': DateTime.now().toIso8601String(),
+        'messages': _messages
+            .map((m) => {
+                  'id': m.id,
+                  'text': m.text,
+                  'isUser': m.sender == MessageSender.user,
+                  'isError': m.isError,
+                })
+            .toList(),
+      };
+
+      // Check if session with same title exists, update it or prepend
+      historyList.removeWhere((item) => item['title'] == title);
+      historyList.insert(0, session);
+
+      if (historyList.length > 25) {
+        historyList = historyList.sublist(0, 25);
+      }
+      await prefs.setString('weedguard_chat_history_v1', jsonEncode(historyList));
+    } catch (_) {}
+  }
+
+  Future<void> _bookmarkMessage(String content) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('weedguard_saved_results_v1');
+      List<dynamic> saved = [];
+      if (raw != null) {
+        saved = jsonDecode(raw) as List<dynamic>;
+      }
+
+      final lines = content.split('\n').where((l) => l.trim().isNotEmpty).toList();
+      String title = 'WeedGuard Advisory';
+      if (lines.isNotEmpty) {
+        title = lines.first.replaceAll('*', '').replaceAll('#', '').replaceAll('•', '').trim();
+      }
+      if (title.length > 45) {
+        title = '${title.substring(0, 43)}...';
+      }
+
+      saved.insert(0, {
+        'id': 'saved_${DateTime.now().millisecondsSinceEpoch}',
+        'title': title,
+        'content': content,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+
+      await prefs.setString('weedguard_saved_results_v1', jsonEncode(saved));
+
+      if (mounted) {
+        HapticFeedback.lightImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.bookmark_added_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text('Advisory saved to Saved Results! 🔖'),
+              ],
+            ),
+            backgroundColor: Color(0xFF1B4332),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (_) {}
+  }
+
   void _clearChat() {
     HapticFeedback.mediumImpact();
     _tts.stop();
@@ -186,76 +279,1025 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
     );
   }
 
-  Future<void> _showApiKeyDialog() async {
-    final currentKey = await WeedGuardChatService.getUserApiKey() ?? '';
-    final controller = TextEditingController(text: currentKey);
+  /// Custom Pop-up Menu matching the user's cropped design exactly
+  void _showCustomMenu(BuildContext context) {
+    HapticFeedback.lightImpact();
+    final mediaQuery = MediaQuery.of(context);
+    final topPadding = mediaQuery.padding.top + 50.0;
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Menu',
+      barrierColor: Colors.black.withOpacity(0.35),
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (ctx, anim1, anim2) {
+        const double menuWidth = 265.0;
+        const double menuHeight = menuWidth * (434.0 / 382.0); // ~301 px
+
+        return SafeArea(
+          child: Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: EdgeInsets.only(top: topPadding, right: 14),
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: menuWidth,
+                  height: menuHeight,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.24),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: Stack(
+                      children: [
+                        // The exact cropped menu template image
+                        Image.asset(
+                          'assets/images/weedguard_chat_menu.png',
+                          width: menuWidth,
+                          height: menuHeight,
+                          fit: BoxFit.fill,
+                        ),
+
+                        // 5 Interactive Hitboxes matching the 5 menu rows
+                        Column(
+                          children: [
+                            // 1. Chat History
+                            Expanded(
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  splashColor: const Color(0xFF1B4332).withOpacity(0.12),
+                                  highlightColor: const Color(0xFF1B4332).withOpacity(0.06),
+                                  onTap: () {
+                                    Navigator.of(ctx).pop();
+                                    _showChatHistory();
+                                  },
+                                  child: const SizedBox.expand(),
+                                ),
+                              ),
+                            ),
+
+                            // 2. Saved Results
+                            Expanded(
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  splashColor: const Color(0xFF1B4332).withOpacity(0.12),
+                                  highlightColor: const Color(0xFF1B4332).withOpacity(0.06),
+                                  onTap: () {
+                                    Navigator.of(ctx).pop();
+                                    _showSavedResults();
+                                  },
+                                  child: const SizedBox.expand(),
+                                ),
+                              ),
+                            ),
+
+                            // 3. Language (English / ಕನ್ನಡ)
+                            Expanded(
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  splashColor: const Color(0xFF1B4332).withOpacity(0.12),
+                                  highlightColor: const Color(0xFF1B4332).withOpacity(0.06),
+                                  onTap: () {
+                                    Navigator.of(ctx).pop();
+                                    _showLanguagePicker();
+                                  },
+                                  child: const SizedBox.expand(),
+                                ),
+                              ),
+                            ),
+
+                            // 4. How to Use
+                            Expanded(
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  splashColor: const Color(0xFF1B4332).withOpacity(0.12),
+                                  highlightColor: const Color(0xFF1B4332).withOpacity(0.06),
+                                  onTap: () {
+                                    Navigator.of(ctx).pop();
+                                    _showHowToUse();
+                                  },
+                                  child: const SizedBox.expand(),
+                                ),
+                              ),
+                            ),
+
+                            // 5. Help & Feedback
+                            Expanded(
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  splashColor: const Color(0xFF1B4332).withOpacity(0.12),
+                                  highlightColor: const Color(0xFF1B4332).withOpacity(0.06),
+                                  onTap: () {
+                                    Navigator.of(ctx).pop();
+                                    _showHelpAndFeedback();
+                                  },
+                                  child: const SizedBox.expand(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        return FadeTransition(
+          opacity: anim1,
+          child: ScaleTransition(
+            alignment: const Alignment(0.85, -0.9),
+            scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Menu Option 1: Chat History ──────────────────────────────────────────
+  Future<void> _showChatHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('weedguard_chat_history_v1');
+    List<dynamic> history = [];
+    if (raw != null) {
+      try {
+        history = jsonDecode(raw) as List<dynamic>;
+      } catch (_) {}
+    }
 
     if (!mounted) return;
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.vpn_key_rounded, color: Color(0xFF1B4332)),
-            SizedBox(width: 8),
-            Text(
-              'Groq API Key',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-          ],
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) => Container(
+          height: MediaQuery.of(context).size.height * 0.72,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.history_rounded, color: Color(0xFF1B4332), size: 26),
+                      SizedBox(width: 10),
+                      Text(
+                        'Chat History',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1B4332),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (history.isNotEmpty)
+                    TextButton.icon(
+                      style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                      label: const Text('Clear All', style: TextStyle(fontWeight: FontWeight.w700)),
+                      onPressed: () async {
+                        await prefs.remove('weedguard_chat_history_v1');
+                        setSheetState(() => history.clear());
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: history.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFFE8F5E9),
+                              ),
+                              child: const Icon(Icons.forum_outlined, size: 48, color: Color(0xFF2D6A4F)),
+                            ),
+                            const SizedBox(height: 14),
+                            const Text(
+                              'No chat history yet',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1B4332)),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Questions you ask WeedGuard AI will appear here for easy access.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 13, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: history.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final item = history[index] as Map<String, dynamic>;
+                          final title = item['title'] ?? 'Agronomy Inquiry';
+                          final dateStr = item['timestamp'] != null
+                              ? DateTime.tryParse(item['timestamp'])?.toLocal().toString().substring(0, 16) ?? ''
+                              : '';
+                          final msgs = (item['messages'] as List<dynamic>?) ?? [];
+
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            leading: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFD8F3DC),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF1B4332), size: 20),
+                            ),
+                            title: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+                            ),
+                            subtitle: Text(
+                              '$dateStr • ${msgs.length} messages',
+                              style: const TextStyle(fontSize: 12, color: Colors.black54),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                              onPressed: () async {
+                                history.removeAt(index);
+                                await prefs.setString('weedguard_chat_history_v1', jsonEncode(history));
+                                setSheetState(() {});
+                              },
+                            ),
+                            onTap: () {
+                              Navigator.of(ctx).pop();
+                              setState(() {
+                                _messages.clear();
+                                for (final m in msgs) {
+                                  _messages.add(
+                                    ChatMessage(
+                                      id: m['id'] ?? 'm_${DateTime.now().millisecondsSinceEpoch}',
+                                      text: m['text'] ?? '',
+                                      sender: (m['isUser'] ?? false) ? MessageSender.user : MessageSender.ai,
+                                      isError: m['isError'] ?? false,
+                                    ),
+                                  );
+                                }
+                                _showChatView = true;
+                              });
+                            },
+                          );
+                        },
+                      ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B4332),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  icon: const Icon(Icons.add_comment_rounded, size: 20),
+                  label: const Text('Start New Topic', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    _clearChat();
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      ),
+    );
+  }
+
+  // ── Menu Option 2: Saved Results ─────────────────────────────────────────
+  Future<void> _showSavedResults() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('weedguard_saved_results_v1');
+    List<dynamic> saved = [];
+    if (raw != null) {
+      try {
+        saved = jsonDecode(raw) as List<dynamic>;
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) => Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.bookmark_rounded, color: Color(0xFF1B4332), size: 26),
+                      SizedBox(width: 10),
+                      Text(
+                        'Saved Results',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1B4332),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (saved.isNotEmpty)
+                    TextButton(
+                      style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                      onPressed: () async {
+                        await prefs.remove('weedguard_saved_results_v1');
+                        setSheetState(() => saved.clear());
+                      },
+                      child: const Text('Clear All', style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: saved.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFFE8F5E9),
+                              ),
+                              child: const Icon(Icons.bookmark_border_rounded, size: 48, color: Color(0xFF2D6A4F)),
+                            ),
+                            const SizedBox(height: 14),
+                            const Text(
+                              'No saved results yet',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1B4332)),
+                            ),
+                            const SizedBox(height: 6),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 24),
+                              child: Text(
+                                'Tap the bookmark icon 🔖 next to any AI advisory to save it here for offline reference.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 13, color: Colors.grey),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: saved.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final item = saved[index] as Map<String, dynamic>;
+                          final title = item['title'] ?? 'Agronomy Advisory';
+                          final content = item['content'] ?? '';
+                          final dateStr = item['timestamp'] != null
+                              ? DateTime.tryParse(item['timestamp'])?.toLocal().toString().substring(0, 16) ?? ''
+                              : '';
+
+                          return Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FCFA),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFD8F3DC)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF1B4332)),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                                      onPressed: () async {
+                                        saved.removeAt(index);
+                                        await prefs.setString('weedguard_saved_results_v1', jsonEncode(saved));
+                                        setSheetState(() {});
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  content,
+                                  maxLines: 4,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      dateStr,
+                                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                    ),
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.volume_up_rounded, size: 18, color: Color(0xFF2D6A4F)),
+                                          tooltip: 'Read aloud',
+                                          onPressed: () => _speakText('saved_$index', content),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.copy_rounded, size: 16, color: Colors.grey),
+                                          tooltip: 'Copy',
+                                          onPressed: () {
+                                            Clipboard.setData(ClipboardData(text: content));
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Copied advisory to clipboard!'),
+                                                duration: Duration(seconds: 1),
+                                                behavior: SnackBarBehavior.floating,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Menu Option 3: Language (English / ಕನ್ನಡ) ───────────────────────────
+  void _showLanguagePicker() {
+    final currentLang = ref.read(localeProvider).languageCode;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Row(
+                children: [
+                  Icon(Icons.translate_rounded, color: Color(0xFF1B4332), size: 24),
+                  SizedBox(width: 10),
+                  Text(
+                    'Select App Language',
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1B4332),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // Option 1: English
+              _buildLanguageTile(
+                ctx: ctx,
+                title: 'English',
+                subtitle: 'English language',
+                code: 'en',
+                isSelected: currentLang == 'en',
+                onSelect: () async {
+                  await ref.read(localeProvider.notifier).setLocale(const Locale('en'));
+                  if (ctx.mounted) Navigator.of(ctx).pop();
+                  if (mounted) {
+                    HapticFeedback.lightImpact();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Language switched to English'),
+                        backgroundColor: Color(0xFF1B4332),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+              ),
+
+              const Divider(height: 10),
+
+              // Option 2: Kannada (ಕನ್ನಡ)
+              _buildLanguageTile(
+                ctx: ctx,
+                title: 'ಕನ್ನಡ (Kannada)',
+                subtitle: 'ಕರ್ನಾಟಕದ ರೈತರಿಗಾಗಿ ಕನ್ನಡ ಭಾಷೆ',
+                code: 'kn',
+                isSelected: currentLang == 'kn',
+                onSelect: () async {
+                  await ref.read(localeProvider.notifier).setLocale(const Locale('kn'));
+                  if (ctx.mounted) Navigator.of(ctx).pop();
+                  if (mounted) {
+                    HapticFeedback.lightImpact();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('ಭಾಷೆಯನ್ನು ಕನ್ನಡಕ್ಕೆ ಯಶಸ್ವಿಯಾಗಿ ಬದಲಾಯಿಸಲಾಗಿದೆ'),
+                        backgroundColor: Color(0xFF1B4332),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+              ),
+
+              const Divider(height: 10),
+
+              // Option 3: Hindi (हिंदी)
+              _buildLanguageTile(
+                ctx: ctx,
+                title: 'हिंदी (Hindi)',
+                subtitle: 'भारतीय किसानों के लिए हिंदी भाषा',
+                code: 'hi',
+                isSelected: currentLang == 'hi',
+                onSelect: () async {
+                  await ref.read(localeProvider.notifier).setLocale(const Locale('hi'));
+                  if (ctx.mounted) Navigator.of(ctx).pop();
+                  if (mounted) {
+                    HapticFeedback.lightImpact();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('भाषा हिंदी में सफलतापूर्वक बदल दी गई है'),
+                        backgroundColor: Color(0xFF1B4332),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageTile({
+    required BuildContext ctx,
+    required String title,
+    required String subtitle,
+    required String code,
+    required bool isSelected,
+    required VoidCallback onSelect,
+  }) {
+    return ListTile(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      tileColor: isSelected ? const Color(0xFFD8F3DC).withOpacity(0.5) : Colors.transparent,
+      leading: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF1B4332) : const Color(0xFFE8F5E9),
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: Text(
+            code.toUpperCase(),
+            style: TextStyle(
+              color: isSelected ? Colors.white : const Color(0xFF1B4332),
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+      trailing: isSelected
+          ? const Icon(Icons.check_circle_rounded, color: Color(0xFF1B4332))
+          : const Icon(Icons.radio_button_unchecked, color: Colors.grey),
+      onTap: onSelect,
+    );
+  }
+
+  // ── Menu Option 4: How to Use ────────────────────────────────────────────
+  void _showHowToUse() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.82,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Paste your Groq API key below to enable live cloud AI intelligence for WeedGuard AI:',
-              style: TextStyle(fontSize: 13, color: Colors.black87),
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Row(
+              children: [
+                Icon(Icons.info_outline_rounded, color: Color(0xFF1B4332), size: 26),
+                SizedBox(width: 10),
+                Text(
+                  'How to Use WeedGuard AI',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1B4332),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 14),
-            TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                hintText: 'gsk_...',
-                filled: true,
-                fillColor: const Color(0xFFF1F5F2),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFB7E4C7)),
+            Expanded(
+              child: ListView(
+                children: [
+                  _buildHowToCard(
+                    number: '1',
+                    icon: Icons.camera_alt_rounded,
+                    title: 'Identify Weeds with Camera',
+                    desc: 'Tap "Identify Weed" or the attachment paperclip 📎 to capture a live field photo. AI visual detection identifies broadleaf, grass, and sedge species instantly.',
+                  ),
+                  _buildHowToCard(
+                    number: '2',
+                    icon: Icons.science_rounded,
+                    title: 'Precise Herbicide Dosage Math',
+                    desc: 'Ask for custom dilution recipes (e.g. per 15L knapsack tank or per acre) for pre-emergent (Pendimethalin, Atrazine) and selective post-emergent molecules.',
+                  ),
+                  _buildHowToCard(
+                    number: '3',
+                    icon: Icons.eco_rounded,
+                    title: 'Zero-Chemical Organic Solutions',
+                    desc: 'Get proven organic agronomy recipes like vinegar + neem bio-spray, straw mulching (4-6 inches), and intercropping with cowpea to starve weeds naturally.',
+                  ),
+                  _buildHowToCard(
+                    number: '4',
+                    icon: Icons.cloud_sync_rounded,
+                    title: 'Weather-Smart Spray Windows',
+                    desc: 'Always verify wind speed (<10 km/h) to avoid spray drift and check rainfastness (minimum 3-4 hours clear weather) before applying any chemical.',
+                  ),
+                  _buildHowToCard(
+                    number: '5',
+                    icon: Icons.volume_up_rounded,
+                    title: 'Voice Input & Audio Readout',
+                    desc: 'Tap the mic 🎙️ to speak your query in Kannada, Hindi, or English. Tap the speaker icon on any response to have the advice read aloud.',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1B4332),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Got It!', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1B4332),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Widget _buildHowToCard({
+    required String number,
+    required IconData icon,
+    required String title,
+    required String desc,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FCFA),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFD8F3DC)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1B4332),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  number,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
+                ),
+              ),
             ),
-            onPressed: () async {
-              await WeedGuardChatService.saveUserApiKey(controller.text);
-              if (ctx.mounted) Navigator.of(ctx).pop();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Groq API Key saved successfully!'),
-                    backgroundColor: Color(0xFF1B4332),
-                    behavior: SnackBarBehavior.floating,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(icon, color: const Color(0xFF2D6A4F), size: 18),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5, color: Color(0xFF1B4332)),
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              }
-            },
-            child: const Text('Save Key'),
+                  const SizedBox(height: 6),
+                  Text(
+                    desc,
+                    style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Menu Option 5: Help & Feedback ───────────────────────────────────────
+  void _showHelpAndFeedback() {
+    int selectedRating = 5;
+    final feedbackController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
           ),
-        ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Row(
+                  children: [
+                    Icon(Icons.help_outline_rounded, color: Color(0xFF1B4332), size: 26),
+                    SizedBox(width: 10),
+                    Text(
+                      'Help & Feedback',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1B4332),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Support Helpline Info Card
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFB7E4C7)),
+                  ),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.phone_in_talk_rounded, color: Color(0xFF1B4332), size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            'Kisan Helpline (Toll-Free): 1800-180-1551',
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: Color(0xFF1B4332)),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 6),
+                      Text(
+                        'Agronomy Email: support@weedguard.ai • Mon-Sat 8:00 AM - 6:00 PM',
+                        style: TextStyle(fontSize: 12, color: Colors.black87),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+                const Text(
+                  'Rate your WeedGuard AI experience:',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+
+                // Star Rating
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    final star = index + 1;
+                    return IconButton(
+                      icon: Icon(
+                        star <= selectedRating ? Icons.star_rounded : Icons.star_border_rounded,
+                        color: Colors.amber.shade700,
+                        size: 36,
+                      ),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        setSheetState(() => selectedRating = star);
+                      },
+                    );
+                  }),
+                ),
+
+                const SizedBox(height: 12),
+                const Text(
+                  'Your suggestions or feedback:',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: feedbackController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Tell us how WeedGuard AI can better serve your farm...',
+                    hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
+                    filled: true,
+                    fillColor: const Color(0xFFF1F5F2),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFB7E4C7)),
+                    ),
+                    contentPadding: const EdgeInsets.all(12),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1B4332),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final prefs = await SharedPreferences.getInstance();
+                      final feedbackData = {
+                        'rating': selectedRating,
+                        'comment': feedbackController.text.trim(),
+                        'timestamp': DateTime.now().toIso8601String(),
+                      };
+                      await prefs.setString('weedguard_farmer_feedback', jsonEncode(feedbackData));
+
+                      if (ctx.mounted) Navigator.of(ctx).pop();
+                      HapticFeedback.mediumImpact();
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                              SizedBox(width: 8),
+                              Expanded(child: Text('Thank you! Your feedback helps us improve precision farming.')),
+                            ],
+                          ),
+                          backgroundColor: Color(0xFF1B4332),
+                          behavior: SnackBarBehavior.floating,
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
+                    },
+                    child: const Text('Submit Feedback', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -434,32 +1476,6 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
     );
   }
 
-  void _showAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.smart_toy_rounded, color: Color(0xFF1B4332)),
-            SizedBox(width: 8),
-            Text('About WeedGuard AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-          ],
-        ),
-        content: const Text(
-          'WeedGuard AI is your agricultural intelligence companion. It assists farmers with weed identification, integrated weed management (IWM), safe herbicide dosing, weather spray windows, and organic farming recipes.',
-          style: TextStyle(fontSize: 13.5, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_showChatView) {
@@ -512,65 +1528,19 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                   ),
                 ),
 
-                // 3. Top-Right: Three Dots Menu
+                // 3. Top-Right: Three Dots Menu (Opens exact custom cropped popup)
                 Positioned(
                   top: 0,
                   right: 0,
                   width: w * 0.18,
                   height: h * 0.09,
-                  child: PopupMenuButton<String>(
-                    icon: const SizedBox.shrink(),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    color: Colors.white,
-                    elevation: 4,
-                    onSelected: (val) {
-                      if (val == 'scanner') context.push('/scanner');
-                      if (val == 'apikey') _showApiKeyDialog();
-                      if (val == 'clear') _clearChat();
-                      if (val == 'about') _showAboutDialog();
-                    },
-                    itemBuilder: (ctx) => [
-                      const PopupMenuItem(
-                        value: 'scanner',
-                        child: Row(
-                          children: [
-                            Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF1B4332), size: 20),
-                            SizedBox(width: 10),
-                            Text('Weed Scanner Camera'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'apikey',
-                        child: Row(
-                          children: [
-                            Icon(Icons.vpn_key_rounded, color: Color(0xFF2D6A4F), size: 20),
-                            SizedBox(width: 10),
-                            Text('Configure API Key'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'clear',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                            SizedBox(width: 10),
-                            Text('Clear Conversation'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'about',
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline_rounded, color: Color(0xFF1B4332), size: 20),
-                            SizedBox(width: 10),
-                            Text('About WeedGuard AI'),
-                          ],
-                        ),
-                      ),
-                    ],
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: () => _showCustomMenu(context),
+                      child: const SizedBox.expand(),
+                    ),
                   ),
                 ),
 
@@ -857,9 +1827,9 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
             },
           ),
           IconButton(
-            tooltip: 'Clear Chat',
-            icon: const Icon(Icons.delete_sweep_outlined, color: Colors.white),
-            onPressed: _messages.isNotEmpty ? _clearChat : null,
+            tooltip: 'More Options',
+            icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
+            onPressed: () => _showCustomMenu(context),
           ),
         ],
       ),
@@ -1057,6 +2027,12 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      // Bookmark button to save result
+                      IconButton(
+                        icon: const Icon(Icons.bookmark_add_outlined, size: 18, color: Color(0xFF2D6A4F)),
+                        tooltip: 'Save result',
+                        onPressed: () => _bookmarkMessage(message.text),
+                      ),
                       IconButton(
                         icon: Icon(
                           isSpeaking ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
