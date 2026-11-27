@@ -2006,13 +2006,12 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                     ),
                   ],
                 ),
-                child: Text(
-                  message.text,
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                    height: 1.35,
+                child: SelectableText.rich(
+                  _buildMarkdownTextSpan(
+                    message.text,
+                    isDark: false,
+                    isError: false,
+                    isUserMessage: true,
                   ),
                 ),
               ),
@@ -2076,14 +2075,12 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SelectableText(
-                    _cleanDisplayText(message.text),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: message.isError
-                          ? Colors.redAccent
-                          : (isDark ? Colors.white : const Color(0xFF1A1A1A)),
-                      height: 1.45,
+                  SelectableText.rich(
+                    _buildMarkdownTextSpan(
+                      _cleanDisplayText(message.text),
+                      isDark: isDark,
+                      isError: message.isError,
+                      isUserMessage: false,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -2128,6 +2125,183 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
         ],
       ),
     );
+  }
+
+  /// Parses markdown headings (`#`, `##`, `###`), bold (`**word**`, `__word__`),
+  /// italic (`*word*`, `_word_`), and code (`code`) into rich formatted `TextSpan`s.
+  TextSpan _buildMarkdownTextSpan(
+    String rawText, {
+    required bool isDark,
+    required bool isError,
+    bool isUserMessage = false,
+  }) {
+    final defaultColor = isUserMessage
+        ? Colors.white
+        : (isError
+            ? Colors.redAccent
+            : (isDark ? Colors.white : const Color(0xFF1A1A1A)));
+
+    final boldColor = isUserMessage
+        ? const Color(0xFFD8F3DC)
+        : (isError
+            ? Colors.redAccent
+            : (isDark ? const Color(0xFF74C69D) : const Color(0xFF1B4332)));
+
+    final headingColor = isUserMessage
+        ? Colors.white
+        : (isError
+            ? Colors.redAccent
+            : (isDark ? const Color(0xFF95D5B2) : const Color(0xFF1B4332)));
+
+    final codeBg = isUserMessage
+        ? Colors.white.withValues(alpha: 0.15)
+        : (isDark ? const Color(0xFF333333) : const Color(0xFFE8E8E8));
+
+    final baseStyle = TextStyle(
+      fontSize: isUserMessage ? 14.5 : 14.0,
+      color: defaultColor,
+      height: 1.48,
+      fontWeight: isUserMessage ? FontWeight.w500 : FontWeight.w400,
+    );
+
+    final List<InlineSpan> spans = [];
+    final lines = rawText.split('\n');
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+
+      // Detect line-level Heading (#, ##, ###, with or without space)
+      final headingMatch = RegExp(r'^(#{1,6})\s*(.*)$').firstMatch(line.trim());
+      if (headingMatch != null && headingMatch.group(2)!.trim().isNotEmpty) {
+        final level = headingMatch.group(1)!.length;
+        final headingText = headingMatch.group(2)!.trim();
+        final double headingSize = 14.0 + (level == 1 ? 3.5 : (level == 2 ? 2.5 : 1.5));
+
+        _parseInlineMarkdown(
+          headingText,
+          baseStyle: baseStyle.copyWith(
+            fontSize: headingSize,
+            fontWeight: FontWeight.w800,
+            color: headingColor,
+            height: 1.4,
+          ),
+          boldColor: headingColor,
+          codeBg: codeBg,
+          spans: spans,
+        );
+        if (i < lines.length - 1) {
+          spans.add(const TextSpan(text: '\n'));
+        }
+        continue;
+      }
+
+      // Normal or bullet lines
+      _parseInlineMarkdown(
+        line,
+        baseStyle: baseStyle,
+        boldColor: boldColor,
+        codeBg: codeBg,
+        spans: spans,
+      );
+
+      if (i < lines.length - 1) {
+        spans.add(const TextSpan(text: '\n'));
+      }
+    }
+
+    return TextSpan(children: spans);
+  }
+
+  void _parseInlineMarkdown(
+    String text, {
+    required TextStyle baseStyle,
+    required Color boldColor,
+    required Color codeBg,
+    required List<InlineSpan> spans,
+  }) {
+    final pattern = RegExp(
+      r'(?:(?<=\s|^)#{1,6}\s+([^#\n]+))|' // in-line heading: # Sentence
+      r'(\*\*(.+?)\*\*)|'                  // **bold**
+      r'(__([^_]+)__)|'                    // __bold__
+      r'(\*([^\*]+)\*)|'                    // *italic*
+      r'(_([^_]+)_)|'                      // _italic_
+      r'(`([^`]+)`)',                      // `code`
+    );
+
+    int currentIndex = 0;
+    for (final match in pattern.allMatches(text)) {
+      if (match.start > currentIndex) {
+        spans.add(TextSpan(
+          text: text.substring(currentIndex, match.start),
+          style: baseStyle,
+        ));
+      }
+
+      if (match.group(1) != null) {
+        // In-line heading: `# Sentence`
+        spans.add(TextSpan(
+          text: match.group(1)!.trim(),
+          style: baseStyle.copyWith(
+            fontWeight: FontWeight.w800,
+            color: boldColor,
+            fontSize: (baseStyle.fontSize ?? 14.0) + 1.5,
+          ),
+        ));
+      } else if (match.group(3) != null) {
+        // **bold**
+        spans.add(TextSpan(
+          text: match.group(3)!,
+          style: baseStyle.copyWith(
+            fontWeight: FontWeight.w800,
+            color: boldColor,
+          ),
+        ));
+      } else if (match.group(5) != null) {
+        // __bold__
+        spans.add(TextSpan(
+          text: match.group(5)!,
+          style: baseStyle.copyWith(
+            fontWeight: FontWeight.w800,
+            color: boldColor,
+          ),
+        ));
+      } else if (match.group(7) != null) {
+        // *italic*
+        spans.add(TextSpan(
+          text: match.group(7)!,
+          style: baseStyle.copyWith(
+            fontStyle: FontStyle.italic,
+          ),
+        ));
+      } else if (match.group(9) != null) {
+        // _italic_
+        spans.add(TextSpan(
+          text: match.group(9)!,
+          style: baseStyle.copyWith(
+            fontStyle: FontStyle.italic,
+          ),
+        ));
+      } else if (match.group(11) != null) {
+        // `code`
+        spans.add(TextSpan(
+          text: match.group(11)!,
+          style: baseStyle.copyWith(
+            fontFamily: 'monospace',
+            backgroundColor: codeBg,
+            fontSize: (baseStyle.fontSize ?? 14.0) - 1.0,
+          ),
+        ));
+      }
+
+      currentIndex = match.end;
+    }
+
+    if (currentIndex < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(currentIndex),
+        style: baseStyle,
+      ));
+    }
   }
 
   Widget _buildLoadingBubble(bool isDark) {
