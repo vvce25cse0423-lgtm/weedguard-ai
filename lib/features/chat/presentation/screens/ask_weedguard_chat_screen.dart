@@ -29,6 +29,8 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
   final FlutterTts _tts = FlutterTts();
   String? _currentlySpeakingId;
   final ImagePicker _picker = ImagePicker();
+  double? _templateHeight;
+  double? _templateWidth;
 
   final List<String> _quickSuggestions = [
     'How to control Parthenium (Congress Grass)?',
@@ -1495,15 +1497,24 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
       backgroundColor: const Color(0xFFEAF5EC),
       resizeToAvoidBottomInset: false,
       body: SafeArea(
+        bottom: false,
+        maintainBottomViewPadding: true,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final w = constraints.maxWidth;
-            final h = constraints.maxHeight;
+            // Freeze and lock template dimensions when keyboard is closed
+            // so the background image and card buttons never squish or compress up
+            if (bottomInset == 0 || _templateHeight == null) {
+              _templateHeight = constraints.maxHeight;
+              _templateWidth = constraints.maxWidth;
+            }
+
+            final w = _templateWidth ?? constraints.maxWidth;
+            final h = _templateHeight ?? constraints.maxHeight;
 
             return Stack(
               fit: StackFit.expand,
               children: [
-                // 1. Template Background Image perfectly fitted
+                // 1. Template Background Image perfectly locked at full dimensions
                 Image.asset(
                   'assets/images/weedguard_ai_template.png',
                   width: w,
@@ -1631,88 +1642,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                   ),
                 ),
 
-                // 8. Bottom Pill Input Bar: Active interactive elements
-                Positioned(
-                  left: w * (17 / 512),
-                  right: w * (17 / 512),
-                  bottom: bottomInset > 0 ? bottomInset + 10 : h * (36 / 1024),
-                  height: h * (66 / 1024),
-                  child: Row(
-                    children: [
-                      // Paperclip attachment button
-                      SizedBox(
-                        width: w * (52 / 512),
-                        height: double.infinity,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(24),
-                            onTap: _pickAndAnalyzeImage,
-                            child: const SizedBox.expand(),
-                          ),
-                        ),
-                      ),
-
-                      // Text input field
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: TextField(
-                            controller: _textController,
-                            textInputAction: TextInputAction.send,
-                            onSubmitted: _handleSubmitted,
-                            style: const TextStyle(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1B4332),
-                            ),
-                            decoration: const InputDecoration(
-                              hintText: 'Type your question...',
-                              hintStyle: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF6B8A7A),
-                                fontWeight: FontWeight.w500,
-                              ),
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(vertical: 8),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Mic button
-                      SizedBox(
-                        width: w * (48 / 512),
-                        height: double.infinity,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(24),
-                            onTap: _triggerVoiceInput,
-                            child: const SizedBox.expand(),
-                          ),
-                        ),
-                      ),
-
-                      // Send button (green circle)
-                      SizedBox(
-                        width: w * (58 / 512),
-                        height: double.infinity,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(24),
-                            onTap: () => _handleSubmitted(_textController.text),
-                            child: const SizedBox.expand(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // 9. Floating pill to view existing conversation (if any)
+                // 8. Floating pill to view existing conversation (if any)
                 if (_messages.isNotEmpty)
                   Positioned(
                     top: h * 0.10,
@@ -1755,6 +1685,140 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                       ),
                     ),
                   ),
+
+                // 9. Soft Dimming Backdrop Scrim when keyboard opens (Tap anywhere to dismiss keyboard)
+                if (bottomInset > 0)
+                  Positioned.fill(
+                    child: GestureDetector(
+                      onTap: () => FocusScope.of(context).unfocus(),
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.28),
+                      ),
+                    ),
+                  ),
+
+                // 10. Bottom Pill Input Bar: Active interactive elements
+                Positioned(
+                  left: w * (17 / 512),
+                  right: w * (17 / 512),
+                  bottom: bottomInset > 0 ? bottomInset + 10 : h * (36 / 1024),
+                  height: h * (66 / 1024),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    decoration: BoxDecoration(
+                      color: bottomInset > 0 ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(30),
+                      border: bottomInset > 0
+                          ? Border.all(color: const Color(0xFF2D6A4F), width: 1.5)
+                          : null,
+                      boxShadow: bottomInset > 0
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.18),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Row(
+                      children: [
+                        // Paperclip attachment button
+                        SizedBox(
+                          width: w * (52 / 512),
+                          height: double.infinity,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(24),
+                              onTap: _pickAndAnalyzeImage,
+                              child: Icon(
+                                Icons.attach_file_rounded,
+                                color: bottomInset > 0 ? const Color(0xFF6B8A7A) : Colors.transparent,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Text input field
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: TextField(
+                              controller: _textController,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: _handleSubmitted,
+                              style: const TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1B4332),
+                              ),
+                              decoration: const InputDecoration(
+                                hintText: 'Type your question...',
+                                hintStyle: TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF6B8A7A),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(vertical: 8),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Mic button
+                        SizedBox(
+                          width: w * (48 / 512),
+                          height: double.infinity,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(24),
+                              onTap: _triggerVoiceInput,
+                              child: Icon(
+                                Icons.mic_none_rounded,
+                                color: bottomInset > 0 ? const Color(0xFF6B8A7A) : Colors.transparent,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Send button (green circle)
+                        SizedBox(
+                          width: w * (58 / 512),
+                          height: double.infinity,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(24),
+                              onTap: () => _handleSubmitted(_textController.text),
+                              child: Center(
+                                child: Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: bottomInset > 0 ? const Color(0xFF1B4332) : Colors.transparent,
+                                  ),
+                                  child: Icon(
+                                    Icons.arrow_upward_rounded,
+                                    color: bottomInset > 0 ? Colors.white : Colors.transparent,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             );
           },
