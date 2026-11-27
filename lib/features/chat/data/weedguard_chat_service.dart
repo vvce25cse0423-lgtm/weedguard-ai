@@ -93,8 +93,31 @@ Your agricultural superpowers:
 Response Style:
 - $languageInstruction
 - Friendly greeting and structured breakdown with bullet points and bold highlights.
+- Formatting Rule: NEVER output triple asterisks like `***` or divider lines. Use clean bold `**term**` and bullet points `•`.
 - Keep recommendations actionable, practical, and easy for farmers to apply immediately.
 ''';
+  }
+
+  /// Cleans AI text: removes reasoning tags and ensures NO `***` appears in the output
+  static String _cleanAiResponse(String raw) {
+    if (raw.isEmpty) return raw;
+
+    // 1. Strip reasoning chain-of-thought tags (<think>...</think>)
+    var text = raw.replaceAll(RegExp(r'<think>[\s\S]*?<\/think>', caseSensitive: false), '').trim();
+
+    // 2. Remove divider lines made of asterisks, dashes, or underscores (***, ****, ---, ___)
+    text = text.replaceAll(RegExp(r'^\s*(\*{3,}|-{3,}|_{3,})\s*$', multiLine: true), '');
+
+    // 3. Convert bold-italic ***text*** or ****text**** into clean bold **text**
+    text = text.replaceAllMapped(RegExp(r'\*{3,}(.*?)\*{3,}'), (m) => '**${m[1]?.trim()}**');
+
+    // 4. Eliminate any remaining triple or multiple asterisks anywhere in the text
+    text = text.replaceAll(RegExp(r'\*{3,}'), '');
+
+    // 5. Clean up redundant empty lines created by removing divider lines
+    text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+
+    return text.trim();
   }
 
   static Future<String> sendMessage({
@@ -159,9 +182,8 @@ Response Style:
             if (choices != null && choices.isNotEmpty) {
               final content = choices[0]['message']?['content'] as String?;
               if (content != null && content.trim().isNotEmpty) {
-                // Strip reasoning chain-of-thought tags (<think>...</think>) for clean chat output
-                final cleaned = content.replaceAll(RegExp(r'<think>[\s\S]*?<\/think>', caseSensitive: false), '').trim();
-                return cleaned.isNotEmpty ? cleaned : content.trim();
+                final cleaned = _cleanAiResponse(content);
+                if (cleaned.isNotEmpty) return cleaned;
               }
             }
           }
@@ -200,7 +222,8 @@ Response Style:
             if (choices != null && choices.isNotEmpty) {
               final content = choices[0]['message']?['content'] as String?;
               if (content != null && content.trim().isNotEmpty) {
-                return content.trim();
+                final cleaned = _cleanAiResponse(content);
+                if (cleaned.isNotEmpty) return cleaned;
               }
             }
           } else if (response.statusCode == 402) {

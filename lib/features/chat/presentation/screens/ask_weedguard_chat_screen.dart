@@ -105,6 +105,15 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
     await _tts.speak(cleanText);
   }
 
+  /// Sanitizes text to strictly purge any `***` dividers or raw markdown artifacts
+  String _cleanDisplayText(String raw) {
+    if (raw.isEmpty) return raw;
+    var s = raw.replaceAll(RegExp(r'^\s*(\*{3,}|-{3,}|_{3,})\s*$', multiLine: true), '');
+    s = s.replaceAllMapped(RegExp(r'\*{3,}(.*?)\*{3,}'), (m) => '**${m[1]?.trim()}**');
+    s = s.replaceAll(RegExp(r'\*{3,}'), '');
+    return s.replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
+  }
+
   Future<void> _handleSubmitted(String text) async {
     final query = text.trim();
     if (query.isEmpty || _isLoading) return;
@@ -139,7 +148,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
           _messages.add(
             ChatMessage(
               id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
-              text: responseText,
+              text: _cleanDisplayText(responseText),
               sender: MessageSender.ai,
             ),
           );
@@ -2008,7 +2017,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SelectableText(
-                    message.text,
+                    _cleanDisplayText(message.text),
                     style: TextStyle(
                       fontSize: 14,
                       color: message.isError
