@@ -1497,325 +1497,351 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
         maintainBottomViewPadding: true,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            // Freeze and lock template dimensions when keyboard is closed
-            // so the background image and card buttons never squish or compress up
-            if (bottomInset == 0 || _templateHeight == null) {
+            // Strictly track full unconstrained screen dimensions (never shrink)
+            if (_templateHeight == null || constraints.maxHeight > _templateHeight!) {
               _templateHeight = constraints.maxHeight;
+            }
+            if (_templateWidth == null || constraints.maxWidth > _templateWidth!) {
               _templateWidth = constraints.maxWidth;
             }
 
             final w = _templateWidth ?? constraints.maxWidth;
             final h = _templateHeight ?? constraints.maxHeight;
 
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                // 1. Template Background Image perfectly locked at full dimensions
-                Image.asset(
-                  'assets/images/weedguard_ai_template.png',
-                  width: w,
-                  height: h,
-                  fit: BoxFit.fill,
-                  filterQuality: FilterQuality.high,
-                ),
+            final isKeyboardOpen = bottomInset > 0 || constraints.maxHeight < (h - 80);
+            final double visibleAreaHeight = isKeyboardOpen
+                ? (bottomInset > 0 ? (constraints.maxHeight - bottomInset) : constraints.maxHeight)
+                : h;
 
-                // 2. Top-Left: Back Button
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  width: w * 0.18,
-                  height: h * 0.09,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(24),
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        Navigator.of(context).pop();
-                      },
-                      child: const SizedBox.expand(),
+            return SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: SizedBox(
+                width: w,
+                height: h,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // 1. Template Background Image perfectly locked at full dimensions
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      width: w,
+                      height: h,
+                      child: Image.asset(
+                        'assets/images/weedguard_ai_template.png',
+                        width: w,
+                        height: h,
+                        fit: BoxFit.fill,
+                        filterQuality: FilterQuality.high,
+                      ),
                     ),
-                  ),
-                ),
 
-                // 3. Top-Right: Three Dots Menu (Opens exact custom cropped popup)
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  width: w * 0.18,
-                  height: h * 0.09,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(24),
-                      onTap: () => _showCustomMenu(context),
-                      child: const SizedBox.expand(),
+                    // 2. Top-Left: Back Button
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      width: w * 0.18,
+                      height: h * 0.09,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(24),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.of(context).pop();
+                          },
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
 
-                // 4. Card 1: "Identify Weed"
-                Positioned(
-                  left: w * (27 / 512),
-                  width: w * (222 / 512),
-                  top: h * (464 / 1024),
-                  height: h * (133 / 1024),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      splashColor: const Color(0xFF2D6A4F).withValues(alpha: 0.18),
-                      highlightColor: const Color(0xFF2D6A4F).withValues(alpha: 0.08),
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        _showIdentifyWeedOptions();
-                      },
-                      child: const SizedBox.expand(),
+                    // 3. Top-Right: Three Dots Menu (Opens exact custom cropped popup)
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      width: w * 0.18,
+                      height: h * 0.09,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(24),
+                          onTap: () => _showCustomMenu(context),
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
 
-                // 5. Card 2: "Removal Method"
-                Positioned(
-                  left: w * (264 / 512),
-                  width: w * (223 / 512),
-                  top: h * (464 / 1024),
-                  height: h * (133 / 1024),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      splashColor: const Color(0xFF0077B6).withValues(alpha: 0.18),
-                      highlightColor: const Color(0xFF0077B6).withValues(alpha: 0.08),
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        _handleSubmitted('What are the most effective weed removal methods (mechanical, cultural, chemical, and biological) for crop protection?');
-                      },
-                      child: const SizedBox.expand(),
+                    // 4. Card 1: "Identify Weed"
+                    Positioned(
+                      left: w * (27 / 512),
+                      width: w * (222 / 512),
+                      top: h * (464 / 1024),
+                      height: h * (133 / 1024),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          splashColor: const Color(0xFF2D6A4F).withValues(alpha: 0.18),
+                          highlightColor: const Color(0xFF2D6A4F).withValues(alpha: 0.08),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            _showIdentifyWeedOptions();
+                          },
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
 
-                // 6. Card 3: "Safe Herbicides"
-                Positioned(
-                  left: w * (27 / 512),
-                  width: w * (222 / 512),
-                  top: h * (620 / 1024),
-                  height: h * (135 / 1024),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      splashColor: const Color(0xFFF77F00).withValues(alpha: 0.18),
-                      highlightColor: const Color(0xFFF77F00).withValues(alpha: 0.08),
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        _handleSubmitted('Which safe herbicides are recommended for weed control without harming crops or soil, and what are their safety precautions?');
-                      },
-                      child: const SizedBox.expand(),
+                    // 5. Card 2: "Removal Method"
+                    Positioned(
+                      left: w * (264 / 512),
+                      width: w * (223 / 512),
+                      top: h * (464 / 1024),
+                      height: h * (133 / 1024),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          splashColor: const Color(0xFF0077B6).withValues(alpha: 0.18),
+                          highlightColor: const Color(0xFF0077B6).withValues(alpha: 0.08),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            _handleSubmitted('What are the most effective weed removal methods (mechanical, cultural, chemical, and biological) for crop protection?');
+                          },
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
 
-                // 7. Card 4: "Farming Tips"
-                Positioned(
-                  left: w * (264 / 512),
-                  width: w * (223 / 512),
-                  top: h * (620 / 1024),
-                  height: h * (135 / 1024),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      splashColor: const Color(0xFF7209B7).withValues(alpha: 0.18),
-                      highlightColor: const Color(0xFF7209B7).withValues(alpha: 0.08),
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        _handleSubmitted('What are the top practical farming tips, soil practices, and best methods for weed prevention?');
-                      },
-                      child: const SizedBox.expand(),
+                    // 6. Card 3: "Safe Herbicides"
+                    Positioned(
+                      left: w * (27 / 512),
+                      width: w * (222 / 512),
+                      top: h * (620 / 1024),
+                      height: h * (135 / 1024),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          splashColor: const Color(0xFFF77F00).withValues(alpha: 0.18),
+                          highlightColor: const Color(0xFFF77F00).withValues(alpha: 0.08),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            _handleSubmitted('Which safe herbicides are recommended for weed control without harming crops or soil, and what are their safety precautions?');
+                          },
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
 
-                // 8. Floating pill to view existing conversation (if any)
-                if (_messages.isNotEmpty)
-                  Positioned(
-                    top: h * 0.10,
-                    right: 16,
-                    child: GestureDetector(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        setState(() => _showChatView = true);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1B4332),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.18),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
+                    // 7. Card 4: "Farming Tips"
+                    Positioned(
+                      left: w * (264 / 512),
+                      width: w * (223 / 512),
+                      top: h * (620 / 1024),
+                      height: h * (135 / 1024),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          splashColor: const Color(0xFF7209B7).withValues(alpha: 0.18),
+                          highlightColor: const Color(0xFF7209B7).withValues(alpha: 0.08),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            _handleSubmitted('What are the top practical farming tips, soil practices, and best methods for weed prevention?');
+                          },
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
+                    ),
+
+                    // 8. Floating pill to view existing conversation (if any)
+                    if (_messages.isNotEmpty)
+                      Positioned(
+                        top: h * 0.10,
+                        right: 16,
+                        child: GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            setState(() => _showChatView = true);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1B4332),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.18),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
-                          ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 14),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Chat (${_messages.length})',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 11),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // 9. Soft Dimming Backdrop Scrim when keyboard opens (Tap anywhere to dismiss keyboard)
+                    if (isKeyboardOpen)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        width: w,
+                        height: h,
+                        child: GestureDetector(
+                          onTap: () => FocusScope.of(context).unfocus(),
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            color: Colors.black.withValues(alpha: 0.28),
+                          ),
+                        ),
+                      ),
+
+                    // 10. Bottom Pill Input Bar: Active interactive elements (No green boundary)
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
+                      left: w * (17 / 512),
+                      right: w * (17 / 512),
+                      top: isKeyboardOpen
+                          ? (visibleAreaHeight - (h * (66 / 1024)) - 12)
+                          : (h * (922 / 1024)),
+                      height: h * (66 / 1024),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isKeyboardOpen ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(30),
+                          border: null, // Strictly NO green boundary!
+                          boxShadow: isKeyboardOpen
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.15),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 14),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Chat (${_messages.length})',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
+                            // Paperclip attachment button
+                            SizedBox(
+                              width: w * (52 / 512),
+                              height: double.infinity,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(24),
+                                  onTap: _pickAndAnalyzeImage,
+                                  child: Icon(
+                                    Icons.attach_file_rounded,
+                                    color: isKeyboardOpen ? const Color(0xFF6B8A7A) : Colors.transparent,
+                                    size: 22,
+                                  ),
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 11),
+
+                            // Text input field
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                child: TextField(
+                                  controller: _textController,
+                                  textInputAction: TextInputAction.send,
+                                  onSubmitted: _handleSubmitted,
+                                  style: const TextStyle(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF1B4332),
+                                  ),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Type your question...',
+                                    hintStyle: TextStyle(
+                                      fontSize: 14,
+                                      color: Color(0xFF6B8A7A),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(vertical: 8),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Mic button
+                            SizedBox(
+                              width: w * (48 / 512),
+                              height: double.infinity,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(24),
+                                  onTap: _triggerVoiceInput,
+                                  child: Icon(
+                                    Icons.mic_none_rounded,
+                                    color: isKeyboardOpen ? const Color(0xFF6B8A7A) : Colors.transparent,
+                                    size: 22,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Send button (green circle)
+                            SizedBox(
+                              width: w * (58 / 512),
+                              height: double.infinity,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(24),
+                                  onTap: () => _handleSubmitted(_textController.text),
+                                  child: Center(
+                                    child: Container(
+                                      width: 38,
+                                      height: 38,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: isKeyboardOpen ? const Color(0xFF1B4332) : Colors.transparent,
+                                      ),
+                                      child: Icon(
+                                        Icons.arrow_upward_rounded,
+                                        color: isKeyboardOpen ? Colors.white : Colors.transparent,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     ),
-                  ),
-
-                // 9. Soft Dimming Backdrop Scrim when keyboard opens (Tap anywhere to dismiss keyboard)
-                if (bottomInset > 0)
-                  Positioned.fill(
-                    child: GestureDetector(
-                      onTap: () => FocusScope.of(context).unfocus(),
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        color: Colors.black.withValues(alpha: 0.28),
-                      ),
-                    ),
-                  ),
-
-                // 10. Bottom Pill Input Bar: Active interactive elements
-                Positioned(
-                  left: w * (17 / 512),
-                  right: w * (17 / 512),
-                  bottom: bottomInset > 0 ? bottomInset + 10 : h * (36 / 1024),
-                  height: h * (66 / 1024),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    decoration: BoxDecoration(
-                      color: bottomInset > 0 ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(30),
-                      border: bottomInset > 0
-                          ? Border.all(color: const Color(0xFF2D6A4F), width: 1.5)
-                          : null,
-                      boxShadow: bottomInset > 0
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.18),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Row(
-                      children: [
-                        // Paperclip attachment button
-                        SizedBox(
-                          width: w * (52 / 512),
-                          height: double.infinity,
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(24),
-                              onTap: _pickAndAnalyzeImage,
-                              child: Icon(
-                                Icons.attach_file_rounded,
-                                color: bottomInset > 0 ? const Color(0xFF6B8A7A) : Colors.transparent,
-                                size: 22,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Text input field
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: TextField(
-                              controller: _textController,
-                              textInputAction: TextInputAction.send,
-                              onSubmitted: _handleSubmitted,
-                              style: const TextStyle(
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF1B4332),
-                              ),
-                              decoration: const InputDecoration(
-                                hintText: 'Type your question...',
-                                hintStyle: TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF6B8A7A),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(vertical: 8),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Mic button
-                        SizedBox(
-                          width: w * (48 / 512),
-                          height: double.infinity,
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(24),
-                              onTap: _triggerVoiceInput,
-                              child: Icon(
-                                Icons.mic_none_rounded,
-                                color: bottomInset > 0 ? const Color(0xFF6B8A7A) : Colors.transparent,
-                                size: 22,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Send button (green circle)
-                        SizedBox(
-                          width: w * (58 / 512),
-                          height: double.infinity,
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(24),
-                              onTap: () => _handleSubmitted(_textController.text),
-                              child: Center(
-                                child: Container(
-                                  width: 38,
-                                  height: 38,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: bottomInset > 0 ? const Color(0xFF1B4332) : Colors.transparent,
-                                  ),
-                                  child: Icon(
-                                    Icons.arrow_upward_rounded,
-                                    color: bottomInset > 0 ? Colors.white : Colors.transparent,
-                                    size: 20,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             );
           },
         ),
@@ -1934,8 +1960,8 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         border: Border(
           top: BorderSide(
-            color: isDark ? Colors.white12 : const Color(0xFFE8F0EA),
-            width: 1,
+            color: isDark ? Colors.white12 : const Color(0xFFE5E5E5),
+            width: 0.8,
           ),
         ),
       ),
@@ -2382,10 +2408,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF1F5F2),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: isDark ? Colors.white12 : const Color(0xFFD8F3DC),
-                  width: 1,
-                ),
+                border: null, // Strictly NO green boundary
               ),
               child: TextField(
                 controller: _textController,
@@ -2401,6 +2424,9 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                   hintText: 'Type your question...',
                   hintStyle: TextStyle(fontSize: 13, color: Colors.black45),
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
                   isDense: true,
                   contentPadding: EdgeInsets.symmetric(vertical: 10),
                 ),
