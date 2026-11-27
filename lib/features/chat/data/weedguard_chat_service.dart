@@ -23,6 +23,20 @@ class WeedGuardChatService {
     'mixtral-8x7b-32768',
   ];
 
+  static Future<void> saveUserApiKey(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('groq_api_key', key.trim());
+  }
+
+  static Future<String?> getUserApiKey() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('groq_api_key');
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<String> getEffectiveApiKey() async {
     if (_envGroqKey.trim().isNotEmpty) {
       return _envGroqKey.trim();
@@ -133,6 +147,66 @@ Guidelines:
 
   static String _getOfflineFallbackResponse(String query, String languageCode) {
     final q = query.toLowerCase();
+
+    // 1. Template Card: Identify Weed
+    if (q.contains('identify') || q.contains('identification') || q.contains('ಗುರುತಿಸು') || q.contains('पहचान')) {
+      if (languageCode == 'kn') {
+        return '''🔍 **ಕಳೆ ಗುರುತಿಸುವಿಕೆ ಮಾರ್ಗದರ್ಶಿ:**
+• **ಎಲೆಯ ಆಕಾರ:** ಅಗಲ ಎಲೆಯ ಕಳೆಗಳು (ಪಾರ್ಥೇನಿಯಂ, ಅಮಾರಾಂತಸ್) vs ಕಿರಿದಾದ ಹುಲ್ಲಿನ ಕಳೆಗಳು (ಸೈನೋಡಾನ್, ಎಕಿನೋಕ್ಲೋವಾ).
+• **ಕಾಂಡ ಮತ್ತು ಬೇರು:** ದುಂಡಾದ ಕಾಂಡಗಳು (ಹುಲ್ಲು), ತ್ರಿಕೋನಾಕಾರದ ಕಾಂಡ ಮತ್ತು ಗೆಡ್ಡೆಗಳು (ಭದ್ರಮುಷ್ಟಿ ಸೈಪರಸ್).
+• **ಕ್ಯಾಮೆರಾ ಸ್ಕ್ಯಾನರ್:** ನಿಖರ ಗುರುತಿಸುವಿಕೆಗೆ ವೀಡ್‌ಗಾರ್ಡ್ AI ಕ್ಯಾಮೆರಾ ಸ್ಕ್ಯಾನರ್ ಬಳಸಿ ನೇರವಾಗಿ ಫೋಟೋ ತೆಗೆಯಿರಿ.''';
+      }
+      return '''🔍 **Weed Identification Guide:**
+• **Broadleaf vs Grassy Weeds:** Broadleaf weeds (Parthenium, Pigweed) have netted leaf veins and showy flowers. Grasses (Barnyard grass, Bermuda grass) have narrow, parallel-veined leaves and hollow round stems.
+• **Sedges (Nutgrass):** Distinctive triangular solid stems and underground tuber chains (Cyperus rotundus).
+• **WeedGuard Camera Scanner:** Use our live camera scanner to snap a photo for instant AI visual detection and classification.''';
+    }
+
+    // 2. Template Card: Removal Method
+    if (q.contains('removal') || q.contains('remove') || q.contains('ತೆಗೆಯುವ') || q.contains('ಕಳೆ ತೆಗೆಯುವ') || q.contains('हटाने')) {
+      if (languageCode == 'kn') {
+        return '''🛠️ **ಕಳೆ ತೆಗೆಯುವ ಪರಿಣಾಮಕಾರಿ ವಿಧಾನಗಳು:**
+1. **ಯಾಂತ್ರಿಕ ವಿಧಾನ:** ಬೀಜ ಕಟ್ಟುವುಕ್ಕಿಂತ ಮುನ್ನ ಕೊಳೆತ ಎಡೆಕುಂಟೆ (Wheel Hoe) ಅಥವಾ ಕೈಯಿಂದ ಕಳೆ ಕೀಳುವುದು.
+2. **ಸಾವಯವ ಮಲ್ಚಿಂಗ್:** ಸಾಲುಗಳ ನಡುವೆ ಒಣ ಹುಲ್ಲಿನ ಹೊದಿಕೆ ಹಾಕಿ ಸೂರ್ಯನ ಬೆಳಕು ತಡೆದು ಕಳೆ ಹತ್ತಿಕ್ಕುವುದು.
+3. **ಅಂತರ್ ಬೆಳೆ ಪದ್ಧತಿ:** ದ್ವಿದಳ ಧಾನ್ಯ ಬೆಳೆಸಿ ಮಣ್ಣನ್ನು ಆವರಿಸಿ ಕಳೆ ಮೊಳಕೆಯೊಡೆಯದಂತೆ ತಡೆಯುವುದು.
+4. **ಸಮಗ್ರ ನಿರ್ವಹಣೆ (IWM):** ಕನಿಷ್ಠ ರಾಸಾಯನಿಕ ಮತ್ತು ಗರಿಷ್ಠ ನೈಸರ್ಗಿಕ ತಡೆ ವಿಧಾನಗಳ ಮಿಶ್ರಣ.''';
+      }
+      return '''🛠️ **Integrated Weed Removal Methods:**
+1. **Mechanical Hoeing:** Manual wheel hoes or rotary weeders during early vegetative stages (15–25 days after sowing).
+2. **Solarization & Mulching:** Organic straw mulching (3–4 inches) to block sunlight from weed seedbeds.
+3. **Biological & Smother Crops:** Intercrop fast-canopy legumes (cowpea, black gram) to starve weeds of light.
+4. **Targeted Spot Spraying:** Treat stubborn patches with precision nozzles instead of blanket field spraying.''';
+    }
+
+    // 3. Template Card: Safe Herbicides
+    if (q.contains('safe herbicide') || q.contains('herbicide') || q.contains('ಕಳೆನಾಶಕ') || q.contains('शाकनाशी')) {
+      if (languageCode == 'kn') {
+        return '''🛡️ **ಸುರಕ್ಷಿತ ಕಳೆನಾಶಕಗಳ ಬಳಕೆ ಹಾಗೂ ಮುನ್ನೆಚ್ಚರಿಕೆ:**
+• **ಆಯ್ಕೆ ಮಾಡಿದ ಕಳೆನಾಶಕ (Selective):** ಬೆಳೆಗಳಿಗೆ ಹಾನಿಯಾಗದಂತೆ ಕಳೆಯನ್ನು ಮಾತ್ರ ನಾಶಪಡಿಸುವ ಔಷಧಿಗಳು (ಉದಾ: ಮೆಕ್ಕೆಜೋಳಕ್ಕೆ ಅಟ್ರಾಜಿನ್).
+• **ಪ್ರಿ-ಎಮರ್ಜೆಂಟ್:** ಪೆಂಡಿಮೆಥಾಲಿನ್ (Pendimethalin 30% EC) - ಬಿತ್ತನೆ ಮಾಡಿದ 48 ಗಂಟೆಗಳ ಒಳಗೆ ತೇವಾಂಶವಿರುವ ಮಣ್ಣಿಗೆ ಸಿಂಪಡಿಸಿ.
+• **ಸುರಕ್ಷತಾ ಕ್ರಮಗಳು:** ರಬ್ಬರ್ ಕೈಗವಸು, ಮಾಸ್ಕ್ ಧರಿಸಿ, ಗಾಳಿಯ ವಿರುದ್ಧ ದಿಕ್ಕಿನಲ್ಲಿ ಸಿಂಪಡಿಸಬೇಡಿ. ಮಕ್ಕಳು ಮತ್ತು ಜಾನುವಾರುಗಳಿಂದ ದೂರವಿಡಿ.''';
+      }
+      return '''🛡️ **Safe & Selective Herbicides Protocol:**
+• **Crop-Specific Selective Herbicides:** Use targeted selective molecules that eliminate weeds without injuring crop roots (e.g., Atrazine for maize/sorghum, Bispyribac sodium for paddy).
+• **Pre-Emergent Safety:** Apply Pendimethalin 30% EC within 48 hours of sowing on moist soil to create a chemical protective barrier.
+• **PPE Protection:** Always wear rubber chemical gloves, safety goggles, and an N95 respirator. Never spray against wind direction.''';
+    }
+
+    // 4. Template Card: Farming Tips
+    if (q.contains('farming tip') || q.contains('farming tips') || q.contains('tips') || q.contains('ಕೃಷಿ ಸಲಹೆ') || q.contains('खेती')) {
+      if (languageCode == 'kn') {
+        return '''🌱 **ಉತ್ತಮ ಕೃಷಿ ಹಾಗೂ ಕಳೆ ನಿಯಂತ್ರಣ ಸಲಹೆಗಳು:**
+1. **ಶುದ್ಧ ಬೀಜ ಬಳಕೆ:** ಪ್ರಮಾಣೀಕೃತ, ಕಳೆಬೀಜ ರಹಿತ ಶುದ್ಧ ಬಿತ್ತನೆ ಬೀಜಗಳನ್ನು ಮಾತ್ರ ಬಳಸಿ.
+2. **ಮೊದಲ 30 ದಿನಗಳ ನಿರ್ಣಾಯಕ ಹಂತ:** ಬೆಳೆಯ ಆರಂಭಿಕ 3-4 ವಾರಗಳು ಅತ್ಯಂತ ಮುಖ್ಯ, ಈ ಸಮಯದಲ್ಲಿ ಕಳೆ ಮುಕ್ತವಾಗಿರಿಸಿದರೆ 80% ಇಳುವರಿ ಸುಧಾರಿಸುತ್ತದೆ.
+3. **ಉಳುಮೆ ಯಂತ್ರಗಳ ಸ್ವಚ್ಛತೆ:** ಒಂದು ಹೊಲದಿಂದ ಇನ್ನೊಂದು ಹೊಲಕ್ಕೆ ಟ್ರ್ಯಾಕ್ಟರ್ ಅಥವಾ ಉಪಕರಣಗಳನ್ನು ಬಳಸುವ ಮುನ್ನ ಸ್ವಚ್ಛಗೊಳಿಸಿ.
+4. **ಬೆಳೆ ಪರಿವರ್ತನೆ (Crop Rotation):** ಒಂದೇ ಬೆಳೆ ಬದಲಿಗೆ ಕಾಲಕಾಲಕ್ಕೆ ಬೆಳೆ ಬದಲಾಯಿಸುವುದರಿಂದ ಕಳೆಯ ಚಕ್ರ ಮುರಿಯುತ್ತದೆ.''';
+      }
+      return '''🌱 **Top Farming & Weed Prevention Tips:**
+1. **Critical Period of Weed Competition (CPWC):** Keep fields 100% weed-free during the first 25–40 days after emergence; this guarantees up to 80% higher crop yield.
+2. **Certified Clean Seeds:** Prevent introducing invasive weed seeds by planting certified, cleaned seed stock.
+3. **Equipment Sanitation:** Pressure-wash cultivators and harvesters before moving between different farm plots to stop root/seed transfer.
+4. **Smart Crop Rotation:** Alternate tap-root crops with fibrous-root crops to disrupt persistent weed cycles.''';
+    }
 
     if (q.contains('parthenium') || q.contains('carrot grass') || q.contains('ಕಾಂಗ್ರೆಸ್ ಕಳೆ')) {
       if (languageCode == 'kn') {
