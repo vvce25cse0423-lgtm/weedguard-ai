@@ -283,7 +283,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Menu',
-      barrierColor: Colors.black.withOpacity(0.35),
+      barrierColor: Colors.black.withValues(alpha: 0.35),
       transitionDuration: const Duration(milliseconds: 220),
       pageBuilder: (ctx, anim1, anim2) {
         const double menuWidth = 265.0;
@@ -303,7 +303,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                     borderRadius: BorderRadius.circular(22),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.24),
+                        color: Colors.black.withValues(alpha: 0.24),
                         blurRadius: 18,
                         offset: const Offset(0, 8),
                       ),
@@ -329,8 +329,8 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                               child: Material(
                                 color: Colors.transparent,
                                 child: InkWell(
-                                  splashColor: const Color(0xFF1B4332).withOpacity(0.12),
-                                  highlightColor: const Color(0xFF1B4332).withOpacity(0.06),
+                                  splashColor: const Color(0xFF1B4332).withValues(alpha: 0.12),
+                                  highlightColor: const Color(0xFF1B4332).withValues(alpha: 0.06),
                                   onTap: () {
                                     Navigator.of(ctx).pop();
                                     _showChatHistory();
@@ -345,8 +345,8 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                               child: Material(
                                 color: Colors.transparent,
                                 child: InkWell(
-                                  splashColor: const Color(0xFF1B4332).withOpacity(0.12),
-                                  highlightColor: const Color(0xFF1B4332).withOpacity(0.06),
+                                  splashColor: const Color(0xFF1B4332).withValues(alpha: 0.12),
+                                  highlightColor: const Color(0xFF1B4332).withValues(alpha: 0.06),
                                   onTap: () {
                                     Navigator.of(ctx).pop();
                                     _showSavedResults();
@@ -361,8 +361,8 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                               child: Material(
                                 color: Colors.transparent,
                                 child: InkWell(
-                                  splashColor: const Color(0xFF1B4332).withOpacity(0.12),
-                                  highlightColor: const Color(0xFF1B4332).withOpacity(0.06),
+                                  splashColor: const Color(0xFF1B4332).withValues(alpha: 0.12),
+                                  highlightColor: const Color(0xFF1B4332).withValues(alpha: 0.06),
                                   onTap: () {
                                     Navigator.of(ctx).pop();
                                     _showLanguagePicker();
@@ -377,8 +377,8 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                               child: Material(
                                 color: Colors.transparent,
                                 child: InkWell(
-                                  splashColor: const Color(0xFF1B4332).withOpacity(0.12),
-                                  highlightColor: const Color(0xFF1B4332).withOpacity(0.06),
+                                  splashColor: const Color(0xFF1B4332).withValues(alpha: 0.12),
+                                  highlightColor: const Color(0xFF1B4332).withValues(alpha: 0.06),
                                   onTap: () {
                                     Navigator.of(ctx).pop();
                                     _showHowToUse();
@@ -393,8 +393,8 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                               child: Material(
                                 color: Colors.transparent,
                                 child: InkWell(
-                                  splashColor: const Color(0xFF1B4332).withOpacity(0.12),
-                                  highlightColor: const Color(0xFF1B4332).withOpacity(0.06),
+                                  splashColor: const Color(0xFF1B4332).withValues(alpha: 0.12),
+                                  highlightColor: const Color(0xFF1B4332).withValues(alpha: 0.06),
                                   onTap: () {
                                     Navigator.of(ctx).pop();
                                     _showHelpAndFeedback();
@@ -930,7 +930,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
   }) {
     return ListTile(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      tileColor: isSelected ? const Color(0xFFD8F3DC).withOpacity(0.5) : Colors.transparent,
+      tileColor: isSelected ? const Color(0xFFD8F3DC).withValues(alpha: 0.5) : Colors.transparent,
       leading: Container(
         width: 38,
         height: 38,
@@ -1548,8 +1548,8 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(18),
-                      splashColor: const Color(0xFF2D6A4F).withOpacity(0.18),
-                      highlightColor: const Color(0xFF2D6A4F).withOpacity(0.08),
+                      splashColor: const Color(0xFF2D6A4F).withValues(alpha: 0.18),
+                      highlightColor: const Color(0xFF2D6A4F).withValues(alpha: 0.08),
                       onTap: () {
                         HapticFeedback.lightImpact();
                         _showIdentifyWeedOptions();
@@ -1569,8 +1569,8 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(18),
-                      splashColor: const Color(0xFF0077B6).withOpacity(0.18),
-                      highlightColor: const Color(0xFF0077B6).withOpacity(0.08),
+                      splashColor: const Color(0xFF0077B6).withValues(alpha: 0.18),
+                      highlightColor: const Color(0xFF0077B6).withValues(alpha: 0.08),
                       onTap: () {
                         HapticFeedback.lightImpact();
                         _handleSubmitted('What are the most effective weed removal methods (mechanical, cultural, chemical, and biological) for crop protection?');
@@ -1590,8 +1590,8 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(18),
-                      splashColor: const Color(0xFFF77F00).withOpacity(0.18),
-                      highlightColor: const Color(0xFFF77F00).withOpacity(0.08),
+                      splashColor: const Color(0xFFF77F00).withValues(alpha: 0.18),
+                      highlightColor: const Color(0xFFF77F00).withValues(alpha: 0.08),
                       onTap: () {
                         HapticFeedback.lightImpact();
                         _handleSubmitted('Which safe herbicides are recommended for weed control without harming crops or soil, and what are their safety precautions?');
@@ -1611,8 +1611,8 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(18),
-                      splashColor: const Color(0xFF7209B7).withOpacity(0.18),
-                      highlightColor: const Color(0xFF7209B7).withOpacity(0.08),
+                      splashColor: const Color(0xFF7209B7).withValues(alpha: 0.18),
+                      highlightColor: const Color(0xFF7209B7).withValues(alpha: 0.08),
                       onTap: () {
                         HapticFeedback.lightImpact();
                         _handleSubmitted('What are the top practical farming tips, soil practices, and best methods for weed prevention?');
@@ -1720,7 +1720,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.18),
+                              color: Colors.black.withValues(alpha: 0.18),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -1887,8 +1887,8 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
               ),
             ),
             backgroundColor: isDark
-                ? const Color(0xFF2D6A4F).withOpacity(0.25)
-                : const Color(0xFFD8F3DC).withOpacity(0.55),
+                ? const Color(0xFF2D6A4F).withValues(alpha: 0.25)
+                : const Color(0xFFD8F3DC).withValues(alpha: 0.55),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(
@@ -1931,7 +1931,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -1993,12 +1993,12 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                 ),
                 border: Border.all(
                   color: message.isError
-                      ? Colors.redAccent.withOpacity(0.5)
+                      ? Colors.redAccent.withValues(alpha: 0.5)
                       : (isDark ? Colors.white12 : const Color(0xFFE0E0E0)),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -2121,7 +2121,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, -3),
           ),

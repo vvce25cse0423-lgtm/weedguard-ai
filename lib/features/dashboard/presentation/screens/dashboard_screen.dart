@@ -329,9 +329,9 @@ class _HeroSection extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    const Color(0xFF1B4332).withOpacity(0.45),
-                    const Color(0xFF2D6A4F).withOpacity(0.30),
-                    const Color(0xFF40916C).withOpacity(0.15),
+                    const Color(0xFF1B4332).withValues(alpha: 0.45),
+                    const Color(0xFF2D6A4F).withValues(alpha: 0.30),
+                    const Color(0xFF40916C).withValues(alpha: 0.15),
                     Colors.transparent,
                   ],
                 ),
@@ -348,7 +348,7 @@ class _HeroSection extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFFFFC300).withOpacity(0.35),
+                    const Color(0xFFFFC300).withValues(alpha: 0.35),
                     Colors.transparent,
                   ],
                 ),
@@ -377,7 +377,7 @@ class _HeroSection extends StatelessWidget {
                       height: 46,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 8, offset: const Offset(0, 2))],
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 8, offset: const Offset(0, 2))],
                       ),
                       child: Stack(
                         alignment: Alignment.center,
@@ -438,7 +438,7 @@ class _HeroSection extends StatelessWidget {
                                   height: 34,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.white.withOpacity(0.18),
+                                    color: Colors.white.withValues(alpha: 0.18),
                                     border: Border.all(color: Colors.white38, width: 1.5),
                                   ),
                                   child: const Icon(Icons.thermostat_outlined, color: Colors.white70, size: 16),
@@ -448,7 +448,7 @@ class _HeroSection extends StatelessWidget {
                                   height: 34,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.white.withOpacity(0.18),
+                                    color: Colors.white.withValues(alpha: 0.18),
                                     border: Border.all(color: Colors.white38, width: 1.5),
                                   ),
                                   child: const Icon(Icons.thermostat_outlined, color: Colors.white, size: 16),
@@ -463,7 +463,7 @@ class _HeroSection extends StatelessWidget {
                                     padding: const EdgeInsets.symmetric(horizontal: 8),
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(17),
-                                      color: Colors.white.withOpacity(0.18),
+                                      color: Colors.white.withValues(alpha: 0.18),
                                       border: Border.all(color: Colors.white54, width: 1.5),
                                     ),
                                     child: Row(
@@ -495,7 +495,7 @@ class _HeroSection extends StatelessWidget {
                             height: 34,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.18),
+                              color: Colors.white.withValues(alpha: 0.18),
                               border: Border.all(color: Colors.white54, width: 1.5),
                             ),
                             child: const Icon(Icons.wb_twilight_rounded,
@@ -662,7 +662,7 @@ class _DashboardAvatarButton extends StatelessWidget {
         height: 34,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withOpacity(0.18),
+          color: Colors.white.withValues(alpha: 0.18),
           border: Border.all(color: Colors.white54, width: 1.5),
         ),
         child: ClipOval(child: content),
@@ -768,7 +768,7 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.07),
+              color: Colors.black.withValues(alpha: 0.07),
               blurRadius: 12,
               offset: const Offset(0, 4))
         ],
@@ -1026,7 +1026,7 @@ class _ActionCard extends StatelessWidget {
             border: Border.all(color: const Color(0xFFD8F3DC), width: 1),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: Colors.black.withValues(alpha: 0.06),
                   blurRadius: 8,
                   offset: const Offset(0, 3))
             ],
@@ -1288,7 +1288,7 @@ class _ScansList extends StatelessWidget {
                     border: Border.all(color: const Color(0xFFE8F0E8), width: 1.2),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
+                          color: Colors.black.withValues(alpha: 0.04),
                           blurRadius: 8,
                           offset: const Offset(0, 3))
                     ],
@@ -1439,7 +1439,7 @@ class _WeatherCard extends ConsumerWidget {
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(18),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 10, offset: const Offset(0, 3))],
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 10, offset: const Offset(0, 3))],
             ),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
@@ -1450,7 +1450,7 @@ class _WeatherCard extends ConsumerWidget {
                   Container(
                     width: 60, height: 60,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.65),
+                      color: Colors.white.withValues(alpha: 0.65),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -1478,7 +1478,7 @@ class _WeatherCard extends ConsumerWidget {
                               padding: const EdgeInsets.only(bottom: 3),
                               child: Text(
                                 displayDesc.isNotEmpty ? _capitalize(displayDesc) : '',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: iconColor.withOpacity(0.8)),
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: iconColor.withValues(alpha: 0.8)),
                               ),
                             ),
                           ],
@@ -1505,13 +1505,13 @@ class _WeatherCard extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(l10n.live, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: iconColor)),
                       ),
                       const SizedBox(height: 4),
-                      Icon(Icons.cloud_sync_outlined, size: 16, color: iconColor.withOpacity(0.6)),
+                      Icon(Icons.cloud_sync_outlined, size: 16, color: iconColor.withValues(alpha: 0.6)),
                     ],
                   ),
                 ],
@@ -1536,9 +1536,9 @@ class _WeatherStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 12, color: color.withOpacity(0.7)),
+      Icon(icon, size: 12, color: color.withValues(alpha: 0.7)),
       const SizedBox(width: 3),
-      Text(label, style: TextStyle(fontSize: 11, color: color.withOpacity(0.8), fontWeight: FontWeight.w500)),
+      Text(label, style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.8), fontWeight: FontWeight.w500)),
     ]);
   }
 }
@@ -1676,7 +1676,7 @@ class _TipOfTheDay extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF175727).withOpacity(0.35),
+              color: const Color(0xFF175727).withValues(alpha: 0.35),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -1692,7 +1692,7 @@ class _TipOfTheDay extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.14),
+                    color: Colors.white.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
