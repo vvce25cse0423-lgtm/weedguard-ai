@@ -1737,7 +1737,7 @@ class _TipOfTheDay extends StatelessWidget {
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.lightImpact();
-                  context.push('/chat', extra: tipText);
+                  context.push('/chat');
                 },
                 child: Image.asset(
                   'assets/images/ask_weedguard_ai_badge.png',

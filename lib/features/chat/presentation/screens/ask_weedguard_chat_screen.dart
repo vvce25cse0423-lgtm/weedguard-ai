@@ -43,12 +43,6 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
   void initState() {
     super.initState();
     _initTts();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) {
-        _handleSubmitted('Can you explain more about this farming tip: "${widget.initialQuery}"?');
-      }
-    });
   }
 
   Future<void> _initTts() async {
