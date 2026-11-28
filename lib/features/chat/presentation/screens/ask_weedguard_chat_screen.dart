@@ -24,7 +24,9 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isLoading = false;
+  bool _isTranslating = false;
   bool _showChatView = false;
+  String? _activeLanguageCode;
 
   final FlutterTts _tts = FlutterTts();
   String? _currentlySpeakingId;
@@ -62,7 +64,59 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
   @override
   void initState() {
     super.initState();
+    _activeLanguageCode = ref.read(localeProvider).languageCode;
     _initTts();
+  }
+
+  Future<void> _translateExistingMessages(String targetLang) async {
+    final aiIndices = <int>[];
+    for (int i = 0; i < _messages.length; i++) {
+      if (_messages[i].sender == MessageSender.ai && !_messages[i].isError) {
+        aiIndices.add(i);
+      }
+    }
+    if (aiIndices.isEmpty) return;
+
+    setState(() => _isTranslating = true);
+    try {
+      final firstAiIndex = aiIndices.first;
+      final translatedResults = await Future.wait(
+        aiIndices.map((idx) {
+          final msg = _messages[idx];
+          String? userQuery;
+          if (idx > 0 && _messages[idx - 1].sender == MessageSender.user) {
+            userQuery = _messages[idx - 1].text;
+          }
+          return WeedGuardChatService.translateResponse(
+            msg.text,
+            targetLanguageCode: targetLang,
+            originalUserQuery: userQuery,
+            isFirstMessage: idx == firstAiIndex,
+          );
+        }),
+      );
+
+      if (mounted) {
+        setState(() {
+          for (int k = 0; k < aiIndices.length; k++) {
+            final idx = aiIndices[k];
+            final orig = _messages[idx];
+            _messages[idx] = ChatMessage(
+              id: orig.id,
+              text: translatedResults[k],
+              sender: MessageSender.ai,
+              timestamp: orig.timestamp,
+            );
+          }
+          _isTranslating = false;
+        });
+        _saveCurrentSessionToHistory();
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isTranslating = false);
+      }
+    }
   }
 
   Future<void> _initTts() async {
@@ -1496,6 +1550,14 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<Locale>(localeProvider, (previous, next) {
+      final newCode = next.languageCode;
+      if (newCode != _activeLanguageCode) {
+        _activeLanguageCode = newCode;
+        _translateExistingMessages(newCode);
+      }
+    });
+
     if (_showChatView) {
       return _buildChatView(context);
     }
@@ -1797,9 +1859,14 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                                       color: Color(0xFF6B8A7A),
                                       fontWeight: FontWeight.w500,
                                     ),
+                                    filled: false,
+                                    fillColor: Colors.transparent,
                                     border: InputBorder.none,
                                     enabledBorder: InputBorder.none,
                                     focusedBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                    errorBorder: InputBorder.none,
+                                    focusedErrorBorder: InputBorder.none,
                                     isDense: true,
                                     contentPadding: EdgeInsets.symmetric(vertical: 8),
                                   ),
@@ -1894,12 +1961,11 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
               height: 34,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF52B788), width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF52B788).withValues(alpha: 0.35),
-                    blurRadius: 5,
-                    spreadRadius: 0.5,
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
                   ),
                 ],
               ),
@@ -1909,6 +1975,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                   width: 34,
                   height: 34,
                   fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
                   errorBuilder: (_, __, ___) => const Icon(
                     Icons.shield_rounded,
                     color: Color(0xFF52B788),
@@ -1996,6 +2063,30 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
           SafeArea(
             child: Column(
               children: [
+                if (_isTranslating)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    color: const Color(0xFF1B4332).withValues(alpha: 0.9),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Translating responses...',
+                          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
                 // Messages chat area
                 Expanded(
                   child: ListView.builder(
@@ -2127,17 +2218,13 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
             ),
             const SizedBox(width: 8),
             Container(
-              width: 34,
-              height: 34,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: isDark ? Colors.white24 : const Color(0xFFE2E8E4),
-                  width: 1.2,
-                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
+                    color: Colors.black.withValues(alpha: 0.12),
                     blurRadius: 4,
                     offset: const Offset(0, 1),
                   ),
@@ -2146,9 +2233,10 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
               child: ClipOval(
                 child: Image.asset(
                   'assets/icons/user_avatar.png',
-                  width: 34,
-                  height: 34,
+                  width: 36,
+                  height: 36,
                   fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
                   errorBuilder: (_, __, ___) => Container(
                     color: const Color(0xFF52B788),
                     child: const Icon(Icons.person, color: Colors.white, size: 18),
@@ -2168,30 +2256,32 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 36,
+            height: 36,
             margin: const EdgeInsets.only(top: 2, right: 8),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF52B788).withValues(alpha: 0.35),
-                  blurRadius: 6,
-                  spreadRadius: 0.5,
+                  color: Colors.black.withValues(alpha: 0.14),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
                 ),
               ],
             ),
             child: ClipOval(
               child: Image.asset(
                 'assets/icons/bot_avatar.png',
-                width: 34,
-                height: 34,
+                width: 36,
+                height: 36,
                 fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
                 errorBuilder: (_, __, ___) => Image.asset(
                   'assets/icons/weedguard_shield.png',
-                  width: 34,
-                  height: 34,
+                  width: 36,
+                  height: 36,
                   fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
                 ),
               ),
             ),
@@ -2515,29 +2605,32 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 34,
+            height: 34,
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF52B788).withValues(alpha: 0.3),
-                  blurRadius: 5,
+                  color: Colors.black.withValues(alpha: 0.14),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
                 ),
               ],
             ),
             child: ClipOval(
               child: Image.asset(
                 'assets/icons/bot_avatar.png',
-                width: 32,
-                height: 32,
+                width: 34,
+                height: 34,
                 fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
                 errorBuilder: (_, __, ___) => Image.asset(
                   'assets/icons/weedguard_shield.png',
-                  width: 32,
-                  height: 32,
+                  width: 34,
+                  height: 34,
                   fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
                 ),
               ),
             ),
@@ -2602,11 +2695,14 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
           ),
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF1F5F2),
+                color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF3F6F4),
                 borderRadius: BorderRadius.circular(24),
-                border: null, // Strictly NO green boundary
+                border: Border.all(
+                  color: isDark ? Colors.white12 : const Color(0xFFDCE3DF),
+                  width: 1,
+                ),
               ),
               child: TextField(
                 controller: _textController,
@@ -2618,15 +2714,22 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                   fontSize: 14,
                   color: isDark ? Colors.white : Colors.black87,
                 ),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Type your question...',
-                  hintStyle: TextStyle(fontSize: 13, color: Colors.black45),
+                  hintStyle: TextStyle(
+                    fontSize: 13.5,
+                    color: isDark ? Colors.white54 : Colors.black45,
+                  ),
+                  filled: false,
+                  fillColor: Colors.transparent,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
                   disabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  focusedErrorBorder: InputBorder.none,
                   isDense: true,
-                  contentPadding: EdgeInsets.symmetric(vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 11),
                 ),
               ),
             ),

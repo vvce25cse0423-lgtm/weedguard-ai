@@ -70,24 +70,34 @@ class WeedGuardChatService {
     return _defaultMistralKey;
   }
 
+  static String _languageName(String languageCode) {
+    if (languageCode == 'kn') return 'Kannada (ಕನ್ನಡ)';
+    if (languageCode == 'hi') return 'Hindi (हिंदी)';
+    return 'English';
+  }
+
   static String _buildSystemPrompt(String languageCode, {bool isFirstMessage = false}) {
-    String languageInstruction = 'Respond in clear, simple English for farmers.';
+    String languageInstruction =
+        'CRITICAL LANGUAGE RULE: Respond 100% strictly in clear, simple English for farmers.';
     if (languageCode == 'kn') {
-      languageInstruction = 'Respond purely in clear, natural Kannada (ಕನ್ನಡ) for Karnataka farmers.';
+      languageInstruction =
+          'CRITICAL LANGUAGE RULE: Even if the user types their question in English or Kanglish, you MUST understand it and write 100% of your entire response strictly in Kannada (ಕನ್ನಡ) script ONLY for Karnataka farmers. NEVER output English sentences or paragraphs.';
     } else if (languageCode == 'hi') {
-      languageInstruction = 'Respond purely in clear, natural Hindi (हिंदी) for Indian farmers.';
+      languageInstruction =
+          'CRITICAL LANGUAGE RULE: Even if the user types their question in English or Hinglish, you MUST understand it and write 100% of your entire response strictly in Hindi (हिंदी) Devanagari script ONLY for Indian farmers. NEVER output English sentences or paragraphs.';
     }
 
     String greetingInstruction;
     if (isFirstMessage) {
+      final langLabel = _languageName(languageCode);
       greetingInstruction = '''
 2. GREET ON FIRST CONVERSATION TURN:
-   - Since this is the very first message from the user, begin with a warm, polite one-sentence greeting (e.g. "Hello! Welcome to WeedGuard AI. Here is what you need for your crops:") and then immediately present the advice.
+   - Since this is the very first message from the user, begin with a warm, polite one-sentence greeting in $langLabel and then immediately present the advice.
 ''';
     } else {
       greetingInstruction = '''
 2. ZERO GREETINGS ON FOLLOW-UP CONVERSATIONS:
-   - This is an ongoing conversation. NEVER start with greetings ("Hello", "Hi, I am WeedGuard AI", "Greetings", "Welcome").
+   - This is an ongoing conversation. NEVER start with greetings ("Hello", "Hi, I am WeedGuard AI", "Greetings", "Welcome", "ನಮಸ್ಕಾರ", "नमस्ते").
    - NEVER include conversational preambles ("It's a great question", "Prevention is key", "Here is a guide").
    - Start IMMEDIATELY with the very first bullet point.
 ''';
@@ -164,8 +174,8 @@ $greetingInstruction
     var hasStartedBullets = false;
 
     final fluffStartRegex = RegExp(
-      r'^(hello|hi|hey|greetings|namaskara|namaste)|'
-      r'(weedguard\s+ai)|'
+      r'^(hello|hi|hey|greetings|namaskara|namaste|ನಮಸ್ಕಾರ|नमस्ते|नमस्कार)|'
+      r'(weedguard\s+ai|ವೀಡ್‌ಗಾರ್ಡ್|वीडगार्ड)|'
       r'(great\s+question|good\s+question)|'
       r'(here\s+(is|are)|below\s+(is|are)|follow\s+these|broken\s+down)|'
       r'(prevention\s+saves|step-by-step)',
@@ -249,7 +259,14 @@ $greetingInstruction
     ];
 
     // Maintain recent conversation history (last 8 messages) for ChatGPT-like multi-turn memory
-    final recentHistory = history.length > 8 ? history.sublist(history.length - 8) : history;
+    final filteredHistory = (history.isNotEmpty &&
+            history.last.sender == MessageSender.user &&
+            history.last.text == userMessage)
+        ? history.sublist(0, history.length - 1)
+        : history;
+    final recentHistory = filteredHistory.length > 8
+        ? filteredHistory.sublist(filteredHistory.length - 8)
+        : filteredHistory;
     for (final msg in recentHistory) {
       messages.add({
         'role': msg.sender == MessageSender.user ? 'user' : 'assistant',
@@ -257,13 +274,99 @@ $greetingInstruction
       });
     }
 
-    // Add current query
+    // Add current query with strict language enforcement when Kannada/Hindi is active
+    String apiUserPrompt = userMessage;
+    if (languageCode == 'kn') {
+      apiUserPrompt = '$userMessage\n\n[Respond strictly in Kannada (ಕನ್ನಡ) script only, even if the query is in English.]';
+    } else if (languageCode == 'hi') {
+      apiUserPrompt = '$userMessage\n\n[Respond strictly in Hindi (हिंदी) Devanagari script only, even if the query is in English.]';
+    }
     messages.add({
       'role': 'user',
-      'content': userMessage,
+      'content': apiUserPrompt,
     });
 
-    // ── Tier 1: High-Speed Groq Cloud AI (Qwen 3.8 27B / GPT-OSS 120B) ──
+    final cloudContent = await _queryCloudModels(messages, activeKey);
+    if (cloudContent != null && cloudContent.trim().isNotEmpty) {
+      final cleaned = cleanAiResponse(
+        cloudContent,
+        isFirstMessage: isFirstMessage,
+        languageCode: languageCode,
+      );
+      if (cleaned.isNotEmpty) return cleaned;
+    }
+
+    // ── Tier 3: ChatGPT-style Offline Agronomy Knowledge Engine ──
+    final fallback = _getOfflineFallbackResponse(userMessage, languageCode);
+    return cleanAiResponse(
+      fallback,
+      isFirstMessage: isFirstMessage,
+      languageCode: languageCode,
+    );
+  }
+
+  /// Translates an existing AI response into [targetLanguageCode] ('en', 'kn', 'hi')
+  /// preserving bullet formatting, bold labels, and greeting rules.
+  static Future<String> translateResponse(
+    String existingResponse, {
+    required String targetLanguageCode,
+    String? originalUserQuery,
+    bool isFirstMessage = false,
+  }) async {
+    if (existingResponse.trim().isEmpty) return existingResponse;
+
+    final activeKey = await getEffectiveApiKey();
+    final targetLang = _languageName(targetLanguageCode);
+    final greetingNote = isFirstMessage
+        ? 'Preserve or include a warm 1-sentence greeting in $targetLang at the start.'
+        : 'Do NOT include any greeting at the start; begin immediately with the first bullet point.';
+
+    final messages = <Map<String, String>>[
+      {
+        'role': 'system',
+        'content': '''
+You are an expert agronomy translator for WeedGuard AI.
+Translate the following agronomy response 100% into natural, clear $targetLang script ONLY.
+- Preserve every bullet point (•) and **bold** topic label structure.
+- Keep scientific chemical names and dosages accurate.
+- $greetingNote
+- Output ONLY the translated response with NO extra notes or commentary.
+''',
+      },
+      {
+        'role': 'user',
+        'content': existingResponse,
+      },
+    ];
+
+    final cloudContent = await _queryCloudModels(messages, activeKey);
+    if (cloudContent != null && cloudContent.trim().isNotEmpty) {
+      final cleaned = cleanAiResponse(
+        cloudContent,
+        isFirstMessage: isFirstMessage,
+        languageCode: targetLanguageCode,
+      );
+      if (cleaned.isNotEmpty) return cleaned;
+    }
+
+    // Offline fallback translation using original user query or existing text keywords
+    final fallback = _getOfflineFallbackResponse(
+      originalUserQuery ?? existingResponse,
+      targetLanguageCode,
+    );
+    return cleanAiResponse(
+      fallback,
+      isFirstMessage: isFirstMessage,
+      languageCode: targetLanguageCode,
+    );
+  }
+
+  /// Queries Groq (Tier 1) and Mistral (Tier 2) in sequence and returns raw content if available.
+  static Future<String?> _queryCloudModels(
+    List<Map<String, String>> messages,
+    String activeKey,
+  ) async {
+    // ── Tier 1: High-Speed Groq Cloud AI ──
     String groqKey = _envGroqKey.isNotEmpty ? _envGroqKey : _defaultGroqKey;
     if (activeKey.startsWith('gsk_')) {
       groqKey = activeKey;
@@ -296,12 +399,7 @@ $greetingInstruction
             if (choices != null && choices.isNotEmpty) {
               final content = choices[0]['message']?['content'] as String?;
               if (content != null && content.trim().isNotEmpty) {
-                final cleaned = cleanAiResponse(
-                  content,
-                  isFirstMessage: isFirstMessage,
-                  languageCode: languageCode,
-                );
-                if (cleaned.isNotEmpty) return cleaned;
+                return content;
               }
             }
           }
@@ -340,16 +438,10 @@ $greetingInstruction
             if (choices != null && choices.isNotEmpty) {
               final content = choices[0]['message']?['content'] as String?;
               if (content != null && content.trim().isNotEmpty) {
-                final cleaned = cleanAiResponse(
-                  content,
-                  isFirstMessage: isFirstMessage,
-                  languageCode: languageCode,
-                );
-                if (cleaned.isNotEmpty) return cleaned;
+                return content;
               }
             }
           } else if (response.statusCode == 402) {
-            // Mistral billing budget not configured yet; break to offline tier
             break;
           }
         } catch (_) {
@@ -358,13 +450,7 @@ $greetingInstruction
       }
     }
 
-    // ── Tier 3: ChatGPT-style Offline Agronomy Knowledge Engine ──
-    final fallback = _getOfflineFallbackResponse(userMessage, languageCode);
-    return cleanAiResponse(
-      fallback,
-      isFirstMessage: isFirstMessage,
-      languageCode: languageCode,
-    );
+    return null;
   }
 
   static String _getOfflineFallbackResponse(String query, String languageCode) {
@@ -377,6 +463,12 @@ $greetingInstruction
 • **ಎಲೆಯ ಆಕಾರ:** ಅಗಲ ಎಲೆಯ ಕಳೆಗಳು (ಪಾರ್ಥೇನಿಯಂ, ಅಮಾರಾಂತಸ್) vs ಕಿರಿದಾದ ಹುಲ್ಲಿನ ಕಳೆಗಳು (ಸೈನೋಡಾನ್, ಎಕಿನೋಕ್ಲೋವಾ).
 • **ಕಾಂಡ ಮತ್ತು ಬೇರು:** ದುಂಡಾದ ಕಾಂಡಗಳು (ಹುಲ್ಲು), ತ್ರಿಕೋನಾಕಾರದ ಕಾಂಡ ಮತ್ತು ಗೆಡ್ಡೆಗಳು (ಭದ್ರಮುಷ್ಟಿ ಸೈಪರಸ್).
 • **ಕ್ಯಾಮೆರಾ ಸ್ಕ್ಯಾನರ್:** ನಿಖರ ಗುರುತಿಸುವಿಕೆಗೆ ವೀಡ್‌ಗಾರ್ಡ್ AI ಕ್ಯಾಮೆರಾ ಸ್ಕ್ಯಾನರ್ ಬಳಸಿ ನೇರವಾಗಿ ಫೋಟೋ ತೆಗೆಯಿರಿ.''';
+      }
+      if (languageCode == 'hi') {
+        return '''🔍 **खरपतवार पहचान मार्गदर्शिका:**
+• **चौड़ी पत्ती बनाम घास वाले खरपतवार:** चौड़ी पत्ती वाले खरपतवार (गाजर घास, चौलाई) में जालीदार नसें होती हैं, जबकि घास वाले खरपतवार (बर्नयार्ड घास, दूब) में संकीर्ण पत्तियां और खोखला गोल तना होता है।
+• **मोथा (Cyperus rotundus):** इसका तना विशिष्ट रूप से तिकोना ठोस होता है और नीचे गांठें होती हैं।
+• **वीडगार्ड कैमरा स्कैनर:** तुरंत AI पहचान और सही उपचार जानने के लिए लाइव कैमरा स्कैनर से फोटो लें।''';
       }
       return '''🔍 **Weed Identification Guide:**
 • **Broadleaf vs Grassy Weeds:** Broadleaf weeds (Parthenium, Pigweed) have netted leaf veins and showy flowers. Grasses (Barnyard grass, Bermuda grass) have narrow, parallel-veined leaves and hollow round stems.
@@ -393,6 +485,13 @@ $greetingInstruction
 • **ಅಂತರ್ ಬೆಳೆ ಪದ್ಧತಿ:** ದ್ವಿದಳ ಧಾನ್ಯ ಬೆಳೆಸಿ ಮಣ್ಣನ್ನು ಆವರಿಸಿ ಕಳೆ ಮೊಳಕೆಯೊಡೆಯದಂತೆ ತಡೆಯುವುದು.
 • **ಸಮಗ್ರ ನಿರ್ವಹಣೆ (IWM):** ಕನಿಷ್ಠ ರಾಸಾಯನಿಕ ಮತ್ತು ಗರಿಷ್ಠ ನೈಸರ್ಗಿಕ ತಡೆ ವಿಧಾನಗಳ ಮಿಶ್ರಣ.''';
       }
+      if (languageCode == 'hi') {
+        return '''🛠️ **खरपतवार हटाने के प्रभावी तरीके:**
+• **यांत्रिक निराई-गुड़ाई:** बुवाई के 15–25 दिन बाद व्हील हो (Wheel Hoe) या रोटरी वीडर से जड़ों को काटें।
+• **जैविक मल्चिंग:** कतारों के बीच 3–4 इंच सूखे पुआल की मल्चिंग बिछाकर धूप रोकें और नमी बचाएं।
+• **अंतर-फसल प्रणाली:** लोबिया या उड़द जैसी जल्दी फैलने वाली दलहनी फसलें उगाकर खरपतवार दबाएं।
+• **समेकित प्रबंधन (IWM):** पूरे खेत में छिड़काव के बजाय केवल प्रभावित हिस्सों पर लक्षित स्प्रे करें।''';
+      }
       return '''🛠️ **Integrated Weed Removal Methods:**
 • **Mechanical Hoeing:** Manual wheel hoes or rotary weeders during early vegetative stages (15–25 days after sowing).
 • **Solarization & Mulching:** Organic straw mulching (3–4 inches) to block sunlight from weed seedbeds.
@@ -407,6 +506,12 @@ $greetingInstruction
 • **ಆಯ್ಕೆ ಮಾಡಿದ ಕಳೆನಾಶಕ (Selective):** ಬೆಳೆಗಳಿಗೆ ಹಾನಿಯಾಗದಂತೆ ಕಳೆಯನ್ನು ಮಾತ್ರ ನಾಶಪಡಿಸುವ ಔಷಧಿಗಳು (ಉದಾ: ಮೆಕ್ಕೆಜೋಳಕ್ಕೆ ಅಟ್ರಾಜಿನ್).
 • **ಪ್ರಿ-ಎಮರ್ಜೆಂಟ್:** ಪೆಂಡಿಮೆಥಾಲಿನ್ (Pendimethalin 30% EC) - ಬಿತ್ತನೆ ಮಾಡಿದ 48 ಗಂಟೆಗಳ ಒಳಗೆ ತೇವಾಂಶವಿರುವ ಮಣ್ಣಿಗೆ ಸಿಂಪಡಿಸಿ.
 • **ಸುರಕ್ಷತಾ ಕ್ರಮಗಳು:** ರಬ್ಬರ್ ಕೈಗವಸು, ಮಾಸ್ಕ್ ಧರಿಸಿ, ಗಾಳಿಯ ವಿರುದ್ಧ ದಿಕ್ಕಿನಲ್ಲಿ ಸಿಂಪಡಿಸಬೇಡಿ. ಮಕ್ಕಳು ಮತ್ತು ಜಾನುವಾರುಗಳಿಂದ ದೂರವಿಡಿ.''';
+      }
+      if (languageCode == 'hi') {
+        return '''🛡️ **सुरक्षित और चयनात्मक शाकनाशी नियम:**
+• **चयनात्मक शाकनाशी (Selective):** केवल खरपतवार नष्ट करने वाली फसल-अनुकूल दवाएं चुनें (जैसे मक्का में Atrazine, धान में Bispyribac sodium)।
+• **अंकुरण-पूर्व सुरक्षा:** बुवाई के 48 घंटे के भीतर नम मिट्टी पर Pendimethalin 30% EC (1.0–1.2 लीटर/एकड़) छिड़कें।
+• **सुरक्षा उपकरण (PPE):** हमेशा रबर के दस्ताने, सुरक्षा चश्मा और N95 मास्क पहनें; हवा की विपरीत दिशा में छिड़काव न करें।''';
       }
       return '''🛡️ **Safe & Selective Herbicides Protocol:**
 • **Crop-Specific Selective Herbicides:** Use targeted selective molecules that eliminate weeds without injuring crop roots (e.g., Atrazine for maize/sorghum, Bispyribac sodium for paddy).
@@ -423,6 +528,13 @@ $greetingInstruction
 • **ಉಳುಮೆ ಯಂತ್ರಗಳ ಸ್ವಚ್ಛತೆ:** ಒಂದು ಹೊಲದಿಂದ ಇನ್ನೊಂದು ಹೊಲಕ್ಕೆ ಟ್ರ್ಯಾಕ್ಟರ್ ಅಥವಾ ಉಪಕರಣಗಳನ್ನು ಬಳಸುವ ಮುನ್ನ ಸ್ವಚ್ಛಗೊಳಿಸಿ.
 • **ಬೆಳೆ ಪರಿವರ್ತನೆ (Crop Rotation):** ಒಂದೇ ಬೆಳೆ ಬದಲಿಗೆ ಕಾಲಕಾಲಕ್ಕೆ ಬೆಳೆ ಬದಲಾಯಿಸುವುದರಿಂದ ಕಳೆಯ ಚಕ್ರ ಮುರಿಯುತ್ತದೆ.''';
       }
+      if (languageCode == 'hi') {
+        return '''🌱 **प्रमुख खेती और खरपतवार रोकथाम सुझाव:**
+• **महत्वपूर्ण शुरुआती अवधि (25–40 दिन):** बुवाई के बाद पहले 25–40 दिनों तक खेत को खरपतवार-मुक्त रखें; इससे उपज में 80% तक सुधार होता है।
+• **प्रमाणित शुद्ध बीज:** खेत में नए खरपतवार आने से रोकने के लिए हमेशा साफ और प्रमाणित बीज ही बोएं।
+• **कृषि यंत्रों की सफाई:** एक खेत से दूसरे खेत में ट्रैक्टर या कल्टीवेटर ले जाने से पहले मिट्टी और बीज अच्छी तरह साफ करें।
+• **फसल चक्र अपनाएं:** एक ही फसल बार-बार न उगाकर फसल बदलें ताकि खरपतवारों का जीवन चक्र टूट सके।''';
+      }
       return '''🌱 **Top Farming & Weed Prevention Tips:**
 • **Critical Period of Weed Competition (CPWC):** Keep fields 100% weed-free during the first 25–40 days after emergence; this guarantees up to 80% higher crop yield.
 • **Certified Clean Seeds:** Prevent introducing invasive weed seeds by planting certified, cleaned seed stock.
@@ -431,12 +543,18 @@ $greetingInstruction
     }
 
     // 5. Parthenium
-    if (q.contains('parthenium') || q.contains('carrot grass') || q.contains('ಕಾಂಗ್ರೆಸ್ ಕಳೆ')) {
+    if (q.contains('parthenium') || q.contains('carrot grass') || q.contains('ಕಾಂಗ್ರೆಸ್ ಕಳೆ') || q.contains('गाजर घास')) {
       if (languageCode == 'kn') {
         return '''🌿 **ಪಾರ್ಥೇನಿಯಂ (ಕಾಂಗ್ರೆಸ್ ಕಳೆ) ನಿರ್ವಹಣೆ:**
 • **ಸಾವಯವ ವಿಧಾನ:** ಹೂ ಬಿಡುವ ಮುನ್ನವೇ ಕೈಯಿಂದ ಕಿತ್ತು ಸುಡುವುದು ಅಥವಾ ಜೈವಿಕ ಕೀಟ ಜೈಗೋಗ್ರಾಮ (Zygogramma) ಬಳಸುವುದು.
 • **ರಾಸಾಯನಿಕ ಸಿಂಪರಣೆ:** ಎಳೆಯ ಹಂತದಲ್ಲಿ ಗ್ಲೈಫೋಸೇಟ್ 41% SL (1 ಲೀಟರ್/ಎಕರೆ) ಅಥವಾ ಮೆಟ್ರಿಬ್ಯುಜಿನ್ ಬಳಸಿ.
 • **ಮುನ್ನೆಚ್ಚರಿಕೆ:** ಚರ್ಮದ ಅಲರ್ಜಿ ತಡೆಯಲು ಕೈಗವಸು ಮತ್ತು ಮುಖಗವಸು ಧರಿಸಿ.''';
+      }
+      if (languageCode == 'hi') {
+        return '''🌿 **पार्थेनियम (गाजर घास / कांग्रेस घास) नियंत्रण:**
+• **शुरुआती नियंत्रण:** फूल आने से पहले 2,4-D एमाइन सॉल्ट (1.0 किग्रा/हेक्टेयर) या Glyphosate 41% SL (10–15 मिली/लीटर पानी) का छिड़काव करें।
+• **जैविक और सस्ता उपाय:** 20% नमक का घोल छिड़कें या ज़ाइगोग्रामा (Zygogramma bicolorata) मित्र कीट व चकवड़ (*Cassia sericea*) पौधे लगाएं।
+• **सावधानी:** त्वचा की एलर्जी और सांस की समस्या से बचने के लिए हमेशा दस्ताने और मास्क पहनें।''';
       }
       return '''🌿 **Parthenium (Congress Grass) Management:**
 • **Early Stage Control:** Spray 2,4-D amine salt (1.0 kg a.i./ha) or Glyphosate 41% SL (10-15 ml/L water) before flowering.
@@ -445,12 +563,18 @@ $greetingInstruction
     }
 
     // 6. Nutsedge / Cyperus
-    if (q.contains('nutsedge') || q.contains('cyperus') || q.contains('ಮೋಥಾ') || q.contains('ಭದ್ರಮುಷ್ಟಿ')) {
+    if (q.contains('nutsedge') || q.contains('cyperus') || q.contains('ಮೋಥಾ') || q.contains('ಭದ್ರಮುಷ್ಟಿ') || q.contains('मोथा')) {
       if (languageCode == 'kn') {
         return '''🌾 **ಭದ್ರಮುಷ್ಟಿ (Cyperus Rotundus) ನಿರ್ವಹಣೆ:**
 • **ಬೇಸಿಗೆ ಉಳುಮೆ:** ಆಳವಾದ ಉಳುಮೆಯಿಂದ ಗೆಡ್ಡೆಗಳನ್ನು ಬಿಸಿಲಿಗೆ ಒಡ್ಡಿ ಒಣಗಿಸಿ.
 • **ರಾಸಾಯನಿಕ ವಿಧಾನ:** ಹ್ಯಾಲೋಸಲ್ಫ್ಯೂರಾನ್ ಮೀಥೈಲ್ 75% WG (36 ಗ್ರಾಂ/ಎಕರೆ) 3-4 ಎಲೆಗಳ ಹಂತದಲ್ಲಿ ಸಿಂಪಡಿಸಿ.
 • **ಸಾಂದರ್ಭಿಕ:** ಕತ್ತರಿಸುವುದರಿಂದ ಕವಲೊಡೆದು ಹೆಚ್ಚಾಗುತ್ತದೆ, ಬುಡಸಮೇತ ತೆಗೆಯುವುದು ಮುಖ್ಯ.''';
+      }
+      if (languageCode == 'hi') {
+        return '''🌾 **मोथा (Cyperus rotundus) नियंत्रण उपाय:**
+• **गहरी गर्मी की जुताई:** मई-जून में गहरी जुताई करके जमीन के नीचे की गांठों को तेज धूप में सुखाएं।
+• **रासायनिक उपचार:** 3–5 पत्ती की अवस्था में Halosulfuron-methyl 75% WG (36 ग्राम/एकड़) या Bentazone 48% SL का छिड़काव करें।
+• **महत्वपूर्ण चेतावनी:** हल्की गुड़ाई करने से इसकी गांठें टूटकर और तेजी से फैलती हैं, इसलिए सही दवा या जड़ सहित उखाड़ना जरूरी है।''';
       }
       return '''🌾 **Purple Nutsedge (Cyperus rotundus) Control:**
 • **Tuber Desiccation:** Deep summer ploughing exposes underground tubers to direct solar heat.
@@ -459,12 +583,18 @@ $greetingInstruction
     }
 
     // 7. Pre-emergent
-    if (q.contains('pre-emergent') || q.contains('ಪ್ರಿ-ಎಮರ್ಜೆಂಟ್') || q.contains('pre emergent')) {
+    if (q.contains('pre-emergent') || q.contains('ಪ್ರಿ-ಎಮರ್ಜೆಂಟ್') || q.contains('pre emergent') || q.contains('अंकुरण')) {
       if (languageCode == 'kn') {
         return '''💧 **ಪ್ರಿ-ಎಮರ್ಜೆಂಟ್ ಸಸ್ಯನಾಶಕ ಬಳಕೆ ನಿಯಮ:**
 • **ಸಮಯ:** ಬಿತ್ತನೆ ಮಾಡಿದ 24 ರಿಂದ 48 ಗಂಟೆಗಳ ಒಳಗೆ (ಬೀಜ ಮೊಳಕೆಯೊಡೆಯುವ ಮುನ್ನ).
 • **ಮಣ್ಣಿನ ತೇವಾಂಶ:** ಔಷಧ ಪರಿಣಾಮಕಾರಿಯಾಗಿ ಕೆಲಸ ಮಾಡಲು ಮಣ್ಣಿನಲ್ಲಿ ಸಾಕಷ್ಟು ತೇವಾಂಶ ಅತ್ಯಗತ್ಯ.
 • **ಉದಾಹರಣೆಗಳು:** ಪೆಂಡಿಮೆಥಾಲಿನ್ (Pendimethalin 30% EC), ಅಟ್ರಾಜಿನ್ (Atrazine 50% WP).''';
+      }
+      if (languageCode == 'hi') {
+        return '''💧 **अंकुरण-पूर्व (Pre-Emergent) शाकनाशी दिशानिर्देश:**
+• **सही समय:** बुवाई के 24 से 48 घंटे के अंदर, फसल या खरपतवार उगने से पहले छिड़काव करें।
+• **मिट्टी की नमी:** दवा के सक्रिय होने के लिए खेत की ऊपरी सतह में पर्याप्त नमी होना अत्यंत आवश्यक है।
+• **प्रमुख उत्पाद:** Pendimethalin 30% EC (1.0–1.2 लीटर/एकड़) और मक्का/गन्ना के लिए Atrazine 50% WP।''';
       }
       return '''💧 **Pre-Emergent Herbicide Guidelines:**
 • **Timing:** Apply within 24 to 48 hours of sowing, before crop or weed seed emergence.
@@ -473,12 +603,18 @@ $greetingInstruction
     }
 
     // 8. Organic Recipes
-    if (q.contains('organic') || q.contains('bio') || q.contains('neem') || q.contains('ಸಾವಯವ')) {
+    if (q.contains('organic') || q.contains('bio') || q.contains('neem') || q.contains('ಸಾವಯವ') || q.contains('जैविक')) {
       if (languageCode == 'kn') {
         return '''🍃 **ಸಾವಯವ ಜೈವಿಕ ಕಳೆ ನಿರ್ವಹಣೆ ರೆಸಿಪಿ:**
 • **ವಿನೆಗರ್ + ಬೇವಿನ ಎಣ್ಣೆ:** 10% ಅಸಿಟಿಕ್ ಆಮ್ಲ (ವಿನೆಗರ್) + 50 ಮಿಲಿ ಬೇವಿನ ಎಣ್ಣೆ + 5 ಮಿಲಿ ಸಾಬೂನಿನ ದ್ರಾವಣ (ಸ್ಪ್ರೆಡರ್).
 • **ಹುಲ್ಲು ಮಲ್ಚಿಂಗ್:** 4-6 ಇಂಚು ಒಣ ಹುಲ್ಲಿನ ಹೊದಿಕೆಯಿಂದ ಕಳೆ ಬೀಜಗಳು ಬೆಳಕಿಲ್ಲದೆ ಸಾಯುತ್ತವೆ.
 • **ಅಂತರ್ ಬೆಳೆ:** ಅಲಸಂದೆ ಅಥವಾ ಹೆಸರು ಬೆಳೆ ಬೆಳೆದು ಭೂಮಿಯನ್ನು ಆವರಿಸುವುದು.''';
+      }
+      if (languageCode == 'hi') {
+        return '''🍃 **बिना रसायन जैविक खरपतवार नियंत्रण नुस्खा:**
+• **जैविक स्प्रे मिश्रण:** 10 लीटर पानी में 10% सिरका (Acetic Acid) + 50 मिली शुद्ध नीम तेल + 5 मिली हल्का तरल साबुन मिलाकर तेज धूप वाली सुबह में छिड़कें।
+• **पुआल मल्चिंग:** कतारों के बीच 4–6 इंच सूखे धान के पुआल की परत बिछाकर धूप रोकें।
+• **जीवित मल्च (आवरण फसल):** उगते खरपतवार को दबाने के लिए लोबिया या मूंग की अंतर-फसल उगाएं।''';
       }
       return '''🍃 **Zero-Chemical Organic Herbicide Recipe:**
 • **Bio-Herbicide Spray:** 10% Household Acetic Acid (Vinegar) + 50 ml Pure Neem Oil + 5 ml mild liquid soap per 10 L water. Apply on hot sunny mornings.
@@ -487,12 +623,18 @@ $greetingInstruction
     }
 
     // 9. Spray Windows / Weather
-    if (q.contains('spray') || q.contains('weather') || q.contains('ವಿಂಡೋ') || q.contains('ಸಿಂಪರಣೆ')) {
+    if (q.contains('spray') || q.contains('weather') || q.contains('ವಿಂಡೋ') || q.contains('ಸಿಂಪರಣೆ') || q.contains('छिड़काव')) {
       if (languageCode == 'kn') {
         return '''🌦️ **ಸೂಕ್ತ ಕಳೆನಾಶಕ ಸಿಂಪರಣಾ ನಿಯಮಗಳು:**
 • **ಗಾಳಿಯ ವೇಗ:** 3 ರಿಂದ 8 ಕಿ.ಮೀ/ಗಂಟೆ (10 ಕಿ.ಮೀ ಗಿಂತ ಹೆಚ್ಚಿದ್ದರೆ ಔಷಧ ತೇಲಿಹೋಗುತ್ತದೆ).
 • **ಸಮಯ:** ಮುಂಜಾನೆ 7:00 ರಿಂದ 10:30 ಅಥವಾ ಸಂಜೆ 4:00 ರಿಂದ 6:30.
 • **ಮಳೆ ಮುನ್ನೆಚ್ಚರಿಕೆ:** ಸಿಂಪಡಿಸಿದ ಕನಿಷ್ಠ 3 ರಿಂದ 4 ಗಂಟೆ ಮಳೆ ಬರಬಾರದು (Rainfastness).''';
+      }
+      if (languageCode == 'hi') {
+        return '''🌦️ **शाकनाशी छिड़काव का सही समय व मौसम:**
+• **हवा की गति:** 3–8 किमी/घंटा उत्तम है। 10 किमी/घंटा से तेज हवा में छिड़काव न करें ताकि दवा पास की फसलों को नुकसान न पहुंचाए।
+• **सर्वोत्तम समय:** सुबह 7:00–10:30 बजे या शाम 4:00–6:30 बजे जब नमी अनुकूल हो।
+• **बारिश से सुरक्षा:** दवा के सही अवशोषण के लिए छिड़काव के बाद कम से कम 3–4 घंटे साफ मौसम जरूरी है।''';
       }
       return '''🌦️ **Optimal Spray Window Protocol:**
 • **Wind Speed:** 3–8 km/h. Strictly avoid spraying if winds exceed 10 km/h to prevent chemical drift damage.
@@ -506,6 +648,13 @@ $greetingInstruction
 • **ಕಳೆನಾಶಕ ಬಳಕೆ:** ಯಾವಾಗಲೂ ಶಿಫಾರಸು ಮಾಡಿದ ಪ್ರಮಾಣದಲ್ಲಿ ಸ್ವಚ್ಛ ನೀರಿನೊಂದಿಗೆ (pH 6.0) ಬಳಸಿ.
 • **ಸಮಗ್ರ ಕಳೆ ನಿರ್ವಹಣೆ (IWM):** ಕಳೆ ಹತೋಟಿಗೆ ಯಾಂತ್ರಿಕ, ಸಾವಯವ ಮತ್ತು ರಾಸಾಯನಿಕ ವಿಧಾನಗಳನ್ನು ಸಂಯೋಜಿಸಿ.
 • **ಕ್ಯಾಮೆರಾ ಸ್ಕ್ಯಾನರ್:** ನಿಮ್ಮ ಹೊಲದ ಕಳೆಯ ಚಿತ್ರವನ್ನು ಸ್ಕ್ಯಾನರ್ ಮೂಲಕ ಕಳುಹಿಸಿ ನೇರ ಸಲಹೆ ಪಡೆಯಿರಿ.''';
+    }
+    if (languageCode == 'hi') {
+      return '''🌱 **वीडगार्ड कृषि सलाह:**
+• **सटीक छिड़काव:** जब खरपतवार छोटे (2–4 पत्ती अवस्था) हों तभी अनुशंसित मात्रा में साफ पानी के साथ चयनात्मक शाकनाशी प्रयोग करें।
+• **समेकित खरपतवार प्रबंधन (IWM):** रासायनिक निर्भरता 40%–60% तक कम करने के लिए यांत्रिक गुड़ाई और जैविक मल्चिंग को मिलाएं।
+• **सुरक्षित नोजल व समय:** फ्लैट-फैन नोजल का उपयोग करें और तेज दोपहर की गर्मी या 10 किमी/घंटा से अधिक हवा में छिड़काव न करें।
+• **लाइव स्कैन:** तुरंत प्रजाति की पहचान और सटीक दवा की मात्रा जानने के लिए कभी भी वीड स्कैनर से फोटो लें।''';
     }
     return '''🌱 **WeedGuard Agricultural Recommendations:**
 • **Targeted Application:** Always apply selective post-emergent herbicides when weeds are small (2–4 leaf stage) for highest efficacy.
