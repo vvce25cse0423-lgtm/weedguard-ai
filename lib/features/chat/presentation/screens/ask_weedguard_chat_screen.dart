@@ -1673,14 +1673,14 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
 
                     // 4. Card 1: "Identify Weed"
                     Positioned(
-                      left: w * (27 / 512),
-                      width: w * (222 / 512),
-                      top: h * (464 / 1024),
-                      height: h * (133 / 1024),
+                      left: w * (25 / 512),
+                      width: w * (226 / 512),
+                      top: h * (445 / 1024),
+                      height: h * (132 / 1024),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(20),
                           splashColor: const Color(0xFF2D6A4F).withValues(alpha: 0.18),
                           highlightColor: const Color(0xFF2D6A4F).withValues(alpha: 0.08),
                           onTap: () {
@@ -1694,14 +1694,14 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
 
                     // 5. Card 2: "Removal Method"
                     Positioned(
-                      left: w * (264 / 512),
-                      width: w * (223 / 512),
-                      top: h * (464 / 1024),
-                      height: h * (133 / 1024),
+                      left: w * (261 / 512),
+                      width: w * (226 / 512),
+                      top: h * (445 / 1024),
+                      height: h * (132 / 1024),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(20),
                           splashColor: const Color(0xFF0077B6).withValues(alpha: 0.18),
                           highlightColor: const Color(0xFF0077B6).withValues(alpha: 0.08),
                           onTap: () {
@@ -1715,14 +1715,14 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
 
                     // 6. Card 3: "Safe Herbicides"
                     Positioned(
-                      left: w * (27 / 512),
-                      width: w * (222 / 512),
-                      top: h * (620 / 1024),
-                      height: h * (135 / 1024),
+                      left: w * (25 / 512),
+                      width: w * (226 / 512),
+                      top: h * (590 / 1024),
+                      height: h * (136 / 1024),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(20),
                           splashColor: const Color(0xFFF77F00).withValues(alpha: 0.18),
                           highlightColor: const Color(0xFFF77F00).withValues(alpha: 0.08),
                           onTap: () {
@@ -1736,14 +1736,14 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
 
                     // 7. Card 4: "Farming Tips"
                     Positioned(
-                      left: w * (264 / 512),
-                      width: w * (223 / 512),
-                      top: h * (620 / 1024),
-                      height: h * (135 / 1024),
+                      left: w * (261 / 512),
+                      width: w * (226 / 512),
+                      top: h * (590 / 1024),
+                      height: h * (136 / 1024),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(20),
                           splashColor: const Color(0xFF7209B7).withValues(alpha: 0.18),
                           highlightColor: const Color(0xFF7209B7).withValues(alpha: 0.08),
                           onTap: () {
@@ -1819,16 +1819,16 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                     AnimatedPositioned(
                       duration: const Duration(milliseconds: 180),
                       curve: Curves.easeOutCubic,
-                      left: w * (17 / 512),
-                      right: w * (17 / 512),
+                      left: w * (24 / 512),
+                      right: w * (24 / 512),
                       top: isKeyboardOpen
-                          ? (visibleAreaHeight - (h * (66 / 1024)) - 12)
-                          : (h * (922 / 1024)),
-                      height: h * (66 / 1024),
+                          ? (visibleAreaHeight - (h * (64 / 1024)) - 12)
+                          : (h * (916 / 1024)),
+                      height: h * (64 / 1024),
                       child: Container(
                         decoration: BoxDecoration(
                           color: isKeyboardOpen ? Colors.white : Colors.transparent,
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(32),
                           border: null, // Strictly NO green boundary!
                           boxShadow: isKeyboardOpen
                               ? [
@@ -1844,7 +1844,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                           children: [
                             // Paperclip attachment button
                             SizedBox(
-                              width: w * (52 / 512),
+                              width: w * (54 / 512),
                               height: double.infinity,
                               child: Material(
                                 color: Colors.transparent,
@@ -1897,7 +1897,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
 
                             // Mic button
                             SizedBox(
-                              width: w * (48 / 512),
+                              width: w * (50 / 512),
                               height: double.infinity,
                               child: Material(
                                 color: Colors.transparent,
