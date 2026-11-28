@@ -1869,14 +1869,32 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
         title: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF2D6A4F),
-                border: Border.all(color: Colors.white, width: 1.8),
+                border: Border.all(color: const Color(0xFF52B788), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF52B788).withValues(alpha: 0.35),
+                    blurRadius: 6,
+                    spreadRadius: 1,
+                  ),
+                ],
               ),
-              child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 20),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/icons/weedguard_shield.png',
+                  width: 38,
+                  height: 38,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.shield_rounded,
+                    color: Color(0xFF52B788),
+                    size: 22,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(width: 10),
             const Expanded(
@@ -2068,13 +2086,34 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
             ),
             const SizedBox(width: 8),
             Container(
-              width: 28,
-              height: 28,
-              decoration: const BoxDecoration(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFF52B788),
+                border: Border.all(
+                  color: isDark ? Colors.white24 : const Color(0xFFE2E8E4),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.person, color: Colors.white, size: 16),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/icons/user_avatar.png',
+                  width: 34,
+                  height: 34,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: const Color(0xFF52B788),
+                    child: const Icon(Icons.person, color: Colors.white, size: 18),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -2088,15 +2127,33 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 34,
+            height: 34,
             margin: const EdgeInsets.only(top: 2, right: 8),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFF1B4332),
-              border: Border.all(color: const Color(0xFF52B788), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF52B788).withValues(alpha: 0.35),
+                  blurRadius: 6,
+                  spreadRadius: 0.5,
+                ),
+              ],
             ),
-            child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 18),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/icons/bot_avatar.png',
+                width: 34,
+                height: 34,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Image.asset(
+                  'assets/icons/weedguard_shield.png',
+                  width: 34,
+                  height: 34,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
           ),
           Expanded(
             child: Container(
@@ -2138,24 +2195,61 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       // Bookmark button to save result
-                      IconButton(
-                        icon: const Icon(Icons.bookmark_add_outlined, size: 18, color: Color(0xFF2D6A4F)),
-                        tooltip: 'Save result',
-                        onPressed: () => _bookmarkMessage(message.text),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          isSpeaking ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
-                          size: 18,
-                          color: isSpeaking ? Colors.redAccent : const Color(0xFF2D6A4F),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => _bookmarkMessage(message.text),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          child: Image.asset(
+                            'assets/icons/action_bookmark.png',
+                            width: 18,
+                            height: 18,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.bookmark_border_rounded,
+                              size: 18,
+                              color: Color(0xFF2D6A4F),
+                            ),
+                          ),
                         ),
-                        tooltip: isSpeaking ? 'Stop speaking' : 'Read aloud',
-                        onPressed: () => _speakText(message.id, message.text),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.copy_rounded, size: 16, color: Colors.grey),
-                        tooltip: 'Copy',
-                        onPressed: () {
+                      Container(
+                        height: 14,
+                        width: 1,
+                        color: isDark ? Colors.white24 : const Color(0xFFD0DDD4),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                      ),
+                      // Speak / Read aloud button
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => _speakText(message.id, message.text),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          child: isSpeaking
+                              ? const Icon(Icons.stop_circle_rounded, size: 18, color: Colors.redAccent)
+                              : Image.asset(
+                                  'assets/icons/action_speaker.png',
+                                  width: 20,
+                                  height: 18,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.volume_up_rounded,
+                                    size: 18,
+                                    color: Color(0xFF2D6A4F),
+                                  ),
+                                ),
+                        ),
+                      ),
+                      Container(
+                        height: 14,
+                        width: 1,
+                        color: isDark ? Colors.white24 : const Color(0xFFD0DDD4),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                      ),
+                      // Copy to clipboard button
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () {
                           Clipboard.setData(ClipboardData(text: message.text));
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -2165,6 +2259,20 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                             ),
                           );
                         },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          child: Image.asset(
+                            'assets/icons/action_copy.png',
+                            width: 18,
+                            height: 18,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.content_copy_rounded,
+                              size: 18,
+                              color: Color(0xFF2D6A4F),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -2369,11 +2477,29 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
             width: 32,
             height: 32,
             margin: const EdgeInsets.only(right: 8),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFF2D6A4F),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF52B788).withValues(alpha: 0.3),
+                  blurRadius: 5,
+                ),
+              ],
             ),
-            child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 18),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/icons/bot_avatar.png',
+                width: 32,
+                height: 32,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Image.asset(
+                  'assets/icons/weedguard_shield.png',
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
