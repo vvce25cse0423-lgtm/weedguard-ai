@@ -70,12 +70,27 @@ class WeedGuardChatService {
     return _defaultMistralKey;
   }
 
-  static String _buildSystemPrompt(String languageCode) {
+  static String _buildSystemPrompt(String languageCode, {bool isFirstMessage = false}) {
     String languageInstruction = 'Respond in clear, simple English for farmers.';
     if (languageCode == 'kn') {
       languageInstruction = 'Respond purely in clear, natural Kannada (ಕನ್ನಡ) for Karnataka farmers.';
     } else if (languageCode == 'hi') {
       languageInstruction = 'Respond purely in clear, natural Hindi (हिंदी) for Indian farmers.';
+    }
+
+    String greetingInstruction;
+    if (isFirstMessage) {
+      greetingInstruction = '''
+2. GREET ON FIRST CONVERSATION TURN:
+   - Since this is the very first message from the user, begin with a warm, polite one-sentence greeting (e.g. "Hello! Welcome to WeedGuard AI. Here is what you need for your crops:") and then immediately present the advice.
+''';
+    } else {
+      greetingInstruction = '''
+2. ZERO GREETINGS ON FOLLOW-UP CONVERSATIONS:
+   - This is an ongoing conversation. NEVER start with greetings ("Hello", "Hi, I am WeedGuard AI", "Greetings", "Welcome").
+   - NEVER include conversational preambles ("It's a great question", "Prevention is key", "Here is a guide").
+   - Start IMMEDIATELY with the very first bullet point.
+''';
     }
 
     return '''
@@ -94,10 +109,7 @@ CRITICAL MANDATORY INSTRUCTIONS:
      • **Spray Window:** Spray only when wind speed is <10 km/h, temperature is moderate, and no rain is forecast for 3–4 hours.
      • **Safety PPE:** Wear chemical-resistant rubber gloves, an N95 respirator mask, and eye protection.
 
-2. ZERO GREETINGS OR CHIT-CHAT:
-   - NEVER start with greetings ("Hello", "Hi, I am WeedGuard AI", "Greetings", "Welcome").
-   - NEVER include conversational preambles ("It's a great question", "Prevention is key", "Here is a guide").
-   - Start IMMEDIATELY with the very first bullet point.
+$greetingInstruction
    - NEVER end with conversational questions or offers ("Would you like help calculating dosage?", "Tell me your crop", "Let me know").
    - Terminate immediately after the last bullet point.
 
@@ -114,7 +126,7 @@ CRITICAL MANDATORY INSTRUCTIONS:
 
   /// Cleans AI text: removes reasoning tags, strips conversational greeting/closing filler,
   /// converts headers/numbered lists into clean bullet points, and ensures NO `***` appears.
-  static String cleanAiResponse(String raw) {
+  static String cleanAiResponse(String raw, {bool isFirstMessage = false, String languageCode = 'en'}) {
     if (raw.isEmpty) return raw;
 
     // 1. Strip reasoning chain-of-thought tags (<think>...</think>)
@@ -146,7 +158,7 @@ CRITICAL MANDATORY INSTRUCTIONS:
     // 7. Convert numbered lists (1. , 2. ) to bullet points (• )
     text = text.replaceAll(RegExp(r'^\s*\d+[\.\)]\s+', multiLine: true), '• ');
 
-    // 8. Strip conversational greeting / preamble lines at start
+    // 8. If NOT the first message, strip conversational greeting / preamble lines at start
     final lines = text.split('\n');
     final cleanedLines = <String>[];
     var hasStartedBullets = false;
@@ -163,23 +175,41 @@ CRITICAL MANDATORY INSTRUCTIONS:
     for (final line in lines) {
       final stripped = line.trim();
       if (stripped.isEmpty) {
-        if (hasStartedBullets) {
+        if (hasStartedBullets || isFirstMessage) {
           cleanedLines.add('');
         }
         continue;
       }
 
-      if (!hasStartedBullets) {
+      if (!isFirstMessage && !hasStartedBullets) {
         if (!stripped.startsWith('•') && fluffStartRegex.hasMatch(stripped)) {
           continue;
         }
+        hasStartedBullets = true;
+      } else {
         hasStartedBullets = true;
       }
 
       cleanedLines.add(line);
     }
 
-    // 9. Strip trailing conversational sign-offs / questions from the end
+    // 9. If isFirstMessage is true, ensure there is a warm greeting at the beginning
+    if (isFirstMessage) {
+      final fullText = cleanedLines.join('\n').trim();
+      final hasGreetingAlready = fluffStartRegex.hasMatch(fullText);
+      if (!hasGreetingAlready) {
+        String greetingHeader = 'Hello! Welcome to WeedGuard AI. Here is what you need for your crops:';
+        if (languageCode == 'kn') {
+          greetingHeader = 'ನಮಸ್ಕಾರ! ವೀಡ್‌ಗಾರ್ಡ್ AI ಗೆ ಸುಸ್ವಾಗತ. ನಿಮ್ಮ ಕೃಷಿ ಕಳೆ ನಿರ್ವಹಣೆಗೆ ಇಲ್ಲಿದೆ ಮಾಹಿತಿ:';
+        } else if (languageCode == 'hi') {
+          greetingHeader = 'नमस्ते! वीडगार्ड AI में आपका स्वागत है। आपकी फसलों के लिए खरपतवार प्रबंधन जानकारी:';
+        }
+        cleanedLines.insert(0, '');
+        cleanedLines.insert(0, greetingHeader);
+      }
+    }
+
+    // 10. Strip trailing conversational sign-offs / questions from the end
     final fluffEndRegex = RegExp(
       r'(would\s+you\s+like|feel\s+free|let\s+me\s+know|just\s+tell\s+me|hope\s+this\s+helps|reach\s+out|happy\s+farming)',
       caseSensitive: false,
@@ -207,13 +237,14 @@ CRITICAL MANDATORY INSTRUCTIONS:
     required List<ChatMessage> history,
     required String userMessage,
     String languageCode = 'en',
+    bool isFirstMessage = false,
   }) async {
     final activeKey = await getEffectiveApiKey();
 
     final messages = <Map<String, String>>[
       {
         'role': 'system',
-        'content': _buildSystemPrompt(languageCode),
+        'content': _buildSystemPrompt(languageCode, isFirstMessage: isFirstMessage),
       },
     ];
 
@@ -265,7 +296,11 @@ CRITICAL MANDATORY INSTRUCTIONS:
             if (choices != null && choices.isNotEmpty) {
               final content = choices[0]['message']?['content'] as String?;
               if (content != null && content.trim().isNotEmpty) {
-                final cleaned = cleanAiResponse(content);
+                final cleaned = cleanAiResponse(
+                  content,
+                  isFirstMessage: isFirstMessage,
+                  languageCode: languageCode,
+                );
                 if (cleaned.isNotEmpty) return cleaned;
               }
             }
@@ -305,7 +340,11 @@ CRITICAL MANDATORY INSTRUCTIONS:
             if (choices != null && choices.isNotEmpty) {
               final content = choices[0]['message']?['content'] as String?;
               if (content != null && content.trim().isNotEmpty) {
-                final cleaned = cleanAiResponse(content);
+                final cleaned = cleanAiResponse(
+                  content,
+                  isFirstMessage: isFirstMessage,
+                  languageCode: languageCode,
+                );
                 if (cleaned.isNotEmpty) return cleaned;
               }
             }
@@ -320,7 +359,12 @@ CRITICAL MANDATORY INSTRUCTIONS:
     }
 
     // ── Tier 3: ChatGPT-style Offline Agronomy Knowledge Engine ──
-    return _getOfflineFallbackResponse(userMessage, languageCode);
+    final fallback = _getOfflineFallbackResponse(userMessage, languageCode);
+    return cleanAiResponse(
+      fallback,
+      isFirstMessage: isFirstMessage,
+      languageCode: languageCode,
+    );
   }
 
   static String _getOfflineFallbackResponse(String query, String languageCode) {

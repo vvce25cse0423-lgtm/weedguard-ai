@@ -32,13 +32,31 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
   double? _templateHeight;
   double? _templateWidth;
 
-  final List<String> _quickSuggestions = [
-    'How to control Parthenium (Congress Grass)?',
-    'Best time to spray herbicides?',
-    'Pre-emergent vs Post-emergent herbicides?',
-    'Zero-chemical organic weed recipes?',
-    'How to control Purple Nutsedge (Cyperus)?',
-    'Herbicide dosage calculation per acre',
+  final List<Map<String, dynamic>> _quickSuggestions = [
+    {
+      'text': 'How to control Parthenium (Congress Grass)?',
+      'icon': Icons.grass_rounded,
+    },
+    {
+      'text': 'Best time to spray herbicides?',
+      'icon': Icons.schedule_rounded,
+    },
+    {
+      'text': 'Pre-emergent vs Post-emergent herbicides?',
+      'icon': Icons.science_rounded,
+    },
+    {
+      'text': 'Zero-chemical organic weed recipes?',
+      'icon': Icons.eco_rounded,
+    },
+    {
+      'text': 'How to control Purple Nutsedge (Cyperus)?',
+      'icon': Icons.pest_control_rounded,
+    },
+    {
+      'text': 'Herbicide dosage calculation per acre',
+      'icon': Icons.calculate_outlined,
+    },
   ];
 
   @override
@@ -107,11 +125,6 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
     await _tts.speak(cleanText);
   }
 
-  /// Sanitizes text to strictly enforce pure bullet points, remove greetings/fluff, and purge `***` artifacts
-  String _cleanDisplayText(String raw) {
-    return WeedGuardChatService.cleanAiResponse(raw);
-  }
-
   Future<void> _handleSubmitted(String text) async {
     final query = text.trim();
     if (query.isEmpty || _isLoading) return;
@@ -124,6 +137,9 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
       text: query,
       sender: MessageSender.user,
     );
+
+    // Identify if this is the very first user message of the conversation
+    final isFirstMessage = _messages.where((m) => m.sender == MessageSender.user).isEmpty;
 
     setState(() {
       _messages.add(userMessage);
@@ -139,6 +155,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
         history: _messages,
         userMessage: query,
         languageCode: lang,
+        isFirstMessage: isFirstMessage,
       );
 
       if (mounted) {
@@ -146,7 +163,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
           _messages.add(
             ChatMessage(
               id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
-              text: _cleanDisplayText(responseText),
+              text: responseText,
               sender: MessageSender.ai,
             ),
           );
@@ -1860,8 +1877,12 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
         elevation: 2,
         backgroundColor: const Color(0xFF1B4332),
         foregroundColor: Colors.white,
+        leadingWidth: 40,
+        titleSpacing: 2,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(maxWidth: 38),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
           onPressed: () {
             setState(() => _showChatView = false);
           },
@@ -1869,54 +1890,59 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
         title: Row(
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF52B788), width: 1.5),
+                border: Border.all(color: const Color(0xFF52B788), width: 1.2),
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF52B788).withValues(alpha: 0.35),
-                    blurRadius: 6,
-                    spreadRadius: 1,
+                    blurRadius: 5,
+                    spreadRadius: 0.5,
                   ),
                 ],
               ),
               child: ClipOval(
                 child: Image.asset(
                   'assets/icons/weedguard_shield.png',
-                  width: 38,
-                  height: 38,
+                  width: 34,
+                  height: 34,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => const Icon(
                     Icons.shield_rounded,
                     color: Color(0xFF52B788),
-                    size: 22,
+                    size: 20,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             const Expanded(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'WeedGuard AI',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 15.5,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                       letterSpacing: -0.2,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.visible,
                   ),
                   Text(
                     'Agronomy Assistant',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w500,
                       color: Color(0xFFD8F3DC),
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.visible,
                   ),
                 ],
               ),
@@ -1926,16 +1952,23 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
         actions: [
           // Button to toggle back to Template view
           TextButton.icon(
-            style: TextButton.styleFrom(foregroundColor: Colors.white),
-            icon: const Icon(Icons.grid_view_rounded, size: 18),
-            label: const Text('Topics', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.grid_view_rounded, size: 17),
+            label: const Text('Topics', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
             onPressed: () {
               setState(() => _showChatView = false);
             },
           ),
           IconButton(
             tooltip: 'More Options',
-            icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
+            padding: const EdgeInsets.only(right: 6, left: 2),
+            constraints: const BoxConstraints(maxWidth: 36),
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.more_vert_rounded, color: Colors.white, size: 21),
             onPressed: () => _showCustomMenu(context),
           ),
         ],
@@ -2013,8 +2046,16 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
         itemCount: _quickSuggestions.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final suggestion = _quickSuggestions[index];
+          final item = _quickSuggestions[index];
+          final suggestion = item['text'] as String;
+          final iconData = item['icon'] as IconData;
+
           return ActionChip(
+            avatar: Icon(
+              iconData,
+              size: 15,
+              color: isDark ? const Color(0xFF74C69D) : const Color(0xFF1B4332),
+            ),
             label: Text(
               suggestion,
               style: TextStyle(
@@ -2184,7 +2225,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                 children: [
                   SelectableText.rich(
                     _buildMarkdownTextSpan(
-                      _cleanDisplayText(message.text),
+                      message.text,
                       isDark: isDark,
                       isError: message.isError,
                       isUserMessage: false,
@@ -2202,12 +2243,12 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                           child: Image.asset(
                             'assets/icons/action_bookmark.png',
-                            width: 18,
-                            height: 18,
+                            width: 20,
+                            height: 20,
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => const Icon(
                               Icons.bookmark_border_rounded,
-                              size: 18,
+                              size: 19,
                               color: Color(0xFF2D6A4F),
                             ),
                           ),
@@ -2226,15 +2267,15 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                           child: isSpeaking
-                              ? const Icon(Icons.stop_circle_rounded, size: 18, color: Colors.redAccent)
+                              ? const Icon(Icons.stop_circle_rounded, size: 19, color: Colors.redAccent)
                               : Image.asset(
                                   'assets/icons/action_speaker.png',
-                                  width: 20,
-                                  height: 18,
+                                  width: 22,
+                                  height: 20,
                                   fit: BoxFit.contain,
                                   errorBuilder: (_, __, ___) => const Icon(
                                     Icons.volume_up_rounded,
-                                    size: 18,
+                                    size: 19,
                                     color: Color(0xFF2D6A4F),
                                   ),
                                 ),
@@ -2263,12 +2304,12 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                           child: Image.asset(
                             'assets/icons/action_copy.png',
-                            width: 18,
-                            height: 18,
+                            width: 20,
+                            height: 20,
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => const Icon(
                               Icons.content_copy_rounded,
-                              size: 18,
+                              size: 19,
                               color: Color(0xFF2D6A4F),
                             ),
                           ),
