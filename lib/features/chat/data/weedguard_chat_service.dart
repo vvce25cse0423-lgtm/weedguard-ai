@@ -4,11 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/chat_message_model.dart';
 
 class WeedGuardChatService {
-  // Mistral AI Configuration
-  static const _mistralUrl = 'https://api.mistral.ai/v1/chat/completions';
-  static const _defaultMistralKey = 'mstrl_U3grSBWY5Vl4TrNbftjG1gHSzJNAwNdc_06Dpzb';
-
-  // Groq Fallback Configuration
+  // Groq Cloud Configuration
   static const _groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
   static const _envGroqKey = String.fromEnvironment('GROQ_API_KEY');
 
@@ -21,24 +17,24 @@ class WeedGuardChatService {
     ].map((b) => b ^ 42),
   );
 
-  // Top Mistral Models for ChatGPT-like conversational interaction
-  static const List<String> _mistralModels = [
-    'mistral-small-latest',
-    'codestral-latest',
-    'ministral-8b-latest',
-    'open-mistral-nemo',
-    'open-mistral-7b',
+  // Multi-model Groq Cloud cascade for continuous zero-downtime operation.
+  // Each model has its own independent rate limit allocation on Groq.
+  // When the primary model reaches capacity or rate limits, it automatically
+  // cascades to the next high-speed model without interrupting the user.
+  static const List<String> _groqModels = [
+    'qwen/qwen3.8-27b',             // Tier 1 Primary: 0.17s latency, vision + text, Kannada/Hindi fluency
+    'openai/gpt-oss-120b',          // Tier 2 Fallback: OpenAI 120B ChatGPT open weights, flagship agronomic reasoning
+    'openai/gpt-oss-20b',           // Tier 3 Fallback: OpenAI 20B ultra-fast 1,000 tps conversational engine
+    'openai/gpt-oss-safeguard-20b', // Tier 4 Fallback: OpenAI 20B safety & agronomic moderation engine
+    'allam-2-7b',                   // Tier 5 Fallback: High-speed multilingual 7B model
+    'llama-3.3-70b-versatile',      // Tier 6 Fallback: Meta Llama 3.3 70B versatile model
+    'llama-3.1-8b-instant',         // Tier 7 Fallback: Meta Llama 3.1 8B instant model
   ];
 
-  // Groq Models prioritized for agricultural precision & multilingual fluency
-  static const List<String> _groqModels = [
-    'qwen/qwen3.8-27b',         // Live on Groq: 0.17s response, vision + text, Kannada/Hindi fluency
-    'openai/gpt-oss-120b',      // OpenAI 120B ChatGPT open weights
-    'openai/gpt-oss-20b',       // OpenAI 20B fast model
-    'allam-2-7b',               // Multilingual alternative
-    'llama-3.3-70b-versatile',
-    'llama-3.1-8b-instant',
-  ];
+  /// Checks if a model supports the reasoning_format parameter
+  static bool _isReasoningModel(String model) {
+    return model.startsWith('openai/') || model.startsWith('qwen/');
+  }
 
   static Future<void> saveUserApiKey(String key) async {
     final prefs = await SharedPreferences.getInstance();
@@ -64,10 +60,7 @@ class WeedGuardChatService {
     } catch (_) {}
 
     // Default to the verified Groq API key
-    if (_defaultGroqKey.isNotEmpty) {
-      return _defaultGroqKey;
-    }
-    return _defaultMistralKey;
+    return _defaultGroqKey;
   }
 
   static String _languageName(String languageCode) {
@@ -296,7 +289,7 @@ $greetingInstruction
       if (cleaned.isNotEmpty) return cleaned;
     }
 
-    // ── Tier 3: ChatGPT-style Offline Agronomy Knowledge Engine ──
+    // ── Offline Fallback: Agronomy Knowledge Engine ──
     final fallback = _getOfflineFallbackResponse(userMessage, languageCode);
     return cleanAiResponse(
       fallback,
@@ -361,26 +354,29 @@ Translate the following agronomy response 100% into natural, clear $targetLang s
     );
   }
 
-  /// Queries Groq (Tier 1) and Mistral (Tier 2) in sequence and returns raw content if available.
+  /// Queries Groq Cloud AI models in priority sequence and returns raw content.
+  /// Automatically cascades through the Groq model hierarchy if a model hits rate limits or capacity constraints.
   static Future<String?> _queryCloudModels(
     List<Map<String, String>> messages,
     String activeKey,
   ) async {
-    // ── Tier 1: High-Speed Groq Cloud AI ──
     String groqKey = _envGroqKey.isNotEmpty ? _envGroqKey : _defaultGroqKey;
-    if (activeKey.startsWith('gsk_')) {
+    if (activeKey.isNotEmpty && (activeKey.startsWith('gsk_') || groqKey.isEmpty)) {
       groqKey = activeKey;
     }
 
     if (groqKey.isNotEmpty) {
       for (final model in _groqModels) {
         try {
-          final body = jsonEncode({
+          final payload = <String, dynamic>{
             'model': model,
             'messages': messages,
             'temperature': 0.2,
             'max_tokens': 1200,
-          });
+          };
+          if (_isReasoningModel(model)) {
+            payload['reasoning_format'] = 'hidden';
+          }
 
           final response = await http
               .post(
@@ -389,7 +385,7 @@ Translate the following agronomy response 100% into natural, clear $targetLang s
                   'Content-Type': 'application/json',
                   'Authorization': 'Bearer $groqKey',
                 },
-                body: utf8.encode(body),
+                body: utf8.encode(jsonEncode(payload)),
               )
               .timeout(const Duration(seconds: 15));
 
@@ -397,55 +393,19 @@ Translate the following agronomy response 100% into natural, clear $targetLang s
             final decoded = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
             final choices = decoded['choices'] as List?;
             if (choices != null && choices.isNotEmpty) {
-              final content = choices[0]['message']?['content'] as String?;
+              final messageMap = choices[0]['message'] as Map<String, dynamic>?;
+              var content = messageMap?['content'] as String?;
+              if ((content == null || content.trim().isEmpty) && messageMap?['reasoning'] != null) {
+                content = messageMap!['reasoning'] as String?;
+              }
               if (content != null && content.trim().isNotEmpty) {
                 return content;
               }
             }
           }
+          // Continue to next model if rate limit (HTTP 429), capacity (HTTP 503), or 404
         } catch (_) {
-          // Continue to next model if error or timeout
-        }
-      }
-    }
-
-    // ── Tier 2: Mistral AI Fallback ──
-    if (activeKey.startsWith('mstrl_')) {
-      for (final model in _mistralModels) {
-        try {
-          final body = jsonEncode({
-            'model': model,
-            'messages': messages,
-            'temperature': 0.2,
-            'max_tokens': 1024,
-          });
-
-          final response = await http
-              .post(
-                Uri.parse(_mistralUrl),
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json',
-                  'Authorization': 'Bearer $activeKey',
-                },
-                body: utf8.encode(body),
-              )
-              .timeout(const Duration(seconds: 15));
-
-          if (response.statusCode == 200) {
-            final decoded = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
-            final choices = decoded['choices'] as List?;
-            if (choices != null && choices.isNotEmpty) {
-              final content = choices[0]['message']?['content'] as String?;
-              if (content != null && content.trim().isNotEmpty) {
-                return content;
-              }
-            }
-          } else if (response.statusCode == 402) {
-            break;
-          }
-        } catch (_) {
-          // Try next model if timeout or network hiccup
+          // Continue to next model on network hiccup or timeout
         }
       }
     }
