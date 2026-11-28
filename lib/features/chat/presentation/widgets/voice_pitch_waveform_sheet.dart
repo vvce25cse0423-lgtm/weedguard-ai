@@ -161,8 +161,8 @@ class _VoicePitchWaveformSheetState extends State<VoicePitchWaveformSheet>
         ),
         onSoundLevelChange: (level) {
           if (!mounted) return;
-          // Normalize typical STT sound level (-10 to 10 dB) to 0.0 .. 1.0
-          final norm = ((level + 5) / 15).clamp(0.0, 1.0);
+          // When sound level is <= -1.0 dB (ambient silence/no speech), clamp to 0.0 (rest)
+          final norm = level > -1.0 ? ((level + 1.0) / 11.0).clamp(0.0, 1.0) : 0.0;
           setState(() {
             _normalizedSoundLevel = norm;
           });
@@ -369,45 +369,48 @@ class _VoicePitchWaveformSheetState extends State<VoicePitchWaveformSheet>
           ),
           const SizedBox(height: 14),
 
-          // ── Real-Time Language Auto-Detection Pill ──
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            decoration: BoxDecoration(
-              color: const Color(0xFF153F00),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: const Color(0xFF84E865).withValues(alpha: 0.6),
-                width: 1.2,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black38,
-                  blurRadius: 6,
-                  offset: Offset(0, 2),
+          // ── Real-Time Language Auto-Detection Pill (Aligned left to display complete text without clipping) ──
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF153F00),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFF84E865).withValues(alpha: 0.6),
+                  width: 1.2,
                 ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.auto_awesome_rounded,
-                  color: Color(0xFF84E865),
-                  size: 15,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _recognizedText.isEmpty
-                      ? 'Auto-detecting: Speak in Kannada, Hindi, or English'
-                      : 'Detected Language: ${_getLanguageDisplayName(_activeLanguageCode)}',
-                  style: const TextStyle(
-                    color: Color(0xFF84E865),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black38,
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
                   ),
-                ),
-              ],
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Color(0xFF84E865),
+                    size: 14,
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    _recognizedText.isEmpty
+                        ? 'Auto-detect: Kannada • Hindi • English'
+                        : 'Language: ${_getLanguageDisplayName(_activeLanguageCode)}',
+                    style: const TextStyle(
+                      color: Color(0xFF84E865),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -621,29 +624,32 @@ class VoicePitchWaveformPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeWidth = barWidth;
 
+    // Waveform is only active when recording voice (isListening AND active voice soundLevel > 0.05)
+    // When no recording of voice, the waveform MUST BE COMPLETELY AT REST!
+    final bool isRecordingVoice = isListening && soundLevel > 0.05;
+
     final phase = animationProgress * 2 * math.pi;
 
     for (int i = 0; i < barCount; i++) {
       final x = (i * totalSpacing) + (totalSpacing / 2);
 
-      // Normalized distance from center (0.0 at edges to 1.0 at center)
-      final centerFactor = 1.0 - math.pow(((i - barCount / 2) / (barCount / 2)).abs(), 1.6);
-
-      // Multi-harmonic pitch variation formula
-      final wave1 = math.sin(phase * 2.2 + i * 0.32);
-      final wave2 = math.cos(phase * 1.5 + i * 0.18);
-      final wave3 = math.sin(phase * 4.0 + i * 0.55);
-      final harmonic = ((wave1 * 0.55 + wave2 * 0.30 + wave3 * 0.15).abs());
-
-      // Height calculation
       double barHeight;
-      if (isListening) {
-        final speechBoost = math.max(0.12, soundLevel);
-        // Dynamic pitch variation: when talking, amplitude scales up to ~76px
-        barHeight = 4.0 + (size.height * 0.78 * speechBoost * harmonic * centerFactor);
+      if (isRecordingVoice) {
+        // Normalized distance from center (0.0 at edges to 1.0 at center)
+        final centerFactor = 1.0 - math.pow(((i - barCount / 2) / (barCount / 2)).abs(), 1.6);
+
+        // Multi-harmonic pitch variation formula
+        final wave1 = math.sin(phase * 2.2 + i * 0.32);
+        final wave2 = math.cos(phase * 1.5 + i * 0.18);
+        final wave3 = math.sin(phase * 4.0 + i * 0.55);
+        final harmonic = ((wave1 * 0.55 + wave2 * 0.30 + wave3 * 0.15).abs());
+
+        // Dynamic pitch variation: scales up with voice intensity up to ~76px
+        final speechIntensity = ((soundLevel - 0.05) / 0.95).clamp(0.0, 1.0);
+        barHeight = 3.0 + (size.height * 0.82 * speechIntensity * harmonic * centerFactor);
       } else {
-        // Idle gentle undulation
-        barHeight = 3.0 + (math.sin(phase + i * 0.25).abs() * 6.0 * centerFactor);
+        // AT REST: Completely flat, calm resting line (constant 3.0px)
+        barHeight = 3.0;
       }
 
       barHeight = barHeight.clamp(3.0, size.height * 0.88);
@@ -651,11 +657,11 @@ class VoicePitchWaveformPainter extends CustomPainter {
       final top = centerY - (barHeight / 2);
       final bottom = centerY + (barHeight / 2);
 
-      // Pitch-based intensity: higher peaks use full #84E865, secondary use mid-alpha
+      // Pitch-based intensity: active voice peaks use full #84E865, resting bars use dimPaint
       Paint barPaint;
-      if (barHeight > size.height * 0.42) {
+      if (isRecordingVoice && barHeight > size.height * 0.38) {
         barPaint = vibrantPaint;
-      } else if (barHeight > size.height * 0.18) {
+      } else if (isRecordingVoice && barHeight > size.height * 0.16) {
         barPaint = midPaint;
       } else {
         barPaint = dimPaint;

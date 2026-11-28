@@ -107,20 +107,19 @@ $languageInstruction
 
 STRICT RESPONSE LENGTH AND FORMATTING RULES:
 
-Your answers MUST be concise, direct, and easy to understand.
+Your answers MUST be ultra-concise, direct, short, and easy to understand.
 
 1. RESPONSE LENGTH:
-- Default answer: 80–120 words.
-- Simple questions: 20–50 words.
-- Technical questions: Maximum 150 words.
-- Complex agricultural questions: Maximum 200 words.
-- Never exceed 200 words unless the user explicitly requests detailed information.
+- Standard answer: 50–80 words total.
+- Simple questions: 20–40 words.
+- Technical & complex questions: Maximum 90 words.
+- Never write long descriptive essays, historical backgrounds, or multi-paragraph walls of text.
 - FINAL RULE: Give the shortest complete answer that accurately solves the user's question.
 
 2. ANSWER STRUCTURE:
 Follow this format (do not use every heading for every answer; include only relevant sections):
-• **Direct Answer:** Answer the user's main question in 1–3 sentences.
-• **Key Points:** Give only 3–5 important bullet points when necessary.
+• **Direct Answer:** Answer the user's main question directly in 1–2 sentences.
+• **Key Points:** Give only 2–3 short, single-line bullet points.
 • **Recommendation:** Provide one practical and safe recommendation.
 • **Caution:** Include only when there is a genuine safety concern or important uncertainty.
 
@@ -268,6 +267,18 @@ $greetingInstruction
       }
     }
 
+    // 11. Enforce strict conciseness: cap bullet points to at most 3 bullets if model outputs excess
+    final bulletIndices = <int>[];
+    for (int i = 0; i < cleanedLines.length; i++) {
+      if (cleanedLines[i].trim().startsWith('•')) {
+        bulletIndices.add(i);
+      }
+    }
+    if (bulletIndices.length > 3) {
+      final cutoff = bulletIndices[3];
+      cleanedLines.removeRange(cutoff, cleanedLines.length);
+    }
+
     var result = cleanedLines.join('\n');
     result = result.replaceAll(RegExp(r'\n{3,}'), '\n\n');
     return result.trim();
@@ -304,12 +315,14 @@ $greetingInstruction
       });
     }
 
-    // Add current query with strict language enforcement when Kannada/Hindi is active
+    // Add current query with strict language enforcement and strict brevity requirement
     String apiUserPrompt = userMessage;
     if (languageCode == 'kn') {
-      apiUserPrompt = '$userMessage\n\n[Respond strictly in Kannada (ಕನ್ನಡ) script only, even if the query is in English.]';
+      apiUserPrompt = '$userMessage\n\n[ಕಡ್ಡಾಯ ನಿಯಮ: ಕೇವಲ 50-75 ಪದಗಳಲ್ಲಿ ಅತ್ಯಂತ ಸಂಕ್ಷಿಪ್ತವಾಗಿ ಉತ್ತರಿಸಿ. ದೀರ್ಘ ವಿವರಣೆ ನೀಡಬೇಡಿ. ನೇರ ಉತ್ತರ ಮತ್ತು 2-3 ಬುಲೆಟ್ ಪಾಯಿಂಟ್ಸ್ ಮಾತ್ರ.]';
     } else if (languageCode == 'hi') {
-      apiUserPrompt = '$userMessage\n\n[Respond strictly in Hindi (हिंदी) Devanagari script only, even if the query is in English.]';
+      apiUserPrompt = '$userMessage\n\n[अनिवार्य नियम: केवल 50-75 शब्दों में अत्यंत संक्षिप्त उत्तर दें। कोई लंबा विवरण न दें। केवल 1 सीधा उत्तर और 2-3 मुख्य बिंदु दें।]';
+    } else {
+      apiUserPrompt = '$userMessage\n\n[STRICT INSTRUCTION: Keep your response ultra-concise, short and direct (50-75 words max). No lengthy descriptive paragraphs.]';
     }
     messages.add({
       'role': 'user',
@@ -409,7 +422,7 @@ Translate the following agronomy response 100% into natural, clear $targetLang s
             'model': model,
             'messages': messages,
             'temperature': 0.2,
-            'max_tokens': 1200,
+            'max_tokens': 280,
           };
           if (_isReasoningModel(model)) {
             payload['reasoning_format'] = 'hidden';
