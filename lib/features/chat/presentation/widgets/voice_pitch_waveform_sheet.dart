@@ -5,8 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-/// Modern voice recognition modal with live black-and-white pitch variation waveform.
-/// Dynamically recognizes speech in Kannada, Hindi, or English and feeds it to WeedGuard AI.
+/// Modern voice recognition modal with cropped sunrise crop field background,
+/// #153F00 waveform container, dynamic #84E865 pitch variation waveform,
+/// and real-time automatic language detection (Kannada, Hindi, English).
 class VoicePitchWaveformSheet extends StatefulWidget {
   final String initialLanguageCode;
   final Function(String recognizedText, String languageCode) onSpeechResult;
@@ -34,33 +35,12 @@ class _VoicePitchWaveformSheetState extends State<VoicePitchWaveformSheet>
   late String _activeLanguageCode;
   Timer? _silenceTimer;
 
-  static const Map<String, Map<String, String>> _supportedLanguages = {
-    'kn': {
-      'name': 'ಕನ್ನಡ',
-      'sub': 'Kannada',
-      'locale': 'kn_IN',
-      'prompt': 'ಕನ್ನಡದಲ್ಲಿ ಮಾತನಾಡಿ...',
-    },
-    'hi': {
-      'name': 'हिंदी',
-      'sub': 'Hindi',
-      'locale': 'hi_IN',
-      'prompt': 'हिंदी में बोलिए...',
-    },
-    'en': {
-      'name': 'English',
-      'sub': 'English',
-      'locale': 'en_IN',
-      'prompt': 'Speak in English...',
-    },
-  };
-
   @override
   void initState() {
     super.initState();
     _activeLanguageCode = widget.initialLanguageCode;
-    if (!_supportedLanguages.containsKey(_activeLanguageCode)) {
-      _activeLanguageCode = 'en';
+    if (_activeLanguageCode != 'kn' && _activeLanguageCode != 'hi' && _activeLanguageCode != 'en') {
+      _activeLanguageCode = 'kn';
     }
 
     _waveController = AnimationController(
@@ -129,7 +109,7 @@ class _VoicePitchWaveformSheetState extends State<VoicePitchWaveformSheet>
       }
 
       if (_isSpeechInitialized) {
-        await _startListeningInCurrentLocale();
+        await _startListeningWithAutoDetect();
       }
     } catch (_) {
       if (mounted) {
@@ -138,9 +118,14 @@ class _VoicePitchWaveformSheetState extends State<VoicePitchWaveformSheet>
     }
   }
 
-  Future<void> _startListeningInCurrentLocale() async {
-    final langConfig = _supportedLanguages[_activeLanguageCode] ?? _supportedLanguages['en']!;
-    final targetLocale = langConfig['locale'] ?? 'en_IN';
+  Future<void> _startListeningWithAutoDetect() async {
+    // Choose appropriate initial locale based on app context
+    String targetLocale = 'en_IN';
+    if (_activeLanguageCode == 'kn') {
+      targetLocale = 'kn_IN';
+    } else if (_activeLanguageCode == 'hi') {
+      targetLocale = 'hi_IN';
+    }
 
     try {
       setState(() {
@@ -152,12 +137,13 @@ class _VoicePitchWaveformSheetState extends State<VoicePitchWaveformSheet>
           if (!mounted) return;
           final words = result.recognizedWords;
           if (words.isNotEmpty) {
+            // Intelligent real-time language detection from spoken words
+            final detectedLang = _detectLanguage(words);
+
             setState(() {
               _recognizedText = words;
+              _activeLanguageCode = detectedLang;
             });
-
-            // Detect if speech contains Kannada or Devanagari characters
-            _detectAndSyncLanguage(words);
 
             if (result.finalResult) {
               _scheduleAutoSubmit();
@@ -170,7 +156,7 @@ class _VoicePitchWaveformSheetState extends State<VoicePitchWaveformSheet>
           cancelOnError: false,
           autoPunctuation: true,
           localeId: targetLocale,
-          listenFor: const Duration(seconds: 35),
+          listenFor: const Duration(seconds: 40),
           pauseFor: const Duration(seconds: 4),
         ),
         onSoundLevelChange: (level) {
@@ -185,15 +171,62 @@ class _VoicePitchWaveformSheetState extends State<VoicePitchWaveformSheet>
     } catch (_) {}
   }
 
-  void _detectAndSyncLanguage(String text) {
-    if (RegExp(r'[\u0C80-\u0CFF]').hasMatch(text)) {
-      if (_activeLanguageCode != 'kn') {
-        setState(() => _activeLanguageCode = 'kn');
-      }
-    } else if (RegExp(r'[\u0900-\u097F]').hasMatch(text)) {
-      if (_activeLanguageCode != 'hi') {
-        setState(() => _activeLanguageCode = 'hi');
-      }
+  /// Automatically detects whether the user is speaking Kannada, Hindi, or English.
+  String _detectLanguage(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return _activeLanguageCode;
+
+    // 1. Kannada Unicode script range (\u0C80 - \u0CFF)
+    if (RegExp(r'[\u0C80-\u0CFF]').hasMatch(trimmed)) {
+      return 'kn';
+    }
+
+    // 2. Devanagari / Hindi Unicode script range (\u0900 - \u097F)
+    if (RegExp(r'[\u0900-\u097F]').hasMatch(trimmed)) {
+      return 'hi';
+    }
+
+    // 3. Phonetic & vocabulary analysis for transliterated Kannada / Hindi
+    final lower = trimmed.toLowerCase();
+    final words = lower.split(RegExp(r'\s+'));
+
+    final kannadaKeywords = {
+      'kale', 'kalegalu', 'hullu', 'hege', 'yava', 'yavudu', 'beku', 'agide',
+      'bithane', 'thota', 'neeru', 'gobbara', 'gida', 'gidagalu', 'namaskara',
+      'madodu', 'madbeku', 'tholisodu', 'haku', 'raitha', 'raitharu', 'kabbina',
+      'bhatta', 'jola', 'tomatada', 'bella', 'kallu', 'kelsa', 'oota'
+    };
+
+    final hindiKeywords = {
+      'ghaas', 'khet', 'kheti', 'fasal', 'dawa', 'dawai', 'kaise', 'kya', 'kare',
+      'rokne', 'upay', 'namaste', 'namashkar', 'podha', 'patti', 'keede',
+      'paani', 'mitti', 'gehun', 'chawal', 'dhaan', 'ganna', 'tamatar', 'khad',
+      'kharpatwar', 'safai', 'bataye', 'batao', 'chahiye', 'hoga', 'hai', 'hain'
+    };
+
+    int knScore = 0;
+    int hiScore = 0;
+    for (final w in words) {
+      if (kannadaKeywords.contains(w)) knScore += 2;
+      if (hindiKeywords.contains(w)) hiScore += 2;
+    }
+
+    if (knScore > hiScore && knScore > 0) return 'kn';
+    if (hiScore > knScore && hiScore > 0) return 'hi';
+
+    // 4. Default to English for Latin queries
+    return 'en';
+  }
+
+  String _getLanguageDisplayName(String code) {
+    switch (code) {
+      case 'kn':
+        return 'ಕನ್ನಡ (Kannada)';
+      case 'hi':
+        return 'हिंदी (Hindi)';
+      case 'en':
+      default:
+        return 'English';
     }
   }
 
@@ -215,289 +248,326 @@ class _VoicePitchWaveformSheetState extends State<VoicePitchWaveformSheet>
     Navigator.of(context).pop();
   }
 
-  Future<void> _switchLanguage(String newLangCode) async {
-    if (_activeLanguageCode == newLangCode) return;
-    HapticFeedback.selectionClick();
-
-    _silenceTimer?.cancel();
-    await _speech.stop();
-
-    setState(() {
-      _activeLanguageCode = newLangCode;
-      _recognizedText = '';
-    });
-
-    await _startListeningInCurrentLocale();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final currentLangConfig = _supportedLanguages[_activeLanguageCode] ?? _supportedLanguages['en']!;
-    final promptText = currentLangConfig['prompt'] ?? 'Speak now...';
-
     return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        top: 16,
-        left: 20,
-        right: 20,
-      ),
       decoration: const BoxDecoration(
-        color: Color(0xFF141915),
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
           BoxShadow(
             color: Colors.black54,
-            blurRadius: 20,
-            offset: Offset(0, -5),
+            blurRadius: 24,
+            offset: Offset(0, -6),
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 42,
-              height: 4.5,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(10),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        child: Stack(
+          children: [
+            // 1. Cropped & Compressed Sunrise Crop Field Background
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/voice_recognition_sheet_bg.png',
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
               ),
             ),
-          ),
-          const SizedBox(height: 16),
 
-          // Header: Title & Listening Status
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
+            // 2. High-contrast deep green overlay scrim for readability
+            Positioned.fill(
+              child: Container(
                 decoration: BoxDecoration(
-                  color: _isListening
-                      ? const Color(0xFF2D6A4F).withValues(alpha: 0.3)
-                      : Colors.white12,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  _isListening ? Icons.mic_rounded : Icons.mic_off_rounded,
-                  color: _isListening ? const Color(0xFF52B788) : Colors.white60,
-                  size: 20,
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      const Color(0xFF0C1B0B).withValues(alpha: 0.88),
+                      const Color(0xFF061105).withValues(alpha: 0.94),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'WeedGuard Voice Recognition',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
+            ),
+
+            // 3. Main Sheet Interactive Contents
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                top: 14,
+                left: 20,
+                right: 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4.5,
+                      decoration: BoxDecoration(
+                        color: Colors.white30,
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _isListening
-                          ? 'Listening • ಮಾತನಾಡಿ • बोलिए'
-                          : (_permissionDenied
-                              ? 'Microphone permission needed'
-                              : 'Tap mic or language to speak'),
-                      style: TextStyle(
-                        color: _isListening ? const Color(0xFF74C69D) : Colors.white54,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Header: Title & Listening Status
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _isListening
+                              ? const Color(0xFF84E865).withValues(alpha: 0.22)
+                              : Colors.white12,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _isListening ? Icons.mic_rounded : Icons.mic_off_rounded,
+                          color: _isListening ? const Color(0xFF84E865) : Colors.white60,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'WeedGuard Voice Recognition',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _isListening
+                                  ? 'Listening • ಮಾತನಾಡಿ • बोलिए • Speak'
+                                  : (_permissionDenied
+                                      ? 'Microphone permission needed'
+                                      : 'Tap microphone to speak'),
+                              style: TextStyle(
+                                color: _isListening ? const Color(0xFF84E865) : Colors.white54,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Close button
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // ── Real-Time Language Auto-Detection Pill ──
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF153F00),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF84E865).withValues(alpha: 0.45),
+                        width: 1.2,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              // Close button
-              IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.white70),
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: Color(0xFF84E865),
+                          size: 15,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _recognizedText.isEmpty
+                              ? 'Auto-detecting: Speak in Kannada, Hindi, or English'
+                              : 'Detected Language: ${_getLanguageDisplayName(_activeLanguageCode)}',
+                          style: const TextStyle(
+                            color: Color(0xFF84E865),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-          // Language Selector Pills (Kannada, Hindi, English)
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: _supportedLanguages.entries.map((entry) {
-                final isSelected = entry.key == _activeLanguageCode;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: ChoiceChip(
-                    label: Text(
-                      '${entry.value['name']} (${entry.value['sub']})',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? Colors.black : Colors.white70,
+                  // ── LIVE VOICE PITCH VARIATION WAVEFORM ──
+                  // Container background: #153F00, Waveform active color: #84E865
+                  Container(
+                    height: 96,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF153F00),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFF84E865).withValues(alpha: 0.35),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF153F00).withValues(alpha: 0.5),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: CustomPaint(
+                        painter: VoicePitchWaveformPainter(
+                          animationProgress: _waveController.value,
+                          soundLevel: _isListening ? _normalizedSoundLevel : 0.0,
+                          isListening: _isListening,
+                        ),
+                        child: const SizedBox.expand(),
                       ),
                     ),
-                    selected: isSelected,
-                    selectedColor: Colors.white,
-                    backgroundColor: const Color(0xFF222923),
-                    side: BorderSide(
-                      color: isSelected ? Colors.white : Colors.white12,
-                      width: 1,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Recognized Text Preview Box
+                  Container(
+                    width: double.infinity,
+                    constraints: const BoxConstraints(minHeight: 64, maxHeight: 110),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F2604).withValues(alpha: 0.88),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _recognizedText.isNotEmpty
+                            ? const Color(0xFF84E865)
+                            : Colors.white12,
+                        width: 1.2,
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    showCheckmark: false,
-                    onSelected: (_) => _switchLanguage(entry.key),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // ── LIVE VOICE PITCH VARIATION WAVEFORM (Black & White Audio Spectrum) ──
-          Container(
-            height: 96,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white12, width: 1),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: CustomPaint(
-                painter: VoicePitchWaveformPainter(
-                  animationProgress: _waveController.value,
-                  soundLevel: _isListening ? _normalizedSoundLevel : 0.0,
-                  isListening: _isListening,
-                ),
-                child: const SizedBox.expand(),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Recognized Text Preview Box
-          Container(
-            width: double.infinity,
-            constraints: const Duration(milliseconds: 0) == Duration.zero
-                ? const BoxConstraints(minHeight: 64, maxHeight: 110)
-                : null,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1C221D),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: _recognizedText.isNotEmpty ? const Color(0xFF40916C) : Colors.white10,
-                width: 1,
-              ),
-            ),
-            child: SingleChildScrollView(
-              child: Text(
-                _recognizedText.isNotEmpty
-                    ? _recognizedText
-                    : (_isListening ? promptText : 'Tap microphone to start speaking...'),
-                style: TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: _recognizedText.isNotEmpty ? FontWeight.w600 : FontWeight.w400,
-                  color: _recognizedText.isNotEmpty ? Colors.white : Colors.white38,
-                  height: 1.35,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Bottom Action Controls
-          Row(
-            children: [
-              // Cancel Button
-              Expanded(
-                flex: 2,
-                child: OutlinedButton(
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    Navigator.of(context).pop();
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white70,
-                    side: const BorderSide(color: Colors.white24),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                  ),
-                  child: const Text('Cancel'),
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Mic Pause/Resume Button
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  if (_isListening) {
-                    _speech.stop();
-                    setState(() => _isListening = false);
-                  } else {
-                    _startListeningInCurrentLocale();
-                  }
-                },
-                child: Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isListening ? const Color(0xFF2D6A4F) : Colors.white12,
-                    border: Border.all(
-                      color: _isListening ? const Color(0xFF74C69D) : Colors.white30,
-                      width: 2,
+                    child: SingleChildScrollView(
+                      child: Text(
+                        _recognizedText.isNotEmpty
+                            ? _recognizedText
+                            : (_isListening
+                                ? 'Speak in your language (ಕನ್ನಡ, हिंदी, English)...'
+                                : 'Tap microphone to start speaking...'),
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: _recognizedText.isNotEmpty ? FontWeight.w600 : FontWeight.w400,
+                          color: _recognizedText.isNotEmpty ? Colors.white : Colors.white38,
+                          height: 1.35,
+                        ),
+                      ),
                     ),
                   ),
-                  child: Icon(
-                    _isListening ? Icons.pause_rounded : Icons.mic_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
+                  const SizedBox(height: 20),
 
-              // Send / Submit Button
-              Expanded(
-                flex: 3,
-                child: ElevatedButton.icon(
-                  onPressed: _recognizedText.trim().isNotEmpty ? _submitRecognizedText : null,
-                  icon: const Icon(Icons.send_rounded, size: 18),
-                  label: const Text('Ask AI'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2D6A4F),
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.white12,
-                    disabledForegroundColor: Colors.white30,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                    elevation: 0,
+                  // Bottom Action Controls
+                  Row(
+                    children: [
+                      // Cancel Button
+                      Expanded(
+                        flex: 2,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.of(context).pop();
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white70,
+                            side: const BorderSide(color: Colors.white24),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                          ),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Mic Pause/Resume Button
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          if (_isListening) {
+                            _speech.stop();
+                            setState(() => _isListening = false);
+                          } else {
+                            _startListeningWithAutoDetect();
+                          }
+                        },
+                        child: Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _isListening ? const Color(0xFF153F00) : Colors.white12,
+                            border: Border.all(
+                              color: _isListening ? const Color(0xFF84E865) : Colors.white30,
+                              width: 2,
+                            ),
+                          ),
+                          child: Icon(
+                            _isListening ? Icons.pause_rounded : Icons.mic_rounded,
+                            color: _isListening ? const Color(0xFF84E865) : Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Send / Submit Button
+                      Expanded(
+                        flex: 3,
+                        child: ElevatedButton.icon(
+                          onPressed: _recognizedText.trim().isNotEmpty ? _submitRecognizedText : null,
+                          icon: const Icon(Icons.send_rounded, size: 18),
+                          label: const Text('Ask AI'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF153F00),
+                            foregroundColor: const Color(0xFF84E865),
+                            side: BorderSide(
+                              color: _recognizedText.trim().isNotEmpty
+                                  ? const Color(0xFF84E865)
+                                  : Colors.transparent,
+                              width: 1.2,
+                            ),
+                            disabledBackgroundColor: Colors.white12,
+                            disabledForegroundColor: Colors.white30,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Custom painter rendering dynamic black-and-white audio pitch variation waveform
-/// with frequency peaks, harmonic crests, and mirrored vertical oscillation.
+/// Custom painter rendering dynamic audio pitch variation waveform
+/// with frequency peaks, harmonic crests, and mirrored vertical oscillation
+/// using color #84E865 over #153F00 container.
 class VoicePitchWaveformPainter extends CustomPainter {
   final double animationProgress;
   final double soundLevel;
@@ -516,18 +586,21 @@ class VoicePitchWaveformPainter extends CustomPainter {
     final totalSpacing = size.width / barCount;
     final barWidth = totalSpacing * 0.65;
 
-    final whitePaint = Paint()
-      ..color = Colors.white
+    // #84E865 Color variants for dynamic pitch variation
+    const waveColor = Color(0xFF84E865);
+
+    final vibrantPaint = Paint()
+      ..color = waveColor
       ..strokeCap = StrokeCap.round
       ..strokeWidth = barWidth;
 
-    final lightGreyPaint = Paint()
-      ..color = const Color(0xFFB0B7B2)
+    final midPaint = Paint()
+      ..color = waveColor.withValues(alpha: 0.80)
       ..strokeCap = StrokeCap.round
       ..strokeWidth = barWidth;
 
     final dimPaint = Paint()
-      ..color = Colors.white24
+      ..color = waveColor.withValues(alpha: 0.30)
       ..strokeCap = StrokeCap.round
       ..strokeWidth = barWidth;
 
@@ -539,7 +612,7 @@ class VoicePitchWaveformPainter extends CustomPainter {
       // Normalized distance from center (0.0 at edges to 1.0 at center)
       final centerFactor = 1.0 - math.pow(((i - barCount / 2) / (barCount / 2)).abs(), 1.6);
 
-      // Pitch variation: multi-harmonic frequency calculation
+      // Multi-harmonic pitch variation formula
       final wave1 = math.sin(phase * 2.2 + i * 0.32);
       final wave2 = math.cos(phase * 1.5 + i * 0.18);
       final wave3 = math.sin(phase * 4.0 + i * 0.55);
@@ -549,7 +622,7 @@ class VoicePitchWaveformPainter extends CustomPainter {
       double barHeight;
       if (isListening) {
         final speechBoost = math.max(0.12, soundLevel);
-        // Peak variation: when talking, amplitude scales up dramatically (up to ~76px)
+        // Dynamic pitch variation: when talking, amplitude scales up to ~76px
         barHeight = 4.0 + (size.height * 0.78 * speechBoost * harmonic * centerFactor);
       } else {
         // Idle gentle undulation
@@ -561,12 +634,12 @@ class VoicePitchWaveformPainter extends CustomPainter {
       final top = centerY - (barHeight / 2);
       final bottom = centerY + (barHeight / 2);
 
-      // Alternating pitch tone: higher peaks use bright white, secondary use light grey
+      // Pitch-based intensity: higher peaks use full #84E865, secondary use mid-alpha
       Paint barPaint;
       if (barHeight > size.height * 0.42) {
-        barPaint = whitePaint;
+        barPaint = vibrantPaint;
       } else if (barHeight > size.height * 0.18) {
-        barPaint = lightGreyPaint;
+        barPaint = midPaint;
       } else {
         barPaint = dimPaint;
       }
@@ -578,9 +651,9 @@ class VoicePitchWaveformPainter extends CustomPainter {
       );
     }
 
-    // Horizontal baseline axis line through center for authentic audio analyzer look
+    // Horizontal baseline axis line through center with #84E865 accent
     final axisPaint = Paint()
-      ..color = Colors.white12
+      ..color = waveColor.withValues(alpha: 0.20)
       ..strokeWidth = 0.8;
 
     canvas.drawLine(
