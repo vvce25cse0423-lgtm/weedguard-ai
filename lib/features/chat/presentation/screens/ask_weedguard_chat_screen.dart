@@ -1852,9 +1852,9 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF1B4332),
                                   ),
-                                  decoration: const InputDecoration(
-                                    hintText: 'Type your question...',
-                                    hintStyle: TextStyle(
+                                  decoration: InputDecoration(
+                                    hintText: isKeyboardOpen ? 'Type your question...' : null,
+                                    hintStyle: const TextStyle(
                                       fontSize: 14,
                                       color: Color(0xFF6B8A7A),
                                       fontWeight: FontWeight.w500,
@@ -1868,7 +1868,7 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
                                     errorBorder: InputBorder.none,
                                     focusedErrorBorder: InputBorder.none,
                                     isDense: true,
-                                    contentPadding: EdgeInsets.symmetric(vertical: 8),
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
                                   ),
                                 ),
                               ),
