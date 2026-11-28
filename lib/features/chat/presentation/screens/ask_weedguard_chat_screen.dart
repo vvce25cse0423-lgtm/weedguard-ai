@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/providers/app_providers.dart';
 import '../../models/chat_message_model.dart';
 import '../../data/weedguard_chat_service.dart';
+import '../widgets/voice_pitch_waveform_sheet.dart';
 
 class AskWeedGuardChatScreen extends ConsumerStatefulWidget {
   final String? initialQuery;
@@ -165,7 +166,12 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
     }
 
     await _tts.stop();
-    final lang = ref.read(localeProvider).languageCode;
+    var lang = ref.read(localeProvider).languageCode;
+    if (RegExp(r'[\u0C80-\u0CFF]').hasMatch(text)) {
+      lang = 'kn';
+    } else if (RegExp(r'[\u0900-\u097F]').hasMatch(text)) {
+      lang = 'hi';
+    }
     if (lang == 'kn') {
       await _tts.setLanguage('kn-IN');
     } else if (lang == 'hi') {
@@ -202,7 +208,20 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
     });
     _scrollToBottom();
 
-    final lang = ref.read(localeProvider).languageCode;
+    var lang = ref.read(localeProvider).languageCode;
+    if (RegExp(r'[\u0C80-\u0CFF]').hasMatch(query)) {
+      lang = 'kn';
+      if (_activeLanguageCode != 'kn') {
+        _activeLanguageCode = 'kn';
+        ref.read(localeProvider.notifier).setLocale(const Locale('kn'));
+      }
+    } else if (RegExp(r'[\u0900-\u097F]').hasMatch(query)) {
+      lang = 'hi';
+      if (_activeLanguageCode != 'hi') {
+        _activeLanguageCode = 'hi';
+        ref.read(localeProvider.notifier).setLocale(const Locale('hi'));
+      }
+    }
 
     try {
       final responseText = await WeedGuardChatService.sendMessage(
@@ -1531,19 +1550,21 @@ class _AskWeedGuardChatScreenState extends ConsumerState<AskWeedGuardChatScreen>
 
   void _triggerVoiceInput() {
     HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.mic, color: Colors.white, size: 20),
-            SizedBox(width: 10),
-            Expanded(child: Text('Voice input ready. Tap send or type your question below.')),
-          ],
-        ),
-        backgroundColor: const Color(0xFF1B4332),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => VoicePitchWaveformSheet(
+        initialLanguageCode: _activeLanguageCode ?? 'kn',
+        onSpeechResult: (recognizedQuery, detectedLang) {
+          if (recognizedQuery.trim().isNotEmpty) {
+            if (detectedLang != _activeLanguageCode) {
+              _activeLanguageCode = detectedLang;
+              ref.read(localeProvider.notifier).setLocale(Locale(detectedLang));
+            }
+            _handleSubmitted(recognizedQuery);
+          }
+        },
       ),
     );
   }
